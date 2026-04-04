@@ -29,6 +29,11 @@ logging:
     org.hibernate.SQL: debug
 
 app:
+  alio:
+    base-url: https://opendata.alio.go.kr
+    recruit-list-path: /api/recruitments
+    service-key: ${ALIO_SERVICE_KEY:}
+    result-type: json
   recruitment:
     default-page-size: 10
     max-page-size: 50
