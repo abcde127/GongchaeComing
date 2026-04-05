@@ -33,7 +33,7 @@ logging:
 app:
   alio:
     base-url: https://opendata.alio.go.kr
-    recruit-list-path: /api/recruitments
+    recruit-list-path: /new/v1/recruit/list.do
     service-key: ${ALIO_SERVICE_KEY:}
     result-type: json
   recruitment:
