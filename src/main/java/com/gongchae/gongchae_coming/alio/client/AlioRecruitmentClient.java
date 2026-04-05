@@ -56,7 +56,7 @@ public class AlioRecruitmentClient {
 		addQueryParam(builder, "replmprYn", request.replmprYn());
 		addQueryParam(builder, "workRgnLst", request.workRgnLst());
 
-		return builder.build(true).toUri();
+		return builder.encode().build().toUri();
 	}
 
 	private String resolveResultType(AlioRecruitmentListRequest request) {
