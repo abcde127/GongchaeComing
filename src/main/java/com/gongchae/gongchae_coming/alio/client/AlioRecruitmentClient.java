@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
@@ -28,7 +29,7 @@ public class AlioRecruitmentClient {
 				.retrieve()
 				.body(JsonNode.class);
 		} catch (Exception exception) {
-			throw new AlioApiException("Failed to fetch recruitment list from ALIO API.", exception);
+			throw new AlioApiException(buildErrorMessage(exception), exception);
 		}
 	}
 
@@ -76,5 +77,26 @@ public class AlioRecruitmentClient {
 		if (!properties.hasServiceKey()) {
 			throw new AlioApiException("ALIO API serviceKey is not configured.");
 		}
+	}
+
+	private String buildErrorMessage(Exception exception) {
+		StringBuilder message = new StringBuilder("Failed to fetch recruitment list from ALIO API");
+
+		if (exception instanceof RestClientResponseException responseException) {
+			message.append(" (status: ").append(responseException.getStatusCode()).append(")");
+
+			String responseBody = responseException.getResponseBodyAsString();
+			if (StringUtils.hasText(responseBody)) {
+				message.append(". Response body: ").append(responseBody);
+			}
+
+			return message.toString();
+		}
+
+		if (StringUtils.hasText(exception.getMessage())) {
+			message.append(". Cause: ").append(exception.getMessage());
+		}
+
+		return message.toString();
 	}
 }
