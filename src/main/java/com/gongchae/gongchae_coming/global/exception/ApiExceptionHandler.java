@@ -1,9 +1,11 @@
 package com.gongchae.gongchae_coming.global.exception;
 
 import com.gongchae.gongchae_coming.alio.exception.AlioApiException;
+import com.gongchae.gongchae_coming.member.exception.DuplicateMemberException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.validation.BindException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -26,6 +28,25 @@ public class ApiExceptionHandler {
 			.findFirst()
 			.map(error -> error.getDefaultMessage())
 			.orElse("Request parameter validation failed."));
+		return problemDetail;
+	}
+
+	@ExceptionHandler(MethodArgumentNotValidException.class)
+	public ProblemDetail handleRequestBodyValidationException(MethodArgumentNotValidException exception) {
+		ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+		problemDetail.setTitle("Invalid request body");
+		problemDetail.setDetail(exception.getBindingResult().getAllErrors().stream()
+			.findFirst()
+			.map(error -> error.getDefaultMessage())
+			.orElse("Request body validation failed."));
+		return problemDetail;
+	}
+
+	@ExceptionHandler(DuplicateMemberException.class)
+	public ProblemDetail handleDuplicateMemberException(DuplicateMemberException exception) {
+		ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+		problemDetail.setTitle("Member already exists");
+		problemDetail.setDetail(exception.getMessage());
 		return problemDetail;
 	}
 }
