@@ -3,6 +3,8 @@ package com.gongchae.gongchae_coming.member.service;
 import com.gongchae.gongchae_coming.member.domain.Member;
 import com.gongchae.gongchae_coming.member.dto.MemberFindIdRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberFindIdResponse;
+import com.gongchae.gongchae_coming.member.dto.MemberResetPasswordRequest;
+import com.gongchae.gongchae_coming.member.dto.MemberResetPasswordResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberSignupRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberSignupResponse;
 import com.gongchae.gongchae_coming.member.exception.DuplicateMemberException;
@@ -39,6 +41,16 @@ public class MemberService {
 			.orElseThrow(() -> new MemberNotFoundException("member not found"));
 
 		return MemberFindIdResponse.from(member);
+	}
+
+	@Transactional
+	public MemberResetPasswordResponse resetPassword(MemberResetPasswordRequest request) {
+		Member member = memberRepository.findByEmailAndNickname(request.email(), request.nickname())
+			.orElseThrow(() -> new MemberNotFoundException("member not found"));
+
+		member.resetPassword(passwordEncoder.encode(request.newPassword()));
+
+		return MemberResetPasswordResponse.from(member);
 	}
 
 	private void validateDuplicateMember(MemberSignupRequest request) {
