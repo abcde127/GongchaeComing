@@ -51,6 +51,10 @@ public class Member {
 		return new Member(email, nickname, encodedPassword);
 	}
 
+	public void resetPassword(String encodedPassword) {
+		this.password = encodedPassword;
+	}
+
 	@PrePersist
 	void prePersist() {
 		createdAt = LocalDateTime.now();

@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.gongchae.gongchae_coming.member.domain.Member;
 import com.gongchae.gongchae_coming.member.dto.MemberFindIdRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberFindIdResponse;
+import com.gongchae.gongchae_coming.member.dto.MemberResetPasswordRequest;
+import com.gongchae.gongchae_coming.member.dto.MemberResetPasswordResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberSignupRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberSignupResponse;
 import com.gongchae.gongchae_coming.member.exception.DuplicateMemberException;
@@ -98,6 +100,45 @@ class MemberServiceTest {
 	void findIdRejectsUnknownEmail() {
 		assertThatThrownBy(() -> memberService.findId(new MemberFindIdRequest("missing@example.com")))
 			.isInstanceOf(MemberNotFoundException.class)
+			.hasMessage("member not found");
+	}
+
+	@Test
+	void resetPasswordChangesPasswordWithEncodedPassword() {
+		MemberSignupResponse signupResponse = memberService.signup(new MemberSignupRequest(
+			"user@example.com",
+			"gongchae",
+			"password1"
+		));
+
+		MemberResetPasswordResponse response = memberService.resetPassword(new MemberResetPasswordRequest(
+			"user@example.com",
+			"gongchae",
+			"newpassword1"
+		));
+
+		Member savedMember = memberRepository.findById(signupResponse.id()).orElseThrow();
+		assertThat(response.memberId()).isEqualTo(signupResponse.id());
+		assertThat(response.email()).isEqualTo("user@example.com");
+		assertThat(response.nickname()).isEqualTo("gongchae");
+		assertThat(savedMember.getPassword()).isNotEqualTo("newpassword1");
+		assertThat(passwordEncoder.matches("newpassword1", savedMember.getPassword())).isTrue();
+		assertThat(passwordEncoder.matches("password1", savedMember.getPassword())).isFalse();
+	}
+
+	@Test
+	void resetPasswordRejectsUnknownMember() {
+		memberService.signup(new MemberSignupRequest(
+			"user@example.com",
+			"gongchae",
+			"password1"
+		));
+
+		assertThatThrownBy(() -> memberService.resetPassword(new MemberResetPasswordRequest(
+			"user@example.com",
+			"wrongnickname",
+			"newpassword1"
+		))).isInstanceOf(MemberNotFoundException.class)
 			.hasMessage("member not found");
 	}
 }
