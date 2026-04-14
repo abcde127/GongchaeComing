@@ -4,9 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.gongchae.gongchae_coming.member.domain.Member;
+import com.gongchae.gongchae_coming.member.dto.MemberFindIdRequest;
+import com.gongchae.gongchae_coming.member.dto.MemberFindIdResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberSignupRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberSignupResponse;
 import com.gongchae.gongchae_coming.member.exception.DuplicateMemberException;
+import com.gongchae.gongchae_coming.member.exception.MemberNotFoundException;
 import com.gongchae.gongchae_coming.member.repository.MemberRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,5 +77,27 @@ class MemberServiceTest {
 			"password1"
 		))).isInstanceOf(DuplicateMemberException.class)
 			.hasMessage("nickname already exists");
+	}
+
+	@Test
+	void findIdReturnsMemberIdByEmail() {
+		MemberSignupResponse signupResponse = memberService.signup(new MemberSignupRequest(
+			"user@example.com",
+			"gongchae",
+			"password1"
+		));
+
+		MemberFindIdResponse response = memberService.findId(new MemberFindIdRequest("user@example.com"));
+
+		assertThat(response.memberId()).isEqualTo(signupResponse.id());
+		assertThat(response.email()).isEqualTo("user@example.com");
+		assertThat(response.nickname()).isEqualTo("gongchae");
+	}
+
+	@Test
+	void findIdRejectsUnknownEmail() {
+		assertThatThrownBy(() -> memberService.findId(new MemberFindIdRequest("missing@example.com")))
+			.isInstanceOf(MemberNotFoundException.class)
+			.hasMessage("member not found");
 	}
 }
