@@ -1,9 +1,12 @@
 package com.gongchae.gongchae_coming.member.service;
 
 import com.gongchae.gongchae_coming.member.domain.Member;
+import com.gongchae.gongchae_coming.member.dto.MemberFindIdRequest;
+import com.gongchae.gongchae_coming.member.dto.MemberFindIdResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberSignupRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberSignupResponse;
 import com.gongchae.gongchae_coming.member.exception.DuplicateMemberException;
+import com.gongchae.gongchae_coming.member.exception.MemberNotFoundException;
 import com.gongchae.gongchae_coming.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,6 +31,14 @@ public class MemberService {
 		);
 
 		return MemberSignupResponse.from(memberRepository.save(member));
+	}
+
+	@Transactional(readOnly = true)
+	public MemberFindIdResponse findId(MemberFindIdRequest request) {
+		Member member = memberRepository.findByEmail(request.email())
+			.orElseThrow(() -> new MemberNotFoundException("member not found"));
+
+		return MemberFindIdResponse.from(member);
 	}
 
 	private void validateDuplicateMember(MemberSignupRequest request) {

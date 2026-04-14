@@ -1,5 +1,7 @@
 package com.gongchae.gongchae_coming.member.controller;
 
+import com.gongchae.gongchae_coming.member.dto.MemberFindIdRequest;
+import com.gongchae.gongchae_coming.member.dto.MemberFindIdResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberSignupRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberSignupResponse;
 import com.gongchae.gongchae_coming.member.service.MemberService;
@@ -23,5 +25,10 @@ public class MemberController {
 	@ResponseStatus(HttpStatus.CREATED)
 	public MemberSignupResponse signup(@Valid @RequestBody MemberSignupRequest request) {
 		return memberService.signup(request);
+	}
+
+	@PostMapping("/find-id")
+	public MemberFindIdResponse findId(@Valid @RequestBody MemberFindIdRequest request) {
+		return memberService.findId(request);
 	}
 }

@@ -2,6 +2,7 @@ package com.gongchae.gongchae_coming.global.exception;
 
 import com.gongchae.gongchae_coming.alio.exception.AlioApiException;
 import com.gongchae.gongchae_coming.member.exception.DuplicateMemberException;
+import com.gongchae.gongchae_coming.member.exception.MemberNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.validation.BindException;
@@ -46,6 +47,14 @@ public class ApiExceptionHandler {
 	public ProblemDetail handleDuplicateMemberException(DuplicateMemberException exception) {
 		ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
 		problemDetail.setTitle("Member already exists");
+		problemDetail.setDetail(exception.getMessage());
+		return problemDetail;
+	}
+
+	@ExceptionHandler(MemberNotFoundException.class)
+	public ProblemDetail handleMemberNotFoundException(MemberNotFoundException exception) {
+		ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+		problemDetail.setTitle("Member not found");
 		problemDetail.setDetail(exception.getMessage());
 		return problemDetail;
 	}
