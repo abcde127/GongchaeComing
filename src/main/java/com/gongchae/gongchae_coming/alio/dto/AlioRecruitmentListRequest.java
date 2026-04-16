@@ -9,6 +9,8 @@ public record AlioRecruitmentListRequest(
 	String hireTypeLst,
 	String instClsf,
 	String instType,
+	@Pattern(regexp = "^(R6000(0[1-9]|1[0-9]|2[0-5]))(,R6000(0[1-9]|1[0-9]|2[0-5]))*$",
+		message = "ncsCdLst must contain ALIO NCS codes from R600001 to R600025, separated by comma")
 	String ncsCdLst,
 	@Min(1) @Max(100) Integer numOfRows,
 	@Pattern(regexp = "^[YN]$", message = "ongoingYn must be Y or N") String ongoingYn,
