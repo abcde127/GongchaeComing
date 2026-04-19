@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>로그인 | Gongchae Coming</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
+	<link rel="stylesheet" th:href="@{/css/auth.css}">
+</head>
+<body>
+<main class="auth-page">
+	<section class="auth-visual" aria-label="서비스 소개">
+		<div class="brand-mark">G</div>
+		<div class="visual-copy">
+			<p class="eyebrow">Gongchae Coming</p>
+			<h1>오늘의 공채를 놓치지 않게.</h1>
+			<p>관심 공고를 더 빠르게 확인하고, 내 지원 준비 흐름을 한곳에서 이어가세요.</p>
+		</div>
+	</section>
+
+	<section class="auth-panel" aria-labelledby="login-title">
+		<div class="auth-card">
+			<div class="auth-heading">
+				<p class="eyebrow">Welcome back</p>
+				<h2 id="login-title">로그인</h2>
+				<p>가입한 이메일과 비밀번호를 입력해주세요.</p>
+			</div>
+
+			<div class="alert" id="loginMessage" role="alert" aria-live="polite" hidden></div>
+
+			<form class="login-form" id="loginForm" method="post" action="/login" novalidate>
+				<div class="field-group">
+					<label for="email">이메일</label>
+					<input
+						type="email"
+						id="email"
+						name="username"
+						autocomplete="email"
+						placeholder="you@example.com"
+						required>
+					<p class="field-error" id="emailError"></p>
+				</div>
+
+				<div class="field-group">
+					<div class="label-row">
+						<label for="password">비밀번호</label>
+						<a href="/find-password">비밀번호 찾기</a>
+					</div>
+					<div class="password-field">
+						<input
+							type="password"
+							id="password"
+							name="password"
+							autocomplete="current-password"
+							placeholder="8자 이상 입력"
+							required>
+						<button type="button" class="text-button" id="togglePassword" aria-label="비밀번호 표시">보기</button>
+					</div>
+					<p class="field-error" id="passwordError"></p>
+				</div>
+
+				<label class="check-row">
+					<input type="checkbox" name="remember-me">
+					<span>로그인 상태 유지</span>
+				</label>
+
+				<button type="submit" class="primary-button" id="loginButton">로그인</button>
+			</form>
+
+			<p class="auth-switch">
+				아직 계정이 없나요?
+				<a href="/signup">회원가입</a>
+			</p>
+		</div>
+	</section>
+</main>
+<script th:src="@{/js/login.js}"></script>
+</body>
+</html>
