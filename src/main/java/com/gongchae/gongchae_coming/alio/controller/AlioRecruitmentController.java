@@ -29,4 +29,9 @@ public class AlioRecruitmentController {
 	public List<AlioFilterOptionResponse> getNcsFilterOptions() {
 		return alioRecruitmentService.getNcsFilterOptions();
 	}
+
+	@GetMapping("/filters/work-regions")
+	public List<AlioFilterOptionResponse> getWorkRegionFilterOptions() {
+		return alioRecruitmentService.getWorkRegionFilterOptions();
+	}
 }

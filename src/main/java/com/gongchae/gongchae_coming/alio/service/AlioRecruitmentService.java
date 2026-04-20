@@ -41,6 +41,27 @@ public class AlioRecruitmentService {
 		new AlioFilterOptionResponse("R600025", "연구")
 	);
 
+	private static final List<AlioFilterOptionResponse> WORK_REGION_FILTER_OPTIONS = List.of(
+		new AlioFilterOptionResponse("R3010", "서울특별시"),
+		new AlioFilterOptionResponse("R3011", "인천광역시"),
+		new AlioFilterOptionResponse("R3012", "대전광역시"),
+		new AlioFilterOptionResponse("R3013", "대구광역시"),
+		new AlioFilterOptionResponse("R3014", "부산광역시"),
+		new AlioFilterOptionResponse("R3015", "광주광역시"),
+		new AlioFilterOptionResponse("R3016", "울산광역시"),
+		new AlioFilterOptionResponse("R3017", "경기도"),
+		new AlioFilterOptionResponse("R3018", "강원도"),
+		new AlioFilterOptionResponse("R3019", "충청남도"),
+		new AlioFilterOptionResponse("R3020", "충청북도"),
+		new AlioFilterOptionResponse("R3021", "경상북도"),
+		new AlioFilterOptionResponse("R3022", "경상남도"),
+		new AlioFilterOptionResponse("R3023", "전라남도"),
+		new AlioFilterOptionResponse("R3024", "전라북도"),
+		new AlioFilterOptionResponse("R3025", "제주특별자치도"),
+		new AlioFilterOptionResponse("R3026", "세종특별자치시"),
+		new AlioFilterOptionResponse("R3030", "해외")
+	);
+
 	private final AlioRecruitmentClient alioRecruitmentClient;
 
 	public JsonNode getRecruitments(AlioRecruitmentListRequest request) {
@@ -49,5 +70,9 @@ public class AlioRecruitmentService {
 
 	public List<AlioFilterOptionResponse> getNcsFilterOptions() {
 		return NCS_FILTER_OPTIONS;
+	}
+
+	public List<AlioFilterOptionResponse> getWorkRegionFilterOptions() {
+		return WORK_REGION_FILTER_OPTIONS;
 	}
 }

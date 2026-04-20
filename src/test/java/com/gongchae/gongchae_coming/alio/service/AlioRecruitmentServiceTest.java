@@ -21,4 +21,15 @@ class AlioRecruitmentServiceTest {
 		assertThat(options.get(options.size() - 1).code()).isEqualTo("R600025");
 		assertThat(options.get(options.size() - 1).name()).isEqualTo("연구");
 	}
+
+	@Test
+	void getWorkRegionFilterOptionsReturnsAlioWorkRegionCodes() {
+		var options = alioRecruitmentService.getWorkRegionFilterOptions();
+
+		assertThat(options).hasSize(18);
+		assertThat(options.get(0).code()).isEqualTo("R3010");
+		assertThat(options.get(0).name()).isEqualTo("서울특별시");
+		assertThat(options.get(options.size() - 1).code()).isEqualTo("R3030");
+		assertThat(options.get(options.size() - 1).name()).isEqualTo("해외");
+	}
 }

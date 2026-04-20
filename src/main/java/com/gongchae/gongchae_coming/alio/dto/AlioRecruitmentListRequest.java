@@ -22,6 +22,8 @@ public record AlioRecruitmentListRequest(
 	String recrutSe,
 	@Pattern(regexp = "^[YN]$", message = "replmprYn must be Y or N") String replmprYn,
 	String resultType,
+	@Pattern(regexp = "^(R30(1[0-9]|2[0-6]|30))(,R30(1[0-9]|2[0-6]|30))*$",
+		message = "workRgnLst must contain ALIO work region codes from R3010 to R3026 or R3030, separated by comma")
 	String workRgnLst
 ) {
 
