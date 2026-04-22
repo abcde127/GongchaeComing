@@ -3,6 +3,7 @@ package com.gongchae.gongchae_coming.alio.dto;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
+import org.springframework.util.StringUtils;
 
 public record AlioRecruitmentListRequest(
 	String acbgCondLst,
@@ -22,6 +23,7 @@ public record AlioRecruitmentListRequest(
 	@Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "pbancBgngYmd must be yyyy-MM-dd") String pbancBgngYmd,
 	@Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "pbancEndYmd must be yyyy-MM-dd") String pbancEndYmd,
 	String pblntInstCd,
+	String searchKeyword,
 	String recrutPbancTtl,
 	String recrutSe,
 	@Pattern(regexp = "^[YN]$", message = "replmprYn must be Y or N") String replmprYn,
@@ -37,5 +39,13 @@ public record AlioRecruitmentListRequest(
 
 	public int resolvedNumOfRows() {
 		return numOfRows == null ? 10 : numOfRows;
+	}
+
+	public String resolvedRecruitmentTitleKeyword() {
+		if (StringUtils.hasText(recrutPbancTtl)) {
+			return recrutPbancTtl.trim();
+		}
+
+		return StringUtils.hasText(searchKeyword) ? searchKeyword.trim() : null;
 	}
 }
