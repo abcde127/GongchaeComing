@@ -62,6 +62,16 @@ public class AlioRecruitmentService {
 		new AlioFilterOptionResponse("R3030", "해외")
 	);
 
+	private static final List<AlioFilterOptionResponse> HIRE_TYPE_FILTER_OPTIONS = List.of(
+		new AlioFilterOptionResponse("R1010", "정규직"),
+		new AlioFilterOptionResponse("R1020", "계약직"),
+		new AlioFilterOptionResponse("R1030", "무기계약직"),
+		new AlioFilterOptionResponse("R1040", "비정규직"),
+		new AlioFilterOptionResponse("R1050", "청년인턴"),
+		new AlioFilterOptionResponse("R1060", "청년인턴(체험형)"),
+		new AlioFilterOptionResponse("R1070", "청년인턴(채용형)")
+	);
+
 	private final AlioRecruitmentClient alioRecruitmentClient;
 
 	public JsonNode getRecruitments(AlioRecruitmentListRequest request) {
@@ -74,5 +84,9 @@ public class AlioRecruitmentService {
 
 	public List<AlioFilterOptionResponse> getWorkRegionFilterOptions() {
 		return WORK_REGION_FILTER_OPTIONS;
+	}
+
+	public List<AlioFilterOptionResponse> getHireTypeFilterOptions() {
+		return HIRE_TYPE_FILTER_OPTIONS;
 	}
 }

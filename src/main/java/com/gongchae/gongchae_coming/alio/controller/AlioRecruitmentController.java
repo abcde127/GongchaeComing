@@ -34,4 +34,9 @@ public class AlioRecruitmentController {
 	public List<AlioFilterOptionResponse> getWorkRegionFilterOptions() {
 		return alioRecruitmentService.getWorkRegionFilterOptions();
 	}
+
+	@GetMapping("/filters/hire-types")
+	public List<AlioFilterOptionResponse> getHireTypeFilterOptions() {
+		return alioRecruitmentService.getHireTypeFilterOptions();
+	}
 }

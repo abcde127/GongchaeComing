@@ -6,6 +6,8 @@ import jakarta.validation.constraints.Pattern;
 
 public record AlioRecruitmentListRequest(
 	String acbgCondLst,
+	@Pattern(regexp = "^(R10[1-7]0)(,R10[1-7]0)*$",
+		message = "hireTypeLst must contain ALIO hire type codes from R1010 to R1070, separated by comma")
 	String hireTypeLst,
 	String instClsf,
 	String instType,
