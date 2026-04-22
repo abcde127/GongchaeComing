@@ -10,6 +10,8 @@ public record AlioRecruitmentListRequest(
 		message = "hireTypeLst must contain ALIO hire type codes from R1010 to R1070, separated by comma")
 	String hireTypeLst,
 	String instClsf,
+	@Pattern(regexp = "^(A200[1-5])(,A200[1-5])*$",
+		message = "instType must contain institution type codes from A2001 to A2005, separated by comma")
 	String instType,
 	@Pattern(regexp = "^(R6000(0[1-9]|1[0-9]|2[0-5]))(,R6000(0[1-9]|1[0-9]|2[0-5]))*$",
 		message = "ncsCdLst must contain ALIO NCS codes from R600001 to R600025, separated by comma")
