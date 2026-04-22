@@ -32,4 +32,15 @@ class AlioRecruitmentServiceTest {
 		assertThat(options.get(options.size() - 1).code()).isEqualTo("R3030");
 		assertThat(options.get(options.size() - 1).name()).isEqualTo("해외");
 	}
+
+	@Test
+	void getHireTypeFilterOptionsReturnsAlioHireTypeCodes() {
+		var options = alioRecruitmentService.getHireTypeFilterOptions();
+
+		assertThat(options).hasSize(7);
+		assertThat(options.get(0).code()).isEqualTo("R1010");
+		assertThat(options.get(0).name()).isEqualTo("정규직");
+		assertThat(options.get(options.size() - 1).code()).isEqualTo("R1070");
+		assertThat(options.get(options.size() - 1).name()).isEqualTo("청년인턴(채용형)");
+	}
 }
