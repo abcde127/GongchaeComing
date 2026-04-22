@@ -39,4 +39,9 @@ public class AlioRecruitmentController {
 	public List<AlioFilterOptionResponse> getHireTypeFilterOptions() {
 		return alioRecruitmentService.getHireTypeFilterOptions();
 	}
+
+	@GetMapping("/filters/institution-types")
+	public List<AlioFilterOptionResponse> getInstitutionTypeFilterOptions() {
+		return alioRecruitmentService.getInstitutionTypeFilterOptions();
+	}
 }
