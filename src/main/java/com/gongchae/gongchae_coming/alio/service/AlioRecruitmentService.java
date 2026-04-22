@@ -1,12 +1,18 @@
 package com.gongchae.gongchae_coming.alio.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.gongchae.gongchae_coming.alio.client.AlioRecruitmentClient;
 import com.gongchae.gongchae_coming.alio.dto.AlioFilterOptionResponse;
 import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentListRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -80,10 +86,17 @@ public class AlioRecruitmentService {
 		new AlioFilterOptionResponse("A2005", "기타공공기관")
 	);
 
+	private static final List<AlioFilterOptionResponse> SORT_FILTER_OPTIONS = List.of(
+		new AlioFilterOptionResponse("REGISTRATION_DATE", "등록일순"),
+		new AlioFilterOptionResponse("DEADLINE_DATE", "마감일순")
+	);
+
 	private final AlioRecruitmentClient alioRecruitmentClient;
 
 	public JsonNode getRecruitments(AlioRecruitmentListRequest request) {
-		return alioRecruitmentClient.fetchRecruitments(request);
+		JsonNode response = alioRecruitmentClient.fetchRecruitments(request);
+		sortRecruitmentItems(response, request.resolvedSortBy());
+		return response;
 	}
 
 	public List<AlioFilterOptionResponse> getNcsFilterOptions() {
@@ -100,5 +113,85 @@ public class AlioRecruitmentService {
 
 	public List<AlioFilterOptionResponse> getInstitutionTypeFilterOptions() {
 		return INSTITUTION_TYPE_FILTER_OPTIONS;
+	}
+
+	public List<AlioFilterOptionResponse> getSortFilterOptions() {
+		return SORT_FILTER_OPTIONS;
+	}
+
+	private void sortRecruitmentItems(JsonNode response, String sortBy) {
+		ArrayNode items = findRecruitmentItems(response);
+		if (items == null || items.size() < 2) {
+			return;
+		}
+
+		List<JsonNode> sortedItems = new ArrayList<>();
+		items.forEach(sortedItems::add);
+
+		Comparator<JsonNode> comparator = Comparator
+			.comparing((JsonNode item) -> extractSortDate(item, sortBy), Comparator.nullsLast(Comparator.reverseOrder()))
+			.thenComparing(item -> extractSortDate(item, "REGISTRATION_DATE"), Comparator.nullsLast(Comparator.reverseOrder()))
+			.thenComparing(item -> item.path("recrutPbancTtl").asText(""));
+
+		sortedItems.sort(comparator);
+		items.removeAll();
+		items.addAll(sortedItems);
+	}
+
+	private ArrayNode findRecruitmentItems(JsonNode response) {
+		JsonNode responseNode = response.path("response");
+		JsonNode bodyNode = responseNode.path("body");
+		JsonNode itemsNode = bodyNode.path("items");
+
+		if (itemsNode.isArray()) {
+			return (ArrayNode) itemsNode;
+		}
+
+		JsonNode itemNode = itemsNode.path("item");
+		if (itemNode.isArray()) {
+			return (ArrayNode) itemNode;
+		}
+
+		JsonNode bodyItemNode = bodyNode.path("item");
+		if (bodyItemNode.isArray()) {
+			return (ArrayNode) bodyItemNode;
+		}
+
+		return null;
+	}
+
+	private LocalDate extractSortDate(JsonNode item, String sortBy) {
+		if ("DEADLINE_DATE".equals(sortBy)) {
+			LocalDate endDate = parseDate(item, "pbancEndYmd");
+			if (endDate != null) {
+				return endDate;
+			}
+
+			return parseDate(item, "aplyEndYmd", "endDate");
+		}
+
+		LocalDate registrationDate = parseDate(item, "pbancBgngYmd");
+		if (registrationDate != null) {
+			return registrationDate;
+		}
+
+		return parseDate(item, "pbancRgtrYmd", "regDt", "frstRegDt", "registrationDate");
+	}
+
+	private LocalDate parseDate(JsonNode item, String... fieldNames) {
+		for (String fieldName : fieldNames) {
+			String value = item.path(fieldName).asText(null);
+			if (!StringUtils.hasText(value)) {
+				continue;
+			}
+
+			try {
+				return LocalDate.parse(value.trim());
+			} catch (DateTimeParseException ignored) {
+				// Ignore non-ISO date values and continue with fallback fields.
+			}
+		}
+
+		return null;
 	}
 }

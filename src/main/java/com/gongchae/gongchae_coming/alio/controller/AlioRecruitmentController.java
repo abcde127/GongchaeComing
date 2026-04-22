@@ -44,4 +44,9 @@ public class AlioRecruitmentController {
 	public List<AlioFilterOptionResponse> getInstitutionTypeFilterOptions() {
 		return alioRecruitmentService.getInstitutionTypeFilterOptions();
 	}
+
+	@GetMapping("/filters/sort-types")
+	public List<AlioFilterOptionResponse> getSortFilterOptions() {
+		return alioRecruitmentService.getSortFilterOptions();
+	}
 }
