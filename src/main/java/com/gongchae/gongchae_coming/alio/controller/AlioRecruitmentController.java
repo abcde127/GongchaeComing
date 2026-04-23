@@ -29,4 +29,34 @@ public class AlioRecruitmentController {
 	public List<AlioFilterOptionResponse> getNcsFilterOptions() {
 		return alioRecruitmentService.getNcsFilterOptions();
 	}
+
+	@GetMapping("/filters/work-regions")
+	public List<AlioFilterOptionResponse> getWorkRegionFilterOptions() {
+		return alioRecruitmentService.getWorkRegionFilterOptions();
+	}
+
+	@GetMapping("/filters/hire-types")
+	public List<AlioFilterOptionResponse> getHireTypeFilterOptions() {
+		return alioRecruitmentService.getHireTypeFilterOptions();
+	}
+
+	@GetMapping("/filters/institution-types")
+	public List<AlioFilterOptionResponse> getInstitutionTypeFilterOptions() {
+		return alioRecruitmentService.getInstitutionTypeFilterOptions();
+	}
+
+	@GetMapping("/filters/sort-types")
+	public List<AlioFilterOptionResponse> getSortFilterOptions() {
+		return alioRecruitmentService.getSortFilterOptions();
+	}
+
+	@GetMapping("/filters/sort-directions")
+	public List<AlioFilterOptionResponse> getSortDirectionFilterOptions() {
+		return alioRecruitmentService.getSortDirectionFilterOptions();
+	}
+
+	@GetMapping("/filters/page-sizes")
+	public List<AlioFilterOptionResponse> getPageSizeFilterOptions() {
+		return alioRecruitmentService.getPageSizeFilterOptions();
+	}
 }

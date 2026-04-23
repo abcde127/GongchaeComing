@@ -51,7 +51,7 @@ public class AlioRecruitmentClient {
 		addQueryParam(builder, "pbancBgngYmd", request.pbancBgngYmd());
 		addQueryParam(builder, "pbancEndYmd", request.pbancEndYmd());
 		addQueryParam(builder, "pblntInstCd", request.pblntInstCd());
-		addQueryParam(builder, "recrutPbancTtl", request.recrutPbancTtl());
+		addQueryParam(builder, "recrutPbancTtl", request.resolvedRecruitmentTitleKeyword());
 		addQueryParam(builder, "recrutSe", request.recrutSe());
 		addQueryParam(builder, "replmprYn", request.replmprYn());
 		addQueryParam(builder, "workRgnLst", request.workRgnLst());
