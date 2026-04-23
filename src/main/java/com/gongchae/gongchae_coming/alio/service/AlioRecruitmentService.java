@@ -91,11 +91,23 @@ public class AlioRecruitmentService {
 		new AlioFilterOptionResponse("DEADLINE_DATE", "마감일순")
 	);
 
+	private static final List<AlioFilterOptionResponse> SORT_DIRECTION_FILTER_OPTIONS = List.of(
+		new AlioFilterOptionResponse("DESC", "내림차순"),
+		new AlioFilterOptionResponse("ASC", "오름차순")
+	);
+
+	private static final List<AlioFilterOptionResponse> PAGE_SIZE_FILTER_OPTIONS = List.of(
+		new AlioFilterOptionResponse("10", "10개씩 보기"),
+		new AlioFilterOptionResponse("20", "20개씩 보기"),
+		new AlioFilterOptionResponse("30", "30개씩 보기"),
+		new AlioFilterOptionResponse("50", "50개씩 보기")
+	);
+
 	private final AlioRecruitmentClient alioRecruitmentClient;
 
 	public JsonNode getRecruitments(AlioRecruitmentListRequest request) {
 		JsonNode response = alioRecruitmentClient.fetchRecruitments(request);
-		sortRecruitmentItems(response, request.resolvedSortBy());
+		sortRecruitmentItems(response, request.resolvedSortBy(), request.resolvedSortDirection());
 		return response;
 	}
 
@@ -119,7 +131,15 @@ public class AlioRecruitmentService {
 		return SORT_FILTER_OPTIONS;
 	}
 
-	private void sortRecruitmentItems(JsonNode response, String sortBy) {
+	public List<AlioFilterOptionResponse> getSortDirectionFilterOptions() {
+		return SORT_DIRECTION_FILTER_OPTIONS;
+	}
+
+	public List<AlioFilterOptionResponse> getPageSizeFilterOptions() {
+		return PAGE_SIZE_FILTER_OPTIONS;
+	}
+
+	private void sortRecruitmentItems(JsonNode response, String sortBy, String sortDirection) {
 		ArrayNode items = findRecruitmentItems(response);
 		if (items == null || items.size() < 2) {
 			return;
@@ -128,9 +148,13 @@ public class AlioRecruitmentService {
 		List<JsonNode> sortedItems = new ArrayList<>();
 		items.forEach(sortedItems::add);
 
+		Comparator<LocalDate> dateComparator = "ASC".equals(sortDirection)
+			? Comparator.naturalOrder()
+			: Comparator.reverseOrder();
+
 		Comparator<JsonNode> comparator = Comparator
-			.comparing((JsonNode item) -> extractSortDate(item, sortBy), Comparator.nullsLast(Comparator.reverseOrder()))
-			.thenComparing(item -> extractSortDate(item, "REGISTRATION_DATE"), Comparator.nullsLast(Comparator.reverseOrder()))
+			.comparing((JsonNode item) -> extractSortDate(item, sortBy), Comparator.nullsLast(dateComparator))
+			.thenComparing(item -> extractSortDate(item, "REGISTRATION_DATE"), Comparator.nullsLast(dateComparator))
 			.thenComparing(item -> item.path("recrutPbancTtl").asText(""));
 
 		sortedItems.sort(comparator);

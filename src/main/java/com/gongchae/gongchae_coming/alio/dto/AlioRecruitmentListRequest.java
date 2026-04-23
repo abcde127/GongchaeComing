@@ -17,7 +17,7 @@ public record AlioRecruitmentListRequest(
 	@Pattern(regexp = "^(R6000(0[1-9]|1[0-9]|2[0-5]))(,R6000(0[1-9]|1[0-9]|2[0-5]))*$",
 		message = "ncsCdLst must contain ALIO NCS codes from R600001 to R600025, separated by comma")
 	String ncsCdLst,
-	@Min(1) @Max(100) Integer numOfRows,
+	@Min(1) @Max(50) Integer numOfRows,
 	@Pattern(regexp = "^[YN]$", message = "ongoingYn must be Y or N") String ongoingYn,
 	@Min(1) Integer pageNo,
 	@Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "pbancBgngYmd must be yyyy-MM-dd") String pbancBgngYmd,
@@ -31,6 +31,8 @@ public record AlioRecruitmentListRequest(
 	@Pattern(regexp = "^(REGISTRATION_DATE|DEADLINE_DATE)$",
 		message = "sortBy must be REGISTRATION_DATE or DEADLINE_DATE")
 	String sortBy,
+	@Pattern(regexp = "^(ASC|DESC)$", message = "sortDirection must be ASC or DESC")
+	String sortDirection,
 	@Pattern(regexp = "^(R30(1[0-9]|2[0-6]|30))(,R30(1[0-9]|2[0-6]|30))*$",
 		message = "workRgnLst must contain ALIO work region codes from R3010 to R3026 or R3030, separated by comma")
 	String workRgnLst
@@ -54,5 +56,9 @@ public record AlioRecruitmentListRequest(
 
 	public String resolvedSortBy() {
 		return StringUtils.hasText(sortBy) ? sortBy.trim() : "REGISTRATION_DATE";
+	}
+
+	public String resolvedSortDirection() {
+		return StringUtils.hasText(sortDirection) ? sortDirection.trim() : "DESC";
 	}
 }

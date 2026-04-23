@@ -75,6 +75,29 @@ class AlioRecruitmentServiceTest {
 	}
 
 	@Test
+	void getSortDirectionFilterOptionsReturnsSupportedDirections() {
+		var options = alioRecruitmentService.getSortDirectionFilterOptions();
+
+		assertThat(options).hasSize(2);
+		assertThat(options.get(0).code()).isEqualTo("DESC");
+		assertThat(options.get(0).name()).isEqualTo("내림차순");
+		assertThat(options.get(1).code()).isEqualTo("ASC");
+		assertThat(options.get(1).name()).isEqualTo("오름차순");
+	}
+
+	@Test
+	void getPageSizeFilterOptionsReturnsSupportedPageSizes() {
+		var options = alioRecruitmentService.getPageSizeFilterOptions();
+
+		assertThat(options).hasSize(4);
+		assertThat(options)
+			.extracting(option -> option.code())
+			.containsExactly("10", "20", "30", "50");
+		assertThat(options.get(0).name()).isEqualTo("10개씩 보기");
+		assertThat(options.get(options.size() - 1).name()).isEqualTo("50개씩 보기");
+	}
+
+	@Test
 	void getRecruitmentsSortsItemsByRegistrationDateByDefault() {
 		AlioRecruitmentClient client = mock(AlioRecruitmentClient.class);
 		AlioRecruitmentService service = new AlioRecruitmentService(client);
@@ -89,6 +112,23 @@ class AlioRecruitmentServiceTest {
 
 		assertThat(result.at("/response/body/items/item/0/recrutPbancTtl").asText()).isEqualTo("second");
 		assertThat(result.at("/response/body/items/item/1/recrutPbancTtl").asText()).isEqualTo("first");
+	}
+
+	@Test
+	void getRecruitmentsSortsItemsByRegistrationDateAscendingWhenRequested() {
+		AlioRecruitmentClient client = mock(AlioRecruitmentClient.class);
+		AlioRecruitmentService service = new AlioRecruitmentService(client);
+		ObjectNode response = createResponse(
+			recruitment("first", "2026-04-01", "2026-04-10"),
+			recruitment("second", "2026-04-15", "2026-04-20")
+		);
+
+		when(client.fetchRecruitments(any(AlioRecruitmentListRequest.class))).thenReturn(response);
+
+		var result = service.getRecruitments(request("REGISTRATION_DATE", "ASC"));
+
+		assertThat(result.at("/response/body/items/item/0/recrutPbancTtl").asText()).isEqualTo("first");
+		assertThat(result.at("/response/body/items/item/1/recrutPbancTtl").asText()).isEqualTo("second");
 	}
 
 	@Test
@@ -109,6 +149,10 @@ class AlioRecruitmentServiceTest {
 	}
 
 	private AlioRecruitmentListRequest request(String sortBy) {
+		return request(sortBy, null);
+	}
+
+	private AlioRecruitmentListRequest request(String sortBy, String sortDirection) {
 		return new AlioRecruitmentListRequest(
 			null,
 			null,
@@ -127,6 +171,7 @@ class AlioRecruitmentServiceTest {
 			null,
 			null,
 			sortBy,
+			sortDirection,
 			null
 		);
 	}

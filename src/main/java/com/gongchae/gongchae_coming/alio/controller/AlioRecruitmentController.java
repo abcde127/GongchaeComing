@@ -49,4 +49,14 @@ public class AlioRecruitmentController {
 	public List<AlioFilterOptionResponse> getSortFilterOptions() {
 		return alioRecruitmentService.getSortFilterOptions();
 	}
+
+	@GetMapping("/filters/sort-directions")
+	public List<AlioFilterOptionResponse> getSortDirectionFilterOptions() {
+		return alioRecruitmentService.getSortDirectionFilterOptions();
+	}
+
+	@GetMapping("/filters/page-sizes")
+	public List<AlioFilterOptionResponse> getPageSizeFilterOptions() {
+		return alioRecruitmentService.getPageSizeFilterOptions();
+	}
 }
