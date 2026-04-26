@@ -2,6 +2,7 @@ package com.gongchae.gongchae_coming.alio.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.gongchae.gongchae_coming.alio.client.AlioRecruitmentClient;
 import com.gongchae.gongchae_coming.alio.dto.AlioFilterOptionResponse;
 import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentListRequest;
@@ -107,8 +108,30 @@ public class AlioRecruitmentService {
 
 	public JsonNode getRecruitments(AlioRecruitmentListRequest request) {
 		JsonNode response = alioRecruitmentClient.fetchRecruitments(request);
+		attachDebugInfoWhenAlioReturnsError(request, response);
 		sortRecruitmentItems(response, request.resolvedSortBy(), request.resolvedSortDirection());
 		return response;
+	}
+
+	private void attachDebugInfoWhenAlioReturnsError(AlioRecruitmentListRequest request, JsonNode response) {
+		if (!(response instanceof ObjectNode responseObject) || !isAlioErrorResponse(response)) {
+			return;
+		}
+
+		ObjectNode debugNode = responseObject.putObject("_debug");
+		debugNode.put("alioRequestUri", alioRecruitmentClient.buildRequestUriForDebug(request));
+		debugNode.put("searchKeyword", safeText(request.searchKeyword()));
+		debugNode.put("recrutPbancTtl", safeText(request.resolvedRecruitmentTitleKeyword()));
+		debugNode.put("resultType", safeText(request.resultType()));
+	}
+
+	private boolean isAlioErrorResponse(JsonNode response) {
+		String resultCode = response.path("resultCode").asText(null);
+		return StringUtils.hasText(resultCode) && !"00".equals(resultCode);
+	}
+
+	private String safeText(String value) {
+		return value == null ? "" : value;
 	}
 
 	private void sortRecruitmentItems(JsonNode response, String sortBy, String sortDirection) {

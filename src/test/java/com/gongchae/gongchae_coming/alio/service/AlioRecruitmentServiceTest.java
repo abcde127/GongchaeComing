@@ -70,17 +70,42 @@ class AlioRecruitmentServiceTest {
 		assertThat(result.at("/response/body/items/item/1/recrutPbancTtl").asText()).isEqualTo("first");
 	}
 
+	@Test
+	void getRecruitmentsAttachesDebugInfoWhenAlioReturnsErrorPayload() {
+		AlioRecruitmentClient client = mock(AlioRecruitmentClient.class);
+		AlioRecruitmentService service = new AlioRecruitmentService(client);
+		ObjectNode errorResponse = OBJECT_MAPPER.createObjectNode();
+		errorResponse.put("resultCode", "6");
+		errorResponse.put("resultMsgEng", "SERVER_UNKNOWN_ERROR");
+
+		when(client.fetchRecruitments(any(AlioRecruitmentListRequest.class))).thenReturn(errorResponse);
+		when(client.buildRequestUriForDebug(any(AlioRecruitmentListRequest.class)))
+			.thenReturn("https://opendata.alio.go.kr/new/v1/recruit/list.do?recrutPbancTtl=nhis");
+
+		var result = service.getRecruitments(request("REGISTRATION_DATE", null, "nhis"));
+
+		assertThat(result.at("/_debug/alioRequestUri").asText())
+			.isEqualTo("https://opendata.alio.go.kr/new/v1/recruit/list.do?recrutPbancTtl=nhis");
+		assertThat(result.at("/_debug/searchKeyword").asText()).isEqualTo("nhis");
+		assertThat(result.at("/_debug/recrutPbancTtl").asText()).isEqualTo("nhis");
+	}
+
 	private AlioRecruitmentListRequest request(String sortBy) {
 		return request(sortBy, null);
 	}
 
 	private AlioRecruitmentListRequest request(String sortBy, String sortDirection) {
+		return request(sortBy, sortDirection, null);
+	}
+
+	private AlioRecruitmentListRequest request(String sortBy, String sortDirection, String searchKeyword) {
 		return new AlioRecruitmentListRequest(
 			null,
 			null,
 			null,
 			null,
 			null,
+			searchKeyword,
 			null,
 			null,
 			null,
