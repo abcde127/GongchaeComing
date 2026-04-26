@@ -111,34 +111,6 @@ public class AlioRecruitmentService {
 		return response;
 	}
 
-	public List<AlioFilterOptionResponse> getNcsFilterOptions() {
-		return NCS_FILTER_OPTIONS;
-	}
-
-	public List<AlioFilterOptionResponse> getWorkRegionFilterOptions() {
-		return WORK_REGION_FILTER_OPTIONS;
-	}
-
-	public List<AlioFilterOptionResponse> getHireTypeFilterOptions() {
-		return HIRE_TYPE_FILTER_OPTIONS;
-	}
-
-	public List<AlioFilterOptionResponse> getInstitutionTypeFilterOptions() {
-		return INSTITUTION_TYPE_FILTER_OPTIONS;
-	}
-
-	public List<AlioFilterOptionResponse> getSortFilterOptions() {
-		return SORT_FILTER_OPTIONS;
-	}
-
-	public List<AlioFilterOptionResponse> getSortDirectionFilterOptions() {
-		return SORT_DIRECTION_FILTER_OPTIONS;
-	}
-
-	public List<AlioFilterOptionResponse> getPageSizeFilterOptions() {
-		return PAGE_SIZE_FILTER_OPTIONS;
-	}
-
 	private void sortRecruitmentItems(JsonNode response, String sortBy, String sortDirection) {
 		ArrayNode items = findRecruitmentItems(response);
 		if (items == null || items.size() < 2) {
