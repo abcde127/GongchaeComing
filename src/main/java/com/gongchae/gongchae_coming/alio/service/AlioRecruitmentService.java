@@ -109,6 +109,7 @@ public class AlioRecruitmentService {
 	public JsonNode getRecruitments(AlioRecruitmentListRequest request) {
 		JsonNode response = alioRecruitmentClient.fetchRecruitments(request);
 		attachDebugInfoWhenAlioReturnsError(request, response);
+		filterRecruitmentItems(response, request.searchKeyword());
 		sortRecruitmentItems(response, request.resolvedSortBy(), request.resolvedSortDirection());
 		return response;
 	}
@@ -132,6 +133,62 @@ public class AlioRecruitmentService {
 
 	private String safeText(String value) {
 		return value == null ? "" : value;
+	}
+
+	private void filterRecruitmentItems(JsonNode response, String searchKeyword) {
+		if (!StringUtils.hasText(searchKeyword)) {
+			return;
+		}
+
+		ArrayNode items = findRecruitmentItems(response);
+		if (items == null) {
+			return;
+		}
+
+		String normalizedKeyword = normalizeKeyword(searchKeyword);
+		List<JsonNode> filteredItems = new ArrayList<>();
+
+		items.forEach(item -> {
+			String title = normalizeKeyword(item.path("recrutPbancTtl").asText(""));
+			String institution = normalizeKeyword(
+				firstNonBlank(
+					item.path("pblntInstNm").asText(""),
+					item.path("instNm").asText("")
+				)
+			);
+
+			if (title.contains(normalizedKeyword) || institution.contains(normalizedKeyword)) {
+				filteredItems.add(item);
+			}
+		});
+
+		items.removeAll();
+		items.addAll(filteredItems);
+		updateTotalCount(response, filteredItems.size());
+	}
+
+	private String normalizeKeyword(String value) {
+		return StringUtils.hasText(value)
+			? value.replaceAll("\\s+", "").toLowerCase()
+			: "";
+	}
+
+	private String firstNonBlank(String first, String second) {
+		if (StringUtils.hasText(first)) {
+			return first;
+		}
+		return second;
+	}
+
+	private void updateTotalCount(JsonNode response, int totalCount) {
+		if (response instanceof ObjectNode rootObject) {
+			rootObject.put("totalCount", totalCount);
+		}
+
+		JsonNode bodyNode = response.path("response").path("body");
+		if (bodyNode instanceof ObjectNode bodyObject) {
+			bodyObject.put("totalCount", totalCount);
+		}
 	}
 
 	private void sortRecruitmentItems(JsonNode response, String sortBy, String sortDirection) {

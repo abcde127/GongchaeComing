@@ -90,6 +90,27 @@ class AlioRecruitmentServiceTest {
 		assertThat(result.at("/_debug/recrutPbancTtl").asText()).isEqualTo("nhis");
 	}
 
+	@Test
+	void getRecruitmentsFiltersItemsBySearchKeywordAgainstTitleAndInstitution() {
+		AlioRecruitmentClient client = mock(AlioRecruitmentClient.class);
+		AlioRecruitmentService service = new AlioRecruitmentService(client);
+		ObjectNode response = createResponse(
+			recruitment("국민건강보험공단 체험형 인턴", "국민건강보험공단", "2026-04-01", "2026-04-10"),
+			recruitment("한국전력공사 신입 채용", "한국전력공사", "2026-04-02", "2026-04-11"),
+			recruitment("일반 행정 채용", "국민건강보험공단", "2026-04-03", "2026-04-12")
+		);
+
+		when(client.fetchRecruitments(any(AlioRecruitmentListRequest.class))).thenReturn(response);
+
+		var result = service.getRecruitments(request("REGISTRATION_DATE", "DESC", "건강보험공단"));
+
+		assertThat(result.at("/response/body/items/item")).hasSize(2);
+		assertThat(result.at("/response/body/items/item/0/recrutPbancTtl").asText()).isEqualTo("일반 행정 채용");
+		assertThat(result.at("/response/body/items/item/1/recrutPbancTtl").asText()).isEqualTo("국민건강보험공단 체험형 인턴");
+		assertThat(result.at("/totalCount").asInt()).isEqualTo(2);
+		assertThat(result.at("/response/body/totalCount").asInt()).isEqualTo(2);
+	}
+
 	private AlioRecruitmentListRequest request(String sortBy) {
 		return request(sortBy, null);
 	}
@@ -105,14 +126,13 @@ class AlioRecruitmentServiceTest {
 			null,
 			null,
 			null,
+			null,
+			null,
+			null,
+			null,
+			null,
+			null,
 			searchKeyword,
-			null,
-			null,
-			null,
-			null,
-			null,
-			null,
-			null,
 			null,
 			null,
 			null,
@@ -138,8 +158,15 @@ class AlioRecruitmentServiceTest {
 	}
 
 	private ObjectNode recruitment(String title, String registrationDate, String deadlineDate) {
+		return recruitment(title, null, registrationDate, deadlineDate);
+	}
+
+	private ObjectNode recruitment(String title, String institution, String registrationDate, String deadlineDate) {
 		ObjectNode node = OBJECT_MAPPER.createObjectNode();
 		node.put("recrutPbancTtl", title);
+		if (institution != null) {
+			node.put("pblntInstNm", institution);
+		}
 		node.put("pbancBgngYmd", registrationDate);
 		node.put("pbancEndYmd", deadlineDate);
 		return node;
