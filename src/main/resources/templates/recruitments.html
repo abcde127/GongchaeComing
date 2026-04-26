@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>채용 목록 조회 | Gongchae Coming</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
+	<link rel="stylesheet" th:href="@{/css/recruitments.css}">
+</head>
+<body>
+<div class="page-shell">
+	<header class="hero">
+		<nav class="topbar">
+			<a class="brand" href="/recruitments">
+				<span class="brand-mark">G</span>
+				<span class="brand-copy">
+					<strong>Gongchae Coming</strong>
+				</span>
+			</a>
+			<a class="login-link" href="/login">로그인</a>
+		</nav>
+
+		<div class="hero-content">
+			<div class="hero-copy">
+				<p class="eyebrow">Recruitment List</p>
+				<h1>공공기관 채용공고 목록</h1>
+			</div>
+		</div>
+	</header>
+
+	<main class="content-grid">
+		<aside class="filter-panel" aria-labelledby="filter-title">
+			<div class="panel-heading">
+				<div>
+					<p class="eyebrow">Search Panel</p>
+					<h2 id="filter-title">검색 조건</h2>
+				</div>
+				<div class="panel-actions">
+					<button type="submit" class="primary-button panel-search-button" id="searchButton" form="searchForm">검색하기</button>
+					<button type="button" class="icon-button" id="resetButton" aria-label="검색 조건 초기화" title="초기화">↺</button>
+				</div>
+			</div>
+
+			<form id="searchForm" class="filter-form" novalidate>
+				<div class="field-group field-group-wide">
+					<label for="searchKeyword">키워드 검색</label>
+					<input
+						type="text"
+						id="searchKeyword"
+						name="searchKeyword"
+						placeholder="예: 건강보험공단, 인턴, 사무">
+				</div>
+
+				<div class="field-group">
+					<label for="hireTypeLst">채용 형태</label>
+					<select id="hireTypeLst" name="hireTypeLst">
+						<option value="">전체</option>
+					</select>
+				</div>
+
+				<div class="field-group">
+					<label for="instType">기관 유형</label>
+					<select id="instType" name="instType">
+						<option value="">전체</option>
+					</select>
+				</div>
+
+				<div class="field-group">
+					<label for="workRgnLst">근무지</label>
+					<select id="workRgnLst" name="workRgnLst">
+						<option value="">전체</option>
+					</select>
+				</div>
+
+				<div class="field-group">
+					<label for="ncsCdLst">표준직무</label>
+					<select id="ncsCdLst" name="ncsCdLst">
+						<option value="">전체</option>
+					</select>
+				</div>
+			</form>
+		</aside>
+
+		<section class="result-panel" aria-labelledby="result-title">
+			<div class="result-header">
+				<div>
+					<p class="eyebrow">Result Feed</p>
+					<h2 id="result-title">채용공고 목록</h2>
+				</div>
+				<div class="result-toolbar" aria-label="목록 표시 옵션">
+					<div class="toolbar-group">
+						<label for="ongoingYn">진행 상태</label>
+						<select id="ongoingYn" name="ongoingYn" form="searchForm">
+							<option value="">전체</option>
+							<option value="Y">진행 중</option>
+							<option value="N">마감 포함</option>
+						</select>
+					</div>
+
+					<div class="toolbar-group">
+						<label for="sortBy">정렬 기준</label>
+						<select id="sortBy" name="sortBy" form="searchForm">
+							<option value="REGISTRATION_DATE">등록일</option>
+							<option value="DEADLINE_DATE">마감일</option>
+						</select>
+					</div>
+
+					<div class="toolbar-group">
+						<label for="sortDirection">정렬 방향</label>
+						<select id="sortDirection" name="sortDirection" form="searchForm">
+							<option value="DESC">최신순</option>
+							<option value="ASC">오래된순</option>
+						</select>
+					</div>
+
+					<div class="toolbar-group">
+						<label for="numOfRows">페이지 크기</label>
+						<select id="numOfRows" name="numOfRows" form="searchForm">
+							<option value="12">12개</option>
+							<option value="24">24개</option>
+							<option value="36">36개</option>
+						</select>
+					</div>
+				</div>
+			</div>
+
+			<div class="status-banner" id="statusBanner" hidden></div>
+			<div class="debug-panel" id="debugPanel" hidden>
+				<h3>디버그 정보</h3>
+				<pre id="debugContent"></pre>
+			</div>
+
+			<div class="result-stage" id="resultStage">
+				<div class="loading-overlay" id="loadingState" hidden>
+					<div class="loading-overlay-card">
+						<div class="spinner" aria-hidden="true"></div>
+						<p>채용공고를 불러오고 있습니다.</p>
+					</div>
+				</div>
+
+				<div class="empty-state" id="emptyState">
+					<h3>아직 조회된 공고가 없습니다.</h3>
+					<p>검색 조건을 선택한 뒤 검색해보세요.</p>
+				</div>
+
+				<div class="card-grid" id="resultList" hidden></div>
+				<nav class="pagination" id="pagination" aria-label="채용공고 페이지 이동" hidden></nav>
+			</div>
+		</section>
+	</main>
+</div>
+<script th:src="@{/js/recruitments.js}"></script>
+</body>
+</html>
