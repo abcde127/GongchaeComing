@@ -22,18 +22,25 @@ public class AlioRecruitmentClient {
 
 	public JsonNode fetchRecruitments(AlioRecruitmentListRequest request) {
 		validateConfiguration();
+		URI uri = buildUri(request);
 
 		try {
 			return restClient.post()
-				.uri(buildUri(request))
+				.uri(uri)
 				.retrieve()
 				.body(JsonNode.class);
 		} catch (Exception exception) {
-			throw new AlioApiException(buildErrorMessage(exception), exception);
+			throw buildAlioApiException(uri, exception);
 		}
 	}
 
+	public String buildRequestUriForDebug(AlioRecruitmentListRequest request) {
+		validateConfiguration();
+		return buildUri(request).toString();
+	}
+
 	private URI buildUri(AlioRecruitmentListRequest request) {
+		String recruitmentTitleKeyword = request.resolvedRecruitmentTitleKeyword();
 		UriComponentsBuilder builder = UriComponentsBuilder
 			.fromUriString(properties.baseUrl())
 			.path(properties.recruitListPath())
@@ -51,12 +58,16 @@ public class AlioRecruitmentClient {
 		addQueryParam(builder, "pbancBgngYmd", request.pbancBgngYmd());
 		addQueryParam(builder, "pbancEndYmd", request.pbancEndYmd());
 		addQueryParam(builder, "pblntInstCd", request.pblntInstCd());
-		addQueryParam(builder, "recrutPbancTtl", request.recrutPbancTtl());
 		addQueryParam(builder, "recrutSe", request.recrutSe());
 		addQueryParam(builder, "replmprYn", request.replmprYn());
 		addQueryParam(builder, "workRgnLst", request.workRgnLst());
 
-		return builder.encode().build().toUri();
+		String uri = builder.build().toUriString();
+		if (StringUtils.hasText(recruitmentTitleKeyword)) {
+			uri = uri + "&recrutPbancTl=" + toRawTitleKeywordQueryValue(recruitmentTitleKeyword);
+		}
+
+		return URI.create(uri);
 	}
 
 	private String resolveResultType(AlioRecruitmentListRequest request) {
@@ -69,6 +80,10 @@ public class AlioRecruitmentClient {
 		}
 	}
 
+	private String toRawTitleKeywordQueryValue(String value) {
+		return value.trim().replace(" ", "+");
+	}
+
 	private void validateConfiguration() {
 		if (!StringUtils.hasText(properties.baseUrl()) || !StringUtils.hasText(properties.recruitListPath())) {
 			throw new AlioApiException("ALIO API baseUrl or recruitListPath is not configured.");
@@ -79,24 +94,34 @@ public class AlioRecruitmentClient {
 		}
 	}
 
-	private String buildErrorMessage(Exception exception) {
+	private AlioApiException buildAlioApiException(URI requestUri, Exception exception) {
 		StringBuilder message = new StringBuilder("Failed to fetch recruitment list from ALIO API");
+		String requestUriText = requestUri.toString();
 
 		if (exception instanceof RestClientResponseException responseException) {
 			message.append(" (status: ").append(responseException.getStatusCode()).append(")");
+			message.append(". Request URI: ").append(requestUriText);
 
 			String responseBody = responseException.getResponseBodyAsString();
 			if (StringUtils.hasText(responseBody)) {
 				message.append(". Response body: ").append(responseBody);
 			}
 
-			return message.toString();
+			return new AlioApiException(
+				message.toString(),
+				exception,
+				responseException.getStatusCode(),
+				responseBody,
+				requestUriText
+			);
 		}
+
+		message.append(". Request URI: ").append(requestUriText);
 
 		if (StringUtils.hasText(exception.getMessage())) {
 			message.append(". Cause: ").append(exception.getMessage());
 		}
 
-		return message.toString();
+		return new AlioApiException(message.toString(), exception, null, null, requestUriText);
 	}
 }

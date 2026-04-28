@@ -5,6 +5,7 @@ import com.gongchae.gongchae_coming.member.exception.DuplicateMemberException;
 import com.gongchae.gongchae_coming.member.exception.MemberNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -18,6 +19,17 @@ public class ApiExceptionHandler {
 		ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_GATEWAY);
 		problemDetail.setTitle("ALIO API request failed");
 		problemDetail.setDetail(exception.getMessage());
+
+		if (exception.getAlioStatusCode() != null) {
+			problemDetail.setProperty("alioStatus", exception.getAlioStatusCode().value());
+		}
+		if (StringUtils.hasText(exception.getAlioRequestUri())) {
+			problemDetail.setProperty("alioRequestUri", exception.getAlioRequestUri());
+		}
+		if (StringUtils.hasText(exception.getAlioResponseBody())) {
+			problemDetail.setProperty("alioResponseBody", exception.getAlioResponseBody());
+		}
+
 		return problemDetail;
 	}
 
@@ -55,6 +67,14 @@ public class ApiExceptionHandler {
 	public ProblemDetail handleMemberNotFoundException(MemberNotFoundException exception) {
 		ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
 		problemDetail.setTitle("Member not found");
+		problemDetail.setDetail(exception.getMessage());
+		return problemDetail;
+	}
+
+	@ExceptionHandler(IllegalArgumentException.class)
+	public ProblemDetail handleIllegalArgumentException(IllegalArgumentException exception) {
+		ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+		problemDetail.setTitle("Invalid request");
 		problemDetail.setDetail(exception.getMessage());
 		return problemDetail;
 	}
