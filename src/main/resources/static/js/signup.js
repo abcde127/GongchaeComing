@@ -9,8 +9,10 @@ const passwordError = document.querySelector("#passwordError");
 const passwordConfirmError = document.querySelector("#passwordConfirmError");
 const signupMessage = document.querySelector("#signupMessage");
 const signupButton = document.querySelector("#signupButton");
+const checkEmailButton = document.querySelector("#checkEmailButton");
 const togglePassword = document.querySelector("#togglePassword");
 const togglePasswordConfirm = document.querySelector("#togglePasswordConfirm");
+let checkedEmail = "";
 
 function setMessage(message, type = "error") {
 	signupMessage.textContent = message;
@@ -18,12 +20,33 @@ function setMessage(message, type = "error") {
 	signupMessage.hidden = !message;
 }
 
+function setEmailFeedback(message, type = "error") {
+	emailError.textContent = message;
+	emailError.dataset.type = type;
+}
+
 function clearErrors() {
-	emailError.textContent = "";
+	setEmailFeedback("");
 	nicknameError.textContent = "";
 	passwordError.textContent = "";
 	passwordConfirmError.textContent = "";
 	setMessage("");
+}
+
+function validateEmail() {
+	const email = emailInput.value.trim();
+	setEmailFeedback("");
+	setMessage("");
+
+	if (!email) {
+		setEmailFeedback("이메일을 입력해주세요.");
+		return false;
+	} else if (!emailInput.validity.valid) {
+		setEmailFeedback("올바른 이메일 형식으로 입력해주세요.");
+		return false;
+	}
+
+	return true;
 }
 
 function validateSignupForm() {
@@ -35,11 +58,10 @@ function validateSignupForm() {
 
 	clearErrors();
 
-	if (!email) {
-		emailError.textContent = "이메일을 입력해주세요.";
+	if (!validateEmail()) {
 		valid = false;
-	} else if (!emailInput.validity.valid) {
-		emailError.textContent = "올바른 이메일 형식으로 입력해주세요.";
+	} else if (checkedEmail !== email) {
+		setEmailFeedback("이메일 중복 확인을 먼저 완료해주세요.");
 		valid = false;
 	}
 
@@ -85,6 +107,45 @@ function translateServerMessage(detail) {
 	return "회원가입에 실패했습니다. 입력 내용을 다시 확인해주세요.";
 }
 
+async function checkEmailAvailability() {
+	if (!validateEmail()) {
+		return;
+	}
+
+	const email = emailInput.value.trim();
+	checkEmailButton.disabled = true;
+	checkEmailButton.textContent = "확인 중";
+
+	try {
+		const response = await fetch(`/api/members/email-availability?email=${encodeURIComponent(email)}`);
+
+		if (!response.ok) {
+			const error = await response.json().catch(() => ({}));
+			setEmailFeedback(translateServerMessage(error.detail));
+			checkedEmail = "";
+			return;
+		}
+
+		const result = await response.json();
+
+		if (result.available) {
+			checkedEmail = email;
+			setEmailFeedback("사용 가능한 이메일입니다.", "success");
+			checkEmailButton.disabled = true;
+			return;
+		}
+
+		checkedEmail = "";
+		setEmailFeedback("이미 가입된 이메일입니다.");
+	} catch (error) {
+		checkedEmail = "";
+		setMessage("서버와 연결할 수 없습니다. 잠시 후 다시 시도해주세요.");
+	} finally {
+		checkEmailButton.disabled = checkedEmail === email;
+		checkEmailButton.textContent = "중복 확인";
+	}
+}
+
 function togglePasswordVisibility(input, button, visibleLabel, hiddenLabel) {
 	const isPassword = input.type === "password";
 
@@ -93,6 +154,15 @@ function togglePasswordVisibility(input, button, visibleLabel, hiddenLabel) {
 	button.setAttribute("aria-label", isPassword ? hiddenLabel : visibleLabel);
 	input.focus();
 }
+
+emailInput.addEventListener("input", () => {
+	checkedEmail = "";
+	checkEmailButton.disabled = false;
+	setEmailFeedback("");
+	setMessage("");
+});
+
+checkEmailButton.addEventListener("click", checkEmailAvailability);
 
 togglePassword.addEventListener("click", () => {
 	togglePasswordVisibility(passwordInput, togglePassword, "비밀번호 표시", "비밀번호 숨기기");
