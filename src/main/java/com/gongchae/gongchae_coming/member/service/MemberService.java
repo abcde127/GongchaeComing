@@ -36,6 +36,11 @@ public class MemberService {
 	}
 
 	@Transactional(readOnly = true)
+	public boolean isEmailAvailable(String email) {
+		return !memberRepository.existsByEmail(email);
+	}
+
+	@Transactional(readOnly = true)
 	public MemberFindIdResponse findId(MemberFindIdRequest request) {
 		Member member = memberRepository.findByEmail(request.email())
 			.orElseThrow(() -> new MemberNotFoundException("member not found"));
