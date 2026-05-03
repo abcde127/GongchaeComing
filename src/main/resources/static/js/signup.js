@@ -186,6 +186,8 @@ form.addEventListener("submit", async (event) => {
 
 	signupButton.disabled = true;
 	signupButton.textContent = "가입 중";
+	signupButton.classList.add("is-loading");
+	let signupCompleted = false;
 
 	try {
 		const response = await fetch("/api/members/signup", {
@@ -206,14 +208,15 @@ form.addEventListener("submit", async (event) => {
 			return;
 		}
 
-		setMessage("회원가입이 완료되었습니다. 로그인 화면으로 이동합니다.", "success");
-		window.setTimeout(() => {
-			window.location.href = "/login";
-		}, 700);
+		signupCompleted = true;
+		window.location.href = "/login";
 	} catch (error) {
 		setMessage("서버와 연결할 수 없습니다. 잠시 후 다시 시도해주세요.");
 	} finally {
-		signupButton.disabled = false;
-		signupButton.textContent = "회원가입";
+		if (!signupCompleted) {
+			signupButton.disabled = false;
+			signupButton.textContent = "회원가입";
+			signupButton.classList.remove("is-loading");
+		}
 	}
 });
