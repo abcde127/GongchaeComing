@@ -208,8 +208,10 @@ form.addEventListener("submit", async (event) => {
 			return;
 		}
 
+		const signupResult = await response.json();
+		sessionStorage.setItem("signupResult", JSON.stringify(signupResult));
 		signupCompleted = true;
-		window.location.href = "/login";
+		window.location.href = "/signup-complete";
 	} catch (error) {
 		setMessage("서버와 연결할 수 없습니다. 잠시 후 다시 시도해주세요.");
 	} finally {
