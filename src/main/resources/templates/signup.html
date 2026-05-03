@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>회원가입 | Gongchae Coming</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
+	<link rel="stylesheet" th:href="@{/css/auth.css}">
+</head>
+<body>
+<main class="auth-page">
+	<section class="auth-visual signup-visual" aria-label="서비스 소개">
+		<div class="brand-mark">G</div>
+		<div class="visual-copy">
+			<p class="eyebrow">Gongchae Coming</p>
+			<h1>공채 소식을 내 흐름에 맞게.</h1>
+			<p>관심 있는 공고를 놓치지 않도록 계정을 만들고 채용 준비를 차근차근 이어가세요.</p>
+		</div>
+	</section>
+
+	<section class="auth-panel" aria-labelledby="signup-title">
+		<div class="auth-card">
+			<div class="auth-heading">
+				<p class="eyebrow">Create account</p>
+				<h2 id="signup-title">회원가입</h2>
+				<p>이메일, 닉네임, 비밀번호를 입력하면 바로 시작할 수 있어요.</p>
+			</div>
+
+			<div class="alert" id="signupMessage" role="alert" aria-live="polite" hidden></div>
+
+			<form class="auth-form" id="signupForm" novalidate>
+				<div class="field-group">
+					<label for="email">이메일</label>
+					<input
+						type="email"
+						id="email"
+						name="email"
+						autocomplete="email"
+						placeholder="you@example.com"
+						maxlength="100"
+						required>
+					<p class="field-error" id="emailError"></p>
+				</div>
+
+				<div class="field-group">
+					<label for="nickname">닉네임</label>
+					<input
+						type="text"
+						id="nickname"
+						name="nickname"
+						autocomplete="nickname"
+						placeholder="2자 이상 입력"
+						minlength="2"
+						maxlength="50"
+						required>
+					<p class="field-error" id="nicknameError"></p>
+				</div>
+
+				<div class="field-group">
+					<label for="password">비밀번호</label>
+					<div class="password-field">
+						<input
+							type="password"
+							id="password"
+							name="password"
+							autocomplete="new-password"
+							placeholder="영문과 숫자 포함 8자 이상"
+							minlength="8"
+							maxlength="64"
+							required>
+						<button type="button" class="text-button" id="togglePassword" aria-label="비밀번호 표시">보기</button>
+					</div>
+					<p class="field-hint">영문과 숫자를 포함해 8자 이상 입력해주세요.</p>
+					<p class="field-error" id="passwordError"></p>
+				</div>
+
+				<div class="field-group">
+					<label for="passwordConfirm">비밀번호 확인</label>
+					<div class="password-field">
+						<input
+							type="password"
+							id="passwordConfirm"
+							name="passwordConfirm"
+							autocomplete="new-password"
+							placeholder="비밀번호를 한 번 더 입력"
+							required>
+						<button type="button" class="text-button" id="togglePasswordConfirm" aria-label="비밀번호 확인 표시">보기</button>
+					</div>
+					<p class="field-error" id="passwordConfirmError"></p>
+				</div>
+
+				<button type="submit" class="primary-button" id="signupButton">회원가입</button>
+			</form>
+
+			<p class="auth-switch">
+				이미 계정이 있나요?
+				<a href="/login">로그인</a>
+			</p>
+		</div>
+	</section>
+</main>
+<script th:src="@{/js/signup.js}"></script>
+</body>
+</html>
