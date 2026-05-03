@@ -58,16 +58,12 @@ public class AlioRecruitmentClient {
 		addQueryParam(builder, "pbancBgngYmd", request.pbancBgngYmd());
 		addQueryParam(builder, "pbancEndYmd", request.pbancEndYmd());
 		addQueryParam(builder, "pblntInstCd", request.pblntInstCd());
+		addQueryParam(builder, "recrutPbancTtl", recruitmentTitleKeyword);
 		addQueryParam(builder, "recrutSe", request.recrutSe());
 		addQueryParam(builder, "replmprYn", request.replmprYn());
 		addQueryParam(builder, "workRgnLst", request.workRgnLst());
 
-		String uri = builder.build().toUriString();
-		if (StringUtils.hasText(recruitmentTitleKeyword)) {
-			uri = uri + "&recrutPbancTl=" + toRawTitleKeywordQueryValue(recruitmentTitleKeyword);
-		}
-
-		return URI.create(uri);
+		return builder.build().toUri();
 	}
 
 	private String resolveResultType(AlioRecruitmentListRequest request) {
@@ -78,10 +74,6 @@ public class AlioRecruitmentClient {
 		if (StringUtils.hasText(value)) {
 			builder.queryParam(name, value);
 		}
-	}
-
-	private String toRawTitleKeywordQueryValue(String value) {
-		return value.trim().replace(" ", "+");
 	}
 
 	private void validateConfiguration() {
