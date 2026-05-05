@@ -13,9 +13,9 @@ function launchConfetti() {
 		const duration = Math.floor(Math.random() * 900) + 2800;
 		const fromLeft = index % 2 === 0;
 		const direction = fromLeft ? 1 : -1;
-		const distanceX = (Math.random() * 0.42 + 0.2) * viewportWidth;
-		const peak = (Math.random() * 0.24 + 0.48) * viewportHeight;
-		const fall = (Math.random() * 0.22 + 0.34) * viewportHeight;
+		const distanceX = (Math.random() * 0.38 + 0.18) * viewportWidth;
+		const fall = (Math.random() * 0.34 + 0.82) * viewportHeight;
+		const driftY = (Math.random() * 0.08 + 0.04) * viewportHeight;
 		const spin = Math.floor(Math.random() * 540) + 360;
 		const keyframes = [];
 
@@ -28,7 +28,7 @@ function launchConfetti() {
 		for (let step = 0; step <= 20; step += 1) {
 			const progress = step / 20;
 			const x = direction * distanceX * progress;
-			const y = (-peak * Math.sin(Math.PI * progress)) + (fall * progress * progress);
+			const y = (fall * progress * progress) + (driftY * progress);
 			const opacity = progress < 0.08 ? progress / 0.08 : Math.max(0, 1 - ((progress - 0.82) / 0.18));
 
 			keyframes.push({
