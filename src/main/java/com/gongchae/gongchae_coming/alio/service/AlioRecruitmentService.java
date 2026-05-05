@@ -120,6 +120,7 @@ public class AlioRecruitmentService {
 		}
 
 		ObjectNode debugNode = responseObject.putObject("_debug");
+		debugNode.put("alioRequestMethod", alioRecruitmentClient.buildRequestMethodForDebug());
 		debugNode.put("alioRequestUri", alioRecruitmentClient.buildRequestUriForDebug(request));
 		debugNode.put("searchKeyword", safeText(request.searchKeyword()));
 		debugNode.put("recrutPbancTtl", safeText(request.resolvedRecruitmentTitleKeyword()));

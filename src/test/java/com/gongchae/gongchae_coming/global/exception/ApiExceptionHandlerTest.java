@@ -17,6 +17,7 @@ class ApiExceptionHandlerTest {
 			null,
 			HttpStatusCode.valueOf(500),
 			"{\"resultCode\":\"30\"}",
+			"GET",
 			"https://opendata.alio.go.kr/new/v1/recruit/list.do?recrutPbancTtl=abc"
 		);
 
@@ -27,6 +28,7 @@ class ApiExceptionHandlerTest {
 		assertThat(problemDetail.getProperties())
 			.containsEntry("alioStatus", 500)
 			.containsEntry("alioResponseBody", "{\"resultCode\":\"30\"}")
+			.containsEntry("alioRequestMethod", "GET")
 			.containsEntry("alioRequestUri", "https://opendata.alio.go.kr/new/v1/recruit/list.do?recrutPbancTtl=abc");
 	}
 }

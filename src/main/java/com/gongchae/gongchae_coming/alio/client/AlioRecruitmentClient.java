@@ -17,6 +17,8 @@ import java.net.URI;
 @RequiredArgsConstructor
 public class AlioRecruitmentClient {
 
+	private static final String REQUEST_METHOD = "GET";
+
 	private final RestClient restClient;
 	private final AlioApiProperties properties;
 
@@ -25,7 +27,7 @@ public class AlioRecruitmentClient {
 		URI uri = buildUri(request);
 
 		try {
-			return restClient.post()
+			return restClient.get()
 				.uri(uri)
 				.retrieve()
 				.body(JsonNode.class);
@@ -39,12 +41,15 @@ public class AlioRecruitmentClient {
 		return buildUri(request).toString();
 	}
 
+	public String buildRequestMethodForDebug() {
+		return REQUEST_METHOD;
+	}
+
 	private URI buildUri(AlioRecruitmentListRequest request) {
 		String recruitmentTitleKeyword = request.resolvedRecruitmentTitleKeyword();
 		UriComponentsBuilder builder = UriComponentsBuilder
 			.fromUriString(properties.baseUrl())
 			.path(properties.recruitListPath())
-			.queryParam("serviceKey", properties.serviceKey())
 			.queryParam("resultType", resolveResultType(request))
 			.queryParam("pageNo", request.resolvedPageNo())
 			.queryParam("numOfRows", request.resolvedNumOfRows());
@@ -63,7 +68,8 @@ public class AlioRecruitmentClient {
 		addQueryParam(builder, "replmprYn", request.replmprYn());
 		addQueryParam(builder, "workRgnLst", request.workRgnLst());
 
-		return builder.build().toUri();
+		String uri = builder.build().toUri().toString();
+		return URI.create(uri + "&serviceKey=" + properties.serviceKey());
 	}
 
 	private String resolveResultType(AlioRecruitmentListRequest request) {
@@ -92,6 +98,7 @@ public class AlioRecruitmentClient {
 
 		if (exception instanceof RestClientResponseException responseException) {
 			message.append(" (status: ").append(responseException.getStatusCode()).append(")");
+			message.append(". Request method: ").append(REQUEST_METHOD);
 			message.append(". Request URI: ").append(requestUriText);
 
 			String responseBody = responseException.getResponseBodyAsString();
@@ -104,16 +111,18 @@ public class AlioRecruitmentClient {
 				exception,
 				responseException.getStatusCode(),
 				responseBody,
+				REQUEST_METHOD,
 				requestUriText
 			);
 		}
 
+		message.append(". Request method: ").append(REQUEST_METHOD);
 		message.append(". Request URI: ").append(requestUriText);
 
 		if (StringUtils.hasText(exception.getMessage())) {
 			message.append(". Cause: ").append(exception.getMessage());
 		}
 
-		return new AlioApiException(message.toString(), exception, null, null, requestUriText);
+		return new AlioApiException(message.toString(), exception, null, null, REQUEST_METHOD, requestUriText);
 	}
 }

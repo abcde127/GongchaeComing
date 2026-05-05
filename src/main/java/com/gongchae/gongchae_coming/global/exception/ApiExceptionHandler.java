@@ -23,6 +23,9 @@ public class ApiExceptionHandler {
 		if (exception.getAlioStatusCode() != null) {
 			problemDetail.setProperty("alioStatus", exception.getAlioStatusCode().value());
 		}
+		if (StringUtils.hasText(exception.getAlioRequestMethod())) {
+			problemDetail.setProperty("alioRequestMethod", exception.getAlioRequestMethod());
+		}
 		if (StringUtils.hasText(exception.getAlioRequestUri())) {
 			problemDetail.setProperty("alioRequestUri", exception.getAlioRequestUri());
 		}
