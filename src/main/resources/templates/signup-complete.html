@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>가입 완료 | Gongchae Coming</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
+	<link rel="stylesheet" th:href="@{/css/auth.css}">
+</head>
+<body>
+<div class="confetti-layer" id="confettiLayer" aria-hidden="true"></div>
+<main class="auth-page">
+	<section class="auth-visual signup-visual" aria-label="서비스 소개">
+		<div class="brand-mark">G</div>
+		<div class="visual-copy">
+			<p class="eyebrow">Gongchae Coming</p>
+			<h1>가입이 완료되었습니다.</h1>
+			<p>이제 로그인해서 관심 공고와 지원 준비 흐름을 이어갈 수 있어요.</p>
+		</div>
+	</section>
+
+	<section class="auth-panel" aria-labelledby="complete-title">
+		<div class="auth-card">
+			<div class="auth-heading">
+				<p class="eyebrow">Account ready</p>
+				<h2 id="complete-title">가입을 환영합니다.</h2>
+				<p>가입된 계정 정보는 아래와 같습니다.</p>
+			</div>
+
+			<div class="member-summary" aria-label="가입된 회원 정보">
+				<div class="summary-row">
+					<span>이메일</span>
+					<strong id="memberEmail">-</strong>
+				</div>
+				<div class="summary-row">
+					<span>닉네임</span>
+					<strong id="memberNickname">-</strong>
+				</div>
+			</div>
+
+			<a class="primary-button auth-action-link" href="/login">로그인하기</a>
+		</div>
+	</section>
+</main>
+<script th:src="@{/js/signup-complete.js}"></script>
+</body>
+</html>
