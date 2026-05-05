@@ -82,6 +82,22 @@ class MemberServiceTest {
 	}
 
 	@Test
+	void isEmailAvailableReturnsTrueWhenEmailDoesNotExist() {
+		assertThat(memberService.isEmailAvailable("new@example.com")).isTrue();
+	}
+
+	@Test
+	void isEmailAvailableReturnsFalseWhenEmailExists() {
+		memberService.signup(new MemberSignupRequest(
+			"user@example.com",
+			"gongchae",
+			"password1"
+		));
+
+		assertThat(memberService.isEmailAvailable("user@example.com")).isFalse();
+	}
+
+	@Test
 	void findIdReturnsMemberIdByEmail() {
 		MemberSignupResponse signupResponse = memberService.signup(new MemberSignupRequest(
 			"user@example.com",

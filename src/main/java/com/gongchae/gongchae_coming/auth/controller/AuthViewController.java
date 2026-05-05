@@ -10,4 +10,14 @@ public class AuthViewController {
 	public String login() {
 		return "login";
 	}
+
+	@GetMapping("/signup")
+	public String signup() {
+		return "signup";
+	}
+
+	@GetMapping("/signup-complete")
+	public String signupComplete() {
+		return "signup-complete";
+	}
 }
