@@ -6,14 +6,15 @@ public class AlioApiException extends RuntimeException {
 
 	private final HttpStatusCode alioStatusCode;
 	private final String alioResponseBody;
+	private final String alioRequestMethod;
 	private final String alioRequestUri;
 
 	public AlioApiException(String message) {
-		this(message, null, null, null, null);
+		this(message, null, null, null, null, null);
 	}
 
 	public AlioApiException(String message, Throwable cause) {
-		this(message, cause, null, null, null);
+		this(message, cause, null, null, null, null);
 	}
 
 	public AlioApiException(
@@ -21,11 +22,13 @@ public class AlioApiException extends RuntimeException {
 		Throwable cause,
 		HttpStatusCode alioStatusCode,
 		String alioResponseBody,
+		String alioRequestMethod,
 		String alioRequestUri
 	) {
 		super(message, cause);
 		this.alioStatusCode = alioStatusCode;
 		this.alioResponseBody = alioResponseBody;
+		this.alioRequestMethod = alioRequestMethod;
 		this.alioRequestUri = alioRequestUri;
 	}
 
@@ -35,6 +38,10 @@ public class AlioApiException extends RuntimeException {
 
 	public String getAlioResponseBody() {
 		return alioResponseBody;
+	}
+
+	public String getAlioRequestMethod() {
+		return alioRequestMethod;
 	}
 
 	public String getAlioRequestUri() {

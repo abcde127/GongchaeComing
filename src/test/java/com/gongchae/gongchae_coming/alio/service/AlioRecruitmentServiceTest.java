@@ -79,11 +79,13 @@ class AlioRecruitmentServiceTest {
 		errorResponse.put("resultMsgEng", "SERVER_UNKNOWN_ERROR");
 
 		when(client.fetchRecruitments(any(AlioRecruitmentListRequest.class))).thenReturn(errorResponse);
+		when(client.buildRequestMethodForDebug()).thenReturn("GET");
 		when(client.buildRequestUriForDebug(any(AlioRecruitmentListRequest.class)))
 			.thenReturn("https://opendata.alio.go.kr/new/v1/recruit/list.do?recrutPbancTtl=nhis");
 
 		var result = service.getRecruitments(request("REGISTRATION_DATE", null, "nhis"));
 
+		assertThat(result.at("/_debug/alioRequestMethod").asText()).isEqualTo("GET");
 		assertThat(result.at("/_debug/alioRequestUri").asText())
 			.isEqualTo("https://opendata.alio.go.kr/new/v1/recruit/list.do?recrutPbancTtl=nhis");
 		assertThat(result.at("/_debug/searchKeyword").asText()).isEqualTo("nhis");
