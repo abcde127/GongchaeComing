@@ -344,6 +344,17 @@ function summarizeMetaValues(values) {
 	return `<span class="meta-primary">${filteredValues[0]}</span>${createMetaCountBadge(filteredValues)}`;
 }
 
+function getHireTypeLabel(item) {
+	const hireTypeValue = getValue(item, "hireTypeNmLst", "hireTypeNm", "hireType");
+	const matchedLabels = selectOptions.hireTypeLst
+		.map((hireType) => hireType.label)
+		.filter((label) => hireTypeValue.includes(label));
+
+	return matchedLabels.length
+		? summarizeMetaValues(matchedLabels)
+		: summarizeListValue(hireTypeValue);
+}
+
 function getRecruitmentCategoryLabel(item) {
 	const codes = getRecruitmentCategoryCodes(item);
 	const name = getValue(item, "recrutSeNm");
@@ -447,7 +458,7 @@ function createRecruitmentCard(item) {
 	const institution = getValue(item, "pblntInstNm", "instNm");
 	const companyDivision = getValue(item, "instClsfNm", "instClsf", "instSeNm", "instSe", "orgSeNm", "orgSe");
 	const companyType = getValue(item, "instTypeNm", "instType", "instKndNm", "instKnd", "pblntInstTypeNm", "pblntInstType");
-	const hireType = getValue(item, "hireTypeNmLst", "hireTypeNm", "hireType");
+	const hireType = getHireTypeLabel(item);
 	const recruitmentCategory = getRecruitmentCategoryLabel(item);
 	const region = summarizeListValue(getValue(item, "workRgnNmLst", "workRgnNm", "workRegionNm"));
 	const ncs = summarizeListValue(getValue(item, "ncsCdNmLst", "ncsNmLst", "ncsNm", "ncsName"));
