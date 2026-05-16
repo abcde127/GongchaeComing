@@ -61,4 +61,52 @@ public record AlioRecruitmentListRequest(
 	public String resolvedSortDirection() {
 		return StringUtils.hasText(sortDirection) ? sortDirection.trim() : "DESC";
 	}
+
+	public AlioRecruitmentListRequest withPage(int pageNo, int numOfRows) {
+		return new AlioRecruitmentListRequest(
+			acbgCondLst,
+			hireTypeLst,
+			instClsf,
+			instType,
+			ncsCdLst,
+			numOfRows,
+			ongoingYn,
+			pageNo,
+			pbancBgngYmd,
+			pbancEndYmd,
+			pblntInstCd,
+			searchKeyword,
+			recrutPbancTtl,
+			recrutSe,
+			replmprYn,
+			resultType,
+			sortBy,
+			sortDirection,
+			workRgnLst
+		);
+	}
+
+	public AlioRecruitmentListRequest withoutSearchAndFilters() {
+		return new AlioRecruitmentListRequest(
+			null,
+			null,
+			null,
+			null,
+			null,
+			numOfRows,
+			null,
+			pageNo,
+			null,
+			null,
+			null,
+			null,
+			null,
+			null,
+			null,
+			resultType,
+			sortBy,
+			sortDirection,
+			null
+		);
+	}
 }

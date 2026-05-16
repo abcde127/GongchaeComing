@@ -4,7 +4,12 @@ const keywordSearchButton = document.querySelector("#keywordSearchButton");
 const clearKeywordButton = document.querySelector("#clearKeywordButton");
 const keywordSearchControl = document.querySelector(".list-filter-search-control");
 const loadingState = document.querySelector("#loadingState");
+const loadingProgressMessage = document.querySelector("#loadingProgressMessage");
+const loadingProgressBar = document.querySelector("#loadingProgressBar");
+const loadingProgressDetail = document.querySelector("#loadingProgressDetail");
 const emptyState = document.querySelector("#emptyState");
+const dataRefreshText = document.querySelector("#dataRefreshText");
+const dataRefreshButton = document.querySelector("#dataRefreshButton");
 const listFilterRow = document.querySelector("#listFilterRow");
 const listStatusFilter = document.querySelector("#listStatusFilter");
 const listCompanyFilter = document.querySelector("#listCompanyFilter");
@@ -24,6 +29,8 @@ let currentPage = 1;
 let currentItems = [];
 let currentSummaryContext = { keyword: "", totalCount: 0 };
 let isClearingKeyword = false;
+let syncProgressTimer = null;
+let shouldPollInitialSyncProgress = true;
 const MIN_LOADING_MS = 350;
 
 const selectOptions = {
@@ -164,6 +171,82 @@ function setLoading(isLoading) {
 	resultStage.classList.toggle("is-loading", isLoading);
 	keywordSearchButton.disabled = isLoading;
 	clearKeywordButton.disabled = isLoading;
+	dataRefreshButton.disabled = isLoading;
+	if (isLoading) {
+		resetLoadingProgress();
+	}
+}
+
+function updateDataRefreshText(lastFetchedAt) {
+	if (!lastFetchedAt) {
+		dataRefreshText.textContent = "최종 갱신: 정보 없음";
+		return;
+	}
+
+	const fetchedAt = new Date(lastFetchedAt);
+	if (Number.isNaN(fetchedAt.getTime())) {
+		dataRefreshText.textContent = `최종 갱신: ${lastFetchedAt}`;
+		return;
+	}
+
+	dataRefreshText.textContent = `최종 갱신: ${new Intl.DateTimeFormat("ko-KR", {
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+		hour: "2-digit",
+		minute: "2-digit"
+	}).format(fetchedAt)}`;
+}
+
+function resetLoadingProgress() {
+	loadingProgressMessage.textContent = "채용공고를 불러오고 있습니다.";
+	loadingProgressBar.style.width = "0%";
+	loadingProgressDetail.textContent = "";
+}
+
+function updateLoadingProgress(progress) {
+	const percentage = Number(progress?.percentage ?? 0);
+	const currentPage = Number(progress?.currentPage ?? 0);
+	const totalPages = Number(progress?.totalPages ?? 0);
+	const fetchedCount = Number(progress?.fetchedCount ?? 0);
+	const totalCount = Number(progress?.totalCount ?? 0);
+
+	if (!totalPages) {
+		resetLoadingProgress();
+		return;
+	}
+
+	loadingProgressBar.style.width = `${Math.max(0, Math.min(100, percentage))}%`;
+	loadingProgressMessage.textContent = `전체 데이터 갱신 중 ${percentage}%`;
+	loadingProgressDetail.textContent = totalCount
+		? `${currentPage} / ${totalPages}페이지 · ${fetchedCount.toLocaleString("ko-KR")} / ${totalCount.toLocaleString("ko-KR")}건`
+		: `${currentPage} / ${totalPages}페이지`;
+}
+
+function startSyncProgressPolling() {
+	stopSyncProgressPolling();
+	syncProgressTimer = window.setInterval(async () => {
+		try {
+			const response = await fetch("/api/recruitments/alio/sync-progress", {
+				headers: {
+					Accept: "application/json"
+				}
+			});
+			if (!response.ok) {
+				return;
+			}
+			updateLoadingProgress(await response.json());
+		} catch (error) {
+			// The main list request owns visible error handling.
+		}
+	}, 250);
+}
+
+function stopSyncProgressPolling() {
+	if (syncProgressTimer) {
+		window.clearInterval(syncProgressTimer);
+		syncProgressTimer = null;
+	}
 }
 
 function setStatus(message, type = "error") {
@@ -619,7 +702,7 @@ function renderPagination(totalCount, pageSize, page) {
 	pagination.hidden = false;
 }
 
-function buildQueryString(page = currentPage) {
+function buildQueryString(page = currentPage, refresh = false) {
 	const formData = new FormData(form);
 	const params = new URLSearchParams();
 
@@ -632,18 +715,25 @@ function buildQueryString(page = currentPage) {
 
 	params.set("pageNo", String(page));
 	params.set("numOfRows", String(PAGE_SIZE));
+	if (refresh) {
+		params.set("refresh", "true");
+	}
 	return params.toString();
 }
 
-async function loadRecruitments(page = currentPage) {
+async function loadRecruitments(page = currentPage, refresh = false) {
 	currentPage = page;
 	const loadingStartedAt = Date.now();
 	setLoading(true);
+	const shouldPollProgress = shouldPollInitialSyncProgress || refresh;
+	if (shouldPollProgress) {
+		startSyncProgressPolling();
+	}
 	setStatus("");
 	setDebug(null);
 
 	try {
-		const query = buildQueryString(page);
+		const query = buildQueryString(page, refresh);
 		const response = await fetch(`/api/recruitments/alio?${query}`, {
 			headers: {
 				Accept: "application/json"
@@ -671,6 +761,7 @@ async function loadRecruitments(page = currentPage) {
 		const keyword = searchKeyword.value.trim();
 		currentItems = items;
 		currentSummaryContext = { keyword, totalCount };
+		updateDataRefreshText(payload?.lastFetchedAt ?? payload?.response?.body?.lastFetchedAt);
 		syncCompanyFilterOptions(items);
 		const filteredItems = getFilteredItems(items);
 
@@ -686,6 +777,10 @@ async function loadRecruitments(page = currentPage) {
 		const elapsed = Date.now() - loadingStartedAt;
 		if (elapsed < MIN_LOADING_MS) {
 			await new Promise((resolve) => window.setTimeout(resolve, MIN_LOADING_MS - elapsed));
+		}
+		if (shouldPollProgress) {
+			stopSyncProgressPolling();
+			shouldPollInitialSyncProgress = false;
 		}
 		setLoading(false);
 	}
@@ -730,6 +825,10 @@ keywordSearchButton.addEventListener("click", () => {
 	}
 
 	loadRecruitments(1);
+});
+
+dataRefreshButton.addEventListener("click", () => {
+	loadRecruitments(1, true);
 });
 
 clearKeywordButton.addEventListener("click", () => {
