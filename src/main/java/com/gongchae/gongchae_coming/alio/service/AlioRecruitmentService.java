@@ -1,24 +1,36 @@
 package com.gongchae.gongchae_coming.alio.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.gongchae.gongchae_coming.alio.client.AlioRecruitmentClient;
+import com.gongchae.gongchae_coming.alio.domain.AlioRecruitment;
 import com.gongchae.gongchae_coming.alio.dto.AlioFilterOptionResponse;
 import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentListRequest;
+import com.gongchae.gongchae_coming.alio.repository.AlioRecruitmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class AlioRecruitmentService {
+
+	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+	private static final int SYNC_PAGE_SIZE = 1000;
 
 	private static final List<AlioFilterOptionResponse> NCS_FILTER_OPTIONS = List.of(
 		new AlioFilterOptionResponse("R600001", "사업관리"),
@@ -105,13 +117,147 @@ public class AlioRecruitmentService {
 	);
 
 	private final AlioRecruitmentClient alioRecruitmentClient;
+	private final AlioRecruitmentRepository alioRecruitmentRepository;
+	private final AlioRecruitmentSyncProgressStore syncProgressStore;
 
+	@Transactional
 	public JsonNode getRecruitments(AlioRecruitmentListRequest request) {
-		JsonNode response = alioRecruitmentClient.fetchRecruitments(request);
-		attachDebugInfoWhenAlioReturnsError(request, response);
-		filterRecruitmentItems(response, request.searchKeyword());
+		return getRecruitments(request, false);
+	}
+
+	@Transactional
+	public JsonNode getRecruitments(AlioRecruitmentListRequest request, boolean refresh) {
+		return getRecruitments(request, refresh, null);
+	}
+
+	@Transactional
+	public JsonNode getRecruitments(AlioRecruitmentListRequest request, boolean refresh, String progressKey) {
+		JsonNode syncErrorResponse = refresh ? synchronizeRecruitments(request, progressKey) : null;
+		if (syncErrorResponse != null) {
+			return syncErrorResponse;
+		}
+
+		ObjectNode response = buildResponseFromCachedRecruitments(request);
+		filterRecruitmentItems(response, request);
 		sortRecruitmentItems(response, request.resolvedSortBy(), request.resolvedSortDirection());
+		pageRecruitmentItems(response, request.resolvedPageNo(), request.resolvedNumOfRows());
 		return response;
+	}
+
+	private JsonNode synchronizeRecruitments(AlioRecruitmentListRequest request, String progressKey) {
+		LocalDateTime now = LocalDateTime.now();
+		AlioRecruitmentListRequest syncRequest = request.withoutSearchAndFilters();
+		List<JsonNode> fetchedItems = new ArrayList<>();
+		int pageNo = 1;
+		Integer totalCount = null;
+		int totalPages = 0;
+		if (StringUtils.hasText(progressKey)) {
+			syncProgressStore.start(progressKey);
+		}
+
+		while (totalCount == null || fetchedItems.size() < totalCount) {
+			AlioRecruitmentListRequest pageRequest = syncRequest.withPage(pageNo, SYNC_PAGE_SIZE);
+			JsonNode response = alioRecruitmentClient.fetchRecruitments(pageRequest);
+			if (isAlioErrorResponse(response)) {
+				attachDebugInfoWhenAlioReturnsError(pageRequest, response);
+				return response;
+			}
+
+			ArrayNode items = findRecruitmentItems(response);
+			if (items == null || items.isEmpty()) {
+				break;
+			}
+
+			totalCount = extractTotalCount(response);
+			items.forEach(fetchedItems::add);
+			totalPages = totalCount == null
+				? Math.max(totalPages, pageNo + (items.size() == SYNC_PAGE_SIZE ? 1 : 0))
+				: Math.max(1, (int) Math.ceil((double) totalCount / SYNC_PAGE_SIZE));
+			if (StringUtils.hasText(progressKey)) {
+				syncProgressStore.update(
+					progressKey,
+					pageNo,
+					totalPages,
+					fetchedItems.size(),
+					totalCount == null ? 0 : totalCount
+				);
+			}
+			if (totalCount == null && items.size() < SYNC_PAGE_SIZE) {
+				break;
+			}
+			pageNo++;
+		}
+
+		upsertRecruitments(fetchedItems, now);
+		if (StringUtils.hasText(progressKey)) {
+			int completedPages = totalPages == 0 ? 0 : Math.min(pageNo, totalPages);
+			syncProgressStore.complete(
+				progressKey,
+				completedPages,
+				totalPages,
+				fetchedItems.size(),
+				totalCount == null ? fetchedItems.size() : totalCount
+			);
+		}
+		return null;
+	}
+
+	private void upsertRecruitments(List<JsonNode> items, LocalDateTime fetchedAt) {
+		Set<String> sourceIds = items.stream()
+			.map(AlioRecruitment::resolveSourceRecruitmentId)
+			.collect(Collectors.toSet());
+		if (sourceIds.isEmpty()) {
+			return;
+		}
+		Map<String, AlioRecruitment> existingRecruitments = alioRecruitmentRepository
+			.findBySourceRecruitmentIdIn(sourceIds)
+			.stream()
+			.collect(Collectors.toMap(AlioRecruitment::getSourceRecruitmentId, recruitment -> recruitment));
+
+		List<AlioRecruitment> recruitments = items.stream()
+			.map(item -> {
+				String sourceId = AlioRecruitment.resolveSourceRecruitmentId(item);
+				AlioRecruitment recruitment = existingRecruitments.get(sourceId);
+				if (recruitment == null) {
+					return AlioRecruitment.from(item, fetchedAt);
+				}
+				recruitment.updateFrom(item, fetchedAt);
+				return recruitment;
+			})
+			.toList();
+
+		alioRecruitmentRepository.saveAll(recruitments);
+	}
+
+	private ObjectNode buildResponseFromCachedRecruitments(AlioRecruitmentListRequest request) {
+		ObjectNode root = OBJECT_MAPPER.createObjectNode();
+		root.put("resultCode", "00");
+		root.put("resultMsg", "NORMAL SERVICE");
+		ObjectNode response = root.putObject("response");
+		ObjectNode body = response.putObject("body");
+		body.put("pageNo", request.resolvedPageNo());
+		body.put("numOfRows", request.resolvedNumOfRows());
+		ObjectNode items = body.putObject("items");
+		ArrayNode itemArray = items.putArray("item");
+		LocalDateTime lastFetchedAt = null;
+		List<AlioRecruitment> recruitments = alioRecruitmentRepository.findAll();
+
+		recruitments.forEach(recruitment -> {
+			ObjectNode item = OBJECT_MAPPER.createObjectNode();
+			recruitment.writeTo(item);
+			itemArray.add(item);
+		});
+		for (AlioRecruitment recruitment : recruitments) {
+			if (lastFetchedAt == null || recruitment.getFetchedAt().isAfter(lastFetchedAt)) {
+				lastFetchedAt = recruitment.getFetchedAt();
+			}
+		}
+		if (lastFetchedAt != null) {
+			root.put("lastFetchedAt", lastFetchedAt.toString());
+			body.put("lastFetchedAt", lastFetchedAt.toString());
+		}
+		updateTotalCount(root, itemArray.size());
+		return root;
 	}
 
 	private void attachDebugInfoWhenAlioReturnsError(AlioRecruitmentListRequest request, JsonNode response) {
@@ -129,36 +275,24 @@ public class AlioRecruitmentService {
 
 	private boolean isAlioErrorResponse(JsonNode response) {
 		String resultCode = response.path("resultCode").asText(null);
-		return StringUtils.hasText(resultCode) && !"00".equals(resultCode);
+		return StringUtils.hasText(resultCode) && !"00".equals(resultCode) && !"200".equals(resultCode);
 	}
 
 	private String safeText(String value) {
 		return value == null ? "" : value;
 	}
 
-	private void filterRecruitmentItems(JsonNode response, String searchKeyword) {
-		if (!StringUtils.hasText(searchKeyword)) {
-			return;
-		}
-
+	private void filterRecruitmentItems(JsonNode response, AlioRecruitmentListRequest request) {
 		ArrayNode items = findRecruitmentItems(response);
 		if (items == null) {
 			return;
 		}
 
-		String normalizedKeyword = normalizeKeyword(searchKeyword);
+		List<Predicate<JsonNode>> predicates = buildPredicates(request);
 		List<JsonNode> filteredItems = new ArrayList<>();
 
 		items.forEach(item -> {
-			String title = normalizeKeyword(item.path("recrutPbancTtl").asText(""));
-			String institution = normalizeKeyword(
-				firstNonBlank(
-					item.path("pblntInstNm").asText(""),
-					item.path("instNm").asText("")
-				)
-			);
-
-			if (title.contains(normalizedKeyword) || institution.contains(normalizedKeyword)) {
+			if (predicates.stream().allMatch(predicate -> predicate.test(item))) {
 				filteredItems.add(item);
 			}
 		});
@@ -166,6 +300,95 @@ public class AlioRecruitmentService {
 		items.removeAll();
 		items.addAll(filteredItems);
 		updateTotalCount(response, filteredItems.size());
+	}
+
+	private List<Predicate<JsonNode>> buildPredicates(AlioRecruitmentListRequest request) {
+		List<Predicate<JsonNode>> predicates = new ArrayList<>();
+		String searchKeyword = request.resolvedRecruitmentTitleKeyword();
+
+		if (StringUtils.hasText(searchKeyword)) {
+			String normalizedKeyword = normalizeKeyword(searchKeyword);
+			predicates.add(item -> {
+				String title = normalizeKeyword(item.path("recrutPbancTtl").asText(""));
+				String institution = normalizeKeyword(firstNonBlank(
+					item.path("pblntInstNm").asText(""),
+					item.path("instNm").asText("")
+				));
+				return title.contains(normalizedKeyword) || institution.contains(normalizedKeyword);
+			});
+		}
+
+		addContainsAnyPredicate(predicates, request.hireTypeLst(), "hireTypeLst", "hireTypeNmLst");
+		addContainsAnyPredicate(predicates, request.instType(), "instType", "instTypeNm");
+		addContainsAnyPredicate(predicates, request.ncsCdLst(), "ncsCdLst", "ncsCdNmLst");
+		addContainsAnyPredicate(predicates, request.workRgnLst(), "workRgnLst", "workRgnNmLst");
+		addContainsAnyPredicate(predicates, request.recrutSe(), "recrutSe", "recrutSeNm");
+		addContainsAnyPredicate(predicates, request.acbgCondLst(), "acbgCondLst", "acbgCondNmLst");
+
+		if (StringUtils.hasText(request.instClsf())) {
+			predicates.add(item -> item.path("instClsf").asText("").contains(request.instClsf()));
+		}
+		if (StringUtils.hasText(request.pblntInstCd())) {
+			predicates.add(item -> item.path("pblntInstCd").asText("").contains(request.pblntInstCd()));
+		}
+		if (StringUtils.hasText(request.replmprYn())) {
+			predicates.add(item -> request.replmprYn().equals(item.path("replmprYn").asText("")));
+		}
+		if ("Y".equals(request.ongoingYn())) {
+			predicates.add(item -> "Y".equals(item.path("ongoingYn").asText(null)) || isOngoingRecruitment(item));
+		} else if ("N".equals(request.ongoingYn())) {
+			predicates.add(item -> "N".equals(item.path("ongoingYn").asText(null)) || !isOngoingRecruitment(item));
+		}
+		if (StringUtils.hasText(request.pbancBgngYmd())) {
+			LocalDate startDate = LocalDate.parse(request.pbancBgngYmd());
+			predicates.add(item -> {
+				LocalDate itemStartDate = parseDate(item, "pbancBgngYmd", "pbancRgtrYmd");
+				return itemStartDate != null && !itemStartDate.isBefore(startDate);
+			});
+		}
+		if (StringUtils.hasText(request.pbancEndYmd())) {
+			LocalDate endDate = LocalDate.parse(request.pbancEndYmd());
+			predicates.add(item -> {
+				LocalDate itemEndDate = parseDate(item, "pbancEndYmd", "aplyEndYmd");
+				return itemEndDate != null && !itemEndDate.isAfter(endDate);
+			});
+		}
+
+		return predicates;
+	}
+
+	private void addContainsAnyPredicate(
+		List<Predicate<JsonNode>> predicates,
+		String csvValues,
+		String... fieldNames
+	) {
+		if (!StringUtils.hasText(csvValues)) {
+			return;
+		}
+
+		List<String> values = List.of(csvValues.split(","))
+			.stream()
+			.map(String::trim)
+			.filter(StringUtils::hasText)
+			.toList();
+
+		predicates.add(item -> values.stream().anyMatch(value -> {
+			for (String fieldName : fieldNames) {
+				if (item.path(fieldName).asText("").contains(value)) {
+					return true;
+				}
+			}
+			return false;
+		}));
+	}
+
+	private boolean isOngoingRecruitment(JsonNode item) {
+		LocalDate today = LocalDate.now();
+		LocalDate startDate = parseDate(item, "pbancBgngYmd", "pbancRgtrYmd");
+		LocalDate endDate = parseDate(item, "pbancEndYmd", "aplyEndYmd");
+		return startDate != null && endDate != null
+			&& !today.isBefore(startDate)
+			&& !today.isAfter(endDate);
 	}
 
 	private String normalizeKeyword(String value) {
@@ -192,6 +415,19 @@ public class AlioRecruitmentService {
 		}
 	}
 
+	private Integer extractTotalCount(JsonNode response) {
+		if (response.hasNonNull("totalCount")) {
+			return response.path("totalCount").asInt();
+		}
+
+		JsonNode bodyNode = response.path("response").path("body");
+		if (bodyNode.hasNonNull("totalCount")) {
+			return bodyNode.path("totalCount").asInt();
+		}
+
+		return null;
+	}
+
 	private void sortRecruitmentItems(JsonNode response, String sortBy, String sortDirection) {
 		ArrayNode items = findRecruitmentItems(response);
 		if (items == null || items.size() < 2) {
@@ -216,6 +452,11 @@ public class AlioRecruitmentService {
 	}
 
 	private ArrayNode findRecruitmentItems(JsonNode response) {
+		JsonNode resultNode = response.path("result");
+		if (resultNode.isArray()) {
+			return (ArrayNode) resultNode;
+		}
+
 		JsonNode responseNode = response.path("response");
 		JsonNode bodyNode = responseNode.path("body");
 		JsonNode itemsNode = bodyNode.path("items");
@@ -235,6 +476,21 @@ public class AlioRecruitmentService {
 		}
 
 		return null;
+	}
+
+	private void pageRecruitmentItems(JsonNode response, int pageNo, int numOfRows) {
+		ArrayNode items = findRecruitmentItems(response);
+		if (items == null) {
+			return;
+		}
+
+		List<JsonNode> allItems = new ArrayList<>();
+		items.forEach(allItems::add);
+		int fromIndex = Math.min((pageNo - 1) * numOfRows, allItems.size());
+		int toIndex = Math.min(fromIndex + numOfRows, allItems.size());
+
+		items.removeAll();
+		items.addAll(allItems.subList(fromIndex, toIndex));
 	}
 
 	private LocalDate extractSortDate(JsonNode item, String sortBy) {
@@ -263,6 +519,9 @@ public class AlioRecruitmentService {
 			}
 
 			try {
+				if (value.trim().matches("^\\d{8}$")) {
+					return LocalDate.parse(value.trim(), java.time.format.DateTimeFormatter.BASIC_ISO_DATE);
+				}
 				return LocalDate.parse(value.trim());
 			} catch (DateTimeParseException ignored) {
 				// Ignore non-ISO date values and continue with fallback fields.

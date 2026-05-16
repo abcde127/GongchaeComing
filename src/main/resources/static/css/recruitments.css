@@ -360,6 +360,48 @@ select:focus {
 	position: relative;
 }
 
+.data-refresh-row {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-bottom: 10px;
+	color: var(--muted);
+	font-size: 0.82rem;
+	font-weight: 700;
+}
+
+.data-refresh-button {
+	display: inline-grid;
+	place-items: center;
+	width: 32px;
+	height: 32px;
+	border: 1px solid rgba(23, 32, 51, 0.12);
+	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.84);
+	color: var(--accent);
+	cursor: pointer;
+}
+
+.data-refresh-button:hover {
+	background: rgba(217, 242, 238, 0.82);
+}
+
+.data-refresh-button:disabled {
+	opacity: 0.52;
+	cursor: progress;
+}
+
+.data-refresh-button svg {
+	width: 17px;
+	height: 17px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
 .result-stage.is-loading .card-grid,
 .result-stage.is-loading .pagination,
 .result-stage.is-loading .empty-state {
@@ -393,6 +435,29 @@ select:focus {
 .loading-overlay-card p {
 	margin: 0;
 	color: var(--muted);
+	font-weight: 700;
+}
+
+.loading-progress {
+	overflow: hidden;
+	width: min(280px, 62vw);
+	height: 8px;
+	border-radius: 999px;
+	background: rgba(23, 32, 51, 0.1);
+}
+
+.loading-progress-bar {
+	width: 0;
+	height: 100%;
+	border-radius: inherit;
+	background: var(--accent);
+	transition: width 180ms ease;
+}
+
+.loading-progress-detail {
+	min-height: 18px;
+	color: var(--muted);
+	font-size: 0.82rem;
 	font-weight: 700;
 }
 
