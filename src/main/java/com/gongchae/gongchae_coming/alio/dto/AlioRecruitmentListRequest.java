@@ -28,8 +28,8 @@ public record AlioRecruitmentListRequest(
 	String recrutSe,
 	@Pattern(regexp = "^[YN]$", message = "replmprYn must be Y or N") String replmprYn,
 	String resultType,
-	@Pattern(regexp = "^(REGISTRATION_DATE|DEADLINE_DATE)$",
-		message = "sortBy must be REGISTRATION_DATE or DEADLINE_DATE")
+	@Pattern(regexp = "^(RECRUITMENT_SEQUENCE|REGISTRATION_DATE|DEADLINE_DATE)$",
+		message = "sortBy must be RECRUITMENT_SEQUENCE, REGISTRATION_DATE or DEADLINE_DATE")
 	String sortBy,
 	@Pattern(regexp = "^(ASC|DESC)$", message = "sortDirection must be ASC or DESC")
 	String sortDirection,
@@ -55,11 +55,14 @@ public record AlioRecruitmentListRequest(
 	}
 
 	public String resolvedSortBy() {
-		return StringUtils.hasText(sortBy) ? sortBy.trim() : "REGISTRATION_DATE";
+		return StringUtils.hasText(sortBy) ? sortBy.trim() : "RECRUITMENT_SEQUENCE";
 	}
 
 	public String resolvedSortDirection() {
-		return StringUtils.hasText(sortDirection) ? sortDirection.trim() : "DESC";
+		if (StringUtils.hasText(sortDirection)) {
+			return sortDirection.trim();
+		}
+		return "DEADLINE_DATE".equals(resolvedSortBy()) ? "ASC" : "DESC";
 	}
 
 	public AlioRecruitmentListRequest withPage(int pageNo, int numOfRows) {

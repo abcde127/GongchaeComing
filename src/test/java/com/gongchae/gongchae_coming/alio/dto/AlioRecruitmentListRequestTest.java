@@ -28,10 +28,10 @@ class AlioRecruitmentListRequestTest {
 	}
 
 	@Test
-	void resolvedSortByDefaultsToRegistrationDate() {
+	void resolvedSortByDefaultsToRecruitmentSequence() {
 		var request = request("nhis", null, null);
 
-		assertThat(request.resolvedSortBy()).isEqualTo("REGISTRATION_DATE");
+		assertThat(request.resolvedSortBy()).isEqualTo("RECRUITMENT_SEQUENCE");
 	}
 
 	@Test
