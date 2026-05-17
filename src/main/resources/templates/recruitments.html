@@ -45,8 +45,18 @@
 					<span class="result-count-summary" id="resultCountSummary">전체 0개 중 0개</span>
 					<span id="dataRefreshText">최종 갱신: 정보 없음</span>
 					<span class="sync-status-badge" id="syncStatusBadge" hidden></span>
-					<button type="button" class="sync-inline-button" id="syncFailureDetailButton" hidden>실패사유보기</button>
-					<button type="button" class="sync-inline-button" id="syncResumeButton" hidden>이어서 갱신하기</button>
+					<button type="button" class="sync-failure-button" id="syncFailureDetailButton" aria-label="실패 사유 보기" title="실패 사유 보기" hidden>
+						<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+							<path d="M12 9v4"></path>
+							<path d="M12 17h.01"></path>
+							<path d="M10.3 4.3 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 4.3a2 2 0 0 0-3.4 0Z"></path>
+						</svg>
+					</button>
+					<button type="button" class="sync-stop-button" id="syncStopButton" aria-label="갱신 정지" title="갱신 정지" hidden>
+						<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+							<rect x="7" y="7" width="10" height="10" rx="1"></rect>
+						</svg>
+					</button>
 					<button type="button" class="data-refresh-button" id="dataRefreshButton" aria-label="데이터 갱신" title="데이터 갱신">
 						<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
 							<path d="M21 12a9 9 0 0 1-15.5 6.2"></path>

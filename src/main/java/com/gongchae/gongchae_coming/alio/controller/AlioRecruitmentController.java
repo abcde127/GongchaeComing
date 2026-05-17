@@ -41,4 +41,16 @@ public class AlioRecruitmentController {
 		alioRecruitmentService.cancelBackgroundSynchronization();
 		return syncProgressStore.get();
 	}
+
+	@PostMapping("/sync-pause")
+	public AlioRecruitmentSyncProgressResponse pauseSync() {
+		alioRecruitmentService.pauseBackgroundSynchronization();
+		return syncProgressStore.get();
+	}
+
+	@PostMapping("/sync-resume")
+	public AlioRecruitmentSyncProgressResponse resumeSync() {
+		alioRecruitmentService.resumePausedSynchronization();
+		return syncProgressStore.get();
+	}
 }

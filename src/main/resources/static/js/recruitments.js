@@ -8,9 +8,9 @@ const emptyState = document.querySelector("#emptyState");
 const resultCountSummary = document.querySelector("#resultCountSummary");
 const dataRefreshText = document.querySelector("#dataRefreshText");
 const dataRefreshButton = document.querySelector("#dataRefreshButton");
+const syncStopButton = document.querySelector("#syncStopButton");
 const syncStatusBadge = document.querySelector("#syncStatusBadge");
 const syncFailureDetailButton = document.querySelector("#syncFailureDetailButton");
-const syncResumeButton = document.querySelector("#syncResumeButton");
 const syncFailurePanel = document.querySelector("#syncFailurePanel");
 const syncFailureContent = document.querySelector("#syncFailureContent");
 const listFilterRow = document.querySelector("#listFilterRow");
@@ -36,6 +36,8 @@ let isClearingKeyword = false;
 let syncProgressTimer = null;
 let lastSyncStatus = "IDLE";
 let syncCompletionHideTimer = null;
+let refreshButtonStateTimer = null;
+let refreshButtonContentTimer = null;
 const MIN_LOADING_MS = 350;
 const refreshButtonIcon = `
 	<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -45,11 +47,64 @@ const refreshButtonIcon = `
 		<path d="M6 21v-4h4"></path>
 	</svg>
 `;
-const stopButtonIcon = `
+const pauseButtonIcon = `
 	<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-		<rect x="7" y="7" width="10" height="10" rx="1"></rect>
+		<path d="M10 5v14"></path>
+		<path d="M14 5v14"></path>
 	</svg>
 `;
+const completedButtonContent = `
+	<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+		<path d="M20 6 9 17l-5-5"></path>
+	</svg>
+	<span class="data-refresh-label">갱신 완료</span>
+`;
+
+function buildRefreshButtonContent(icon, label, detail = "") {
+	return `
+		<span class="data-refresh-icon">${icon || ""}</span>
+		<span class="data-refresh-label">${label}</span>
+		<span class="data-refresh-detail">${detail}</span>
+	`;
+}
+
+function buildProgressDetail(percentage, currentPage, totalPages) {
+	return `
+		<span class="data-refresh-dynamic">${percentage}%</span>
+		<span> (</span><span class="data-refresh-dynamic">${currentPage}</span><span>/${totalPages})</span>
+	`;
+}
+
+function setRefreshButtonContent(content, viewKey) {
+	const isViewChanged = dataRefreshButton.dataset.view !== viewKey;
+	const isContentChanged = dataRefreshButton.dataset.content !== content;
+	dataRefreshButton.innerHTML = content;
+	dataRefreshButton.dataset.view = viewKey;
+	dataRefreshButton.dataset.content = content;
+	if (!isViewChanged) {
+		if (!isContentChanged) {
+			return;
+		}
+		window.clearTimeout(refreshButtonContentTimer);
+		dataRefreshButton.classList.remove("is-content-changing");
+		void dataRefreshButton.offsetWidth;
+		dataRefreshButton.classList.add("is-content-changing");
+		refreshButtonContentTimer = window.setTimeout(() => {
+			dataRefreshButton.classList.remove("is-content-changing");
+		}, 220);
+		return;
+	}
+
+	window.clearTimeout(refreshButtonStateTimer);
+	window.clearTimeout(refreshButtonContentTimer);
+	dataRefreshButton.classList.remove("is-content-changing");
+	dataRefreshButton.classList.remove("is-state-changing");
+	void dataRefreshButton.offsetWidth;
+	dataRefreshButton.classList.add("is-state-changing");
+	refreshButtonStateTimer = window.setTimeout(() => {
+		dataRefreshButton.classList.remove("is-state-changing");
+	}, 240);
+}
 
 const selectOptions = {
 	hireTypeLst: [
@@ -186,7 +241,7 @@ function setLoading(isLoading) {
 	resultStage.classList.toggle("is-loading", isLoading);
 	keywordSearchButton.disabled = isLoading;
 	clearKeywordButton.disabled = isLoading;
-	dataRefreshButton.disabled = isLoading || dataRefreshButton.dataset.syncing === "true";
+	dataRefreshButton.disabled = isLoading && dataRefreshButton.dataset.syncing !== "true";
 }
 
 function updateDataRefreshText(lastFetchedAt) {
@@ -219,60 +274,128 @@ function updateResultCountSummary(totalCount, matchedCount) {
 	`;
 }
 
+function renderRefreshButtonIdle() {
+	dataRefreshButton.classList.remove("is-syncing", "is-pending", "is-paused", "is-failed", "is-completed");
+	dataRefreshButton.style.removeProperty("--sync-progress");
+	setRefreshButtonContent(refreshButtonIcon, "idle");
+	dataRefreshButton.setAttribute("aria-label", "데이터 갱신");
+	dataRefreshButton.title = "데이터 갱신";
+	syncFailureDetailButton.hidden = true;
+	syncStopButton.hidden = true;
+	syncStopButton.disabled = false;
+}
+
+function renderRefreshButtonProgress(label, percentage = 0, isPending = false, isPaused = false, detail = "", options = {}) {
+	const safePercentage = Math.max(0, Math.min(100, parseFloat(percentage) || 0));
+	const isFailed = Boolean(options.isFailed);
+	const icon = options.icon || (isPaused ? pauseButtonIcon : refreshButtonIcon);
+	const viewKey = options.viewKey || (isPending ? `pending:${label}` : (isPaused ? "paused" : "syncing"));
+	dataRefreshButton.classList.add("is-syncing");
+	dataRefreshButton.classList.remove("is-completed");
+	dataRefreshButton.classList.toggle("is-pending", isPending);
+	dataRefreshButton.classList.toggle("is-paused", isPaused);
+	dataRefreshButton.classList.toggle("is-failed", isFailed);
+	dataRefreshButton.style.setProperty("--sync-progress", `${safePercentage}%`);
+	setRefreshButtonContent(
+		buildRefreshButtonContent(isPending ? "" : icon, label, detail),
+		viewKey
+	);
+	dataRefreshButton.setAttribute("aria-label", isPaused ? "갱신 재개" : "갱신 일시정지");
+	dataRefreshButton.title = isPaused ? "갱신 재개" : "갱신 일시정지";
+	syncFailureDetailButton.hidden = !isFailed;
+	syncStopButton.hidden = false;
+	syncStopButton.disabled = false;
+}
+
+function renderRefreshButtonFailed() {
+	renderRefreshButtonProgress("갱신 중 문제가 발생하였습니다", 0, false, false, "", {
+		icon: pauseButtonIcon,
+		isFailed: true,
+		viewKey: "failed"
+	});
+	dataRefreshButton.setAttribute("aria-label", "이어서 갱신하기");
+	dataRefreshButton.title = "이어서 갱신하기";
+	syncFailureDetailButton.hidden = false;
+	syncStopButton.hidden = false;
+	syncStopButton.disabled = false;
+}
+
+function renderRefreshButtonCompleted() {
+	dataRefreshButton.classList.remove("is-syncing", "is-pending", "is-paused", "is-failed");
+	dataRefreshButton.classList.add("is-completed");
+	dataRefreshButton.style.removeProperty("--sync-progress");
+	setRefreshButtonContent(completedButtonContent, "completed");
+	dataRefreshButton.setAttribute("aria-label", "갱신 완료");
+	dataRefreshButton.title = "갱신 완료";
+	syncFailureDetailButton.hidden = true;
+	syncStopButton.hidden = true;
+	syncStopButton.disabled = false;
+}
+
+function resetRefreshButtonAfterStartFailure() {
+	dataRefreshButton.dataset.syncing = "false";
+	dataRefreshButton.disabled = !loadingState.hidden;
+	renderRefreshButtonIdle();
+	dataRefreshText.hidden = false;
+}
+
 function updateSyncStatus(progress) {
 	const status = progress?.status || "IDLE";
 	const previousStatus = lastSyncStatus;
 	const percentage = Number(progress?.percentage ?? 0);
 	const currentPage = Number(progress?.currentPage ?? 0);
 	const totalPages = Number(progress?.totalPages ?? 0);
-	const isPendingStatus = Boolean(progress?.inProgress && (status === "CANCELING" || !totalPages));
-	const isRunningStatus = Boolean(progress?.inProgress && !isPendingStatus);
+	const isPausedStatus = status === "PAUSED";
+	const isPendingStatus = Boolean(progress?.inProgress && (status === "CANCELING" || (!totalPages && !isPausedStatus)));
 	lastSyncStatus = status;
 
 	syncStatusBadge.classList.toggle("failed", status === "FAILED");
 	syncStatusBadge.classList.toggle("completed", status === "COMPLETED");
-	syncStatusBadge.classList.toggle("pending", isPendingStatus);
-	syncStatusBadge.classList.toggle("running", isRunningStatus);
-	syncStatusBadge.style.setProperty("--sync-progress", `${Math.max(0, Math.min(100, percentage))}%`);
+	syncStatusBadge.classList.remove("pending", "running");
+	syncStatusBadge.style.removeProperty("--sync-progress");
 	dataRefreshButton.dataset.syncing = progress?.inProgress ? "true" : "false";
-	dataRefreshButton.disabled = status === "CANCELING" || !loadingState.hidden;
+	dataRefreshButton.disabled = isPendingStatus || (!progress?.inProgress && !loadingState.hidden);
+	syncStopButton.disabled = status === "CANCELING";
 	dataRefreshButton.hidden = false;
-	dataRefreshButton.classList.toggle("is-stop", Boolean(progress?.inProgress));
-	dataRefreshButton.innerHTML = progress?.inProgress ? stopButtonIcon : refreshButtonIcon;
-	dataRefreshButton.setAttribute("aria-label", progress?.inProgress ? "갱신 중지" : "데이터 갱신");
-	dataRefreshButton.title = progress?.inProgress ? "갱신 중지" : "데이터 갱신";
 	syncFailureDetailButton.hidden = status !== "FAILED";
-	syncResumeButton.hidden = status !== "FAILED";
 
 	if (progress?.inProgress) {
 		window.clearTimeout(syncCompletionHideTimer);
-		syncStatusBadge.hidden = false;
+		syncStatusBadge.hidden = true;
 		dataRefreshText.hidden = true;
-		syncStatusBadge.textContent = status === "CANCELING"
-			? "갱신 중지 중"
-			: (totalPages ? `갱신 중 ${percentage}% (${currentPage}/${totalPages})` : "갱신 준비 중");
+		renderRefreshButtonProgress(
+			status === "CANCELING"
+				? "갱신 중지 중"
+				: (isPausedStatus
+					? "갱신 일시중지"
+					: (totalPages ? "갱신 중" : "갱신 준비 중")),
+			percentage,
+			isPendingStatus,
+			isPausedStatus,
+			!isPendingStatus && !isPausedStatus && totalPages ? buildProgressDetail(percentage, currentPage, totalPages) : ""
+		);
 		syncFailurePanel.hidden = true;
 		return;
 	}
 
 	if (status === "FAILED") {
 		window.clearTimeout(syncCompletionHideTimer);
-		syncStatusBadge.hidden = false;
+		renderRefreshButtonFailed();
+		syncStatusBadge.hidden = true;
 		dataRefreshText.hidden = true;
-		syncStatusBadge.textContent = progress?.message || "갱신 실패";
 		syncFailureContent.textContent = JSON.stringify(progress?.failureResponse || {}, null, 2);
 		return;
 	}
 
 	if (status === "COMPLETED") {
 		if (previousStatus !== "COMPLETED") {
-			syncStatusBadge.hidden = false;
+			renderRefreshButtonCompleted();
+			syncStatusBadge.hidden = true;
 			dataRefreshText.hidden = true;
-			syncStatusBadge.textContent = "갱신 완료";
 			loadRecruitments(currentPage, false, false);
 			window.clearTimeout(syncCompletionHideTimer);
 			syncCompletionHideTimer = window.setTimeout(() => {
-				syncStatusBadge.hidden = true;
+				renderRefreshButtonIdle();
 				dataRefreshText.hidden = false;
 			}, 3000);
 		}
@@ -281,6 +404,7 @@ function updateSyncStatus(progress) {
 
 	if (status === "CANCELED") {
 		window.clearTimeout(syncCompletionHideTimer);
+		renderRefreshButtonIdle();
 		syncStatusBadge.hidden = true;
 		dataRefreshText.hidden = false;
 		syncStatusBadge.textContent = "";
@@ -288,6 +412,7 @@ function updateSyncStatus(progress) {
 	}
 
 	window.clearTimeout(syncCompletionHideTimer);
+	renderRefreshButtonIdle();
 	syncStatusBadge.hidden = true;
 	dataRefreshText.hidden = false;
 	syncStatusBadge.textContent = "";
@@ -898,6 +1023,9 @@ async function loadRecruitments(page = currentPage, refresh = false, showLoading
 			setStatus(payload.detail || "목록 조회 중 오류가 발생했습니다.");
 			setDebug(payload);
 			renderItems([], "오류로 인해 목록을 불러오지 못했습니다.");
+			if (refresh) {
+				resetRefreshButtonAfterStartFailure();
+			}
 			return;
 		}
 
@@ -905,6 +1033,9 @@ async function loadRecruitments(page = currentPage, refresh = false, showLoading
 			setStatus(`${payload.resultMsg || "ALIO 오류"} (${payload.resultMsgEng || payload.resultCode})`);
 			setDebug(payload._debug || payload);
 			renderItems([], "ALIO 응답에서 오류가 반환되었습니다.");
+			if (refresh) {
+				resetRefreshButtonAfterStartFailure();
+			}
 			return;
 		}
 
@@ -930,6 +1061,9 @@ async function loadRecruitments(page = currentPage, refresh = false, showLoading
 		setStatus("네트워크 오류가 발생했습니다. 서버 실행 상태를 확인해주세요.");
 		setDebug({ message: error.message });
 		renderItems([], "네트워크 오류로 인해 목록을 불러오지 못했습니다.");
+		if (refresh) {
+			resetRefreshButtonAfterStartFailure();
+		}
 	} finally {
 		const elapsed = Date.now() - loadingStartedAt;
 		if (showLoading && elapsed < MIN_LOADING_MS) {
@@ -983,16 +1117,84 @@ keywordSearchButton.addEventListener("click", () => {
 });
 
 dataRefreshButton.addEventListener("click", () => {
-	if (dataRefreshButton.dataset.syncing === "true") {
-		cancelRecruitmentSync();
+	if (lastSyncStatus === "FAILED") {
+		dataRefreshButton.dataset.syncing = "true";
+		dataRefreshButton.disabled = true;
+		syncFailurePanel.hidden = true;
+		renderRefreshButtonProgress("갱신 재시작 중", dataRefreshButton.style.getPropertyValue("--sync-progress"), true);
+		loadRecruitments(currentPage, true, false, true);
 		return;
 	}
+	if (dataRefreshButton.dataset.syncing === "true") {
+		if (lastSyncStatus === "PAUSED") {
+			resumeRecruitmentSync();
+			return;
+		}
+		pauseRecruitmentSync();
+		return;
+	}
+	dataRefreshButton.dataset.syncing = "true";
+	dataRefreshButton.disabled = true;
+	dataRefreshText.hidden = true;
+	syncStatusBadge.hidden = true;
+	syncFailurePanel.hidden = true;
+	window.clearTimeout(syncCompletionHideTimer);
+	renderRefreshButtonProgress("갱신 준비 중", 0, true);
 	loadRecruitments(currentPage, true, false);
 });
 
-async function cancelRecruitmentSync() {
+syncStopButton.addEventListener("click", () => {
+	cancelRecruitmentSync();
+});
+
+syncFailureDetailButton.addEventListener("click", () => {
+	syncFailurePanel.hidden = !syncFailurePanel.hidden;
+});
+
+async function pauseRecruitmentSync() {
 	try {
 		dataRefreshButton.disabled = true;
+		renderRefreshButtonProgress("갱신 일시정지 중", dataRefreshButton.style.getPropertyValue("--sync-progress"), true);
+		const response = await fetch("/api/recruitments/alio/sync-pause", {
+			method: "POST",
+			headers: {
+				Accept: "application/json"
+			}
+		});
+		if (response.ok) {
+			updateSyncStatus(await response.json());
+		}
+	} catch (error) {
+		setStatus("갱신 일시정지 요청 중 오류가 발생했습니다.");
+		dataRefreshButton.disabled = false;
+		checkSyncProgress();
+	}
+}
+
+async function resumeRecruitmentSync() {
+	try {
+		dataRefreshButton.disabled = true;
+		renderRefreshButtonProgress("갱신 재시작 중", dataRefreshButton.style.getPropertyValue("--sync-progress"), true);
+		const response = await fetch("/api/recruitments/alio/sync-resume", {
+			method: "POST",
+			headers: {
+				Accept: "application/json"
+			}
+		});
+		if (response.ok) {
+			updateSyncStatus(await response.json());
+			startSyncProgressPolling();
+		}
+	} catch (error) {
+		setStatus("갱신 재개 요청 중 오류가 발생했습니다.");
+		dataRefreshButton.disabled = false;
+		checkSyncProgress();
+	}
+}
+
+async function cancelRecruitmentSync() {
+	try {
+		syncStopButton.disabled = true;
 		const response = await fetch("/api/recruitments/alio/sync-cancel", {
 			method: "POST",
 			headers: {
@@ -1008,18 +1210,9 @@ async function cancelRecruitmentSync() {
 		}
 	} catch (error) {
 		setStatus("갱신 중지 요청 중 오류가 발생했습니다.");
-		dataRefreshButton.disabled = false;
+		syncStopButton.disabled = false;
 	}
 }
-
-syncFailureDetailButton.addEventListener("click", () => {
-	syncFailurePanel.hidden = !syncFailurePanel.hidden;
-});
-
-syncResumeButton.addEventListener("click", () => {
-	syncFailurePanel.hidden = true;
-	loadRecruitments(currentPage, true, false, true);
-});
 
 clearKeywordButton.addEventListener("click", () => {
 	isClearingKeyword = true;
