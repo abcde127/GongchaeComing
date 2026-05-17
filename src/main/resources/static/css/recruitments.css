@@ -1154,11 +1154,41 @@ select:focus {
 }
 
 .meta-row-period .meta-value {
-	display: -webkit-box;
-	-webkit-line-clamp: 2;
-	-webkit-box-orient: vertical;
-	overflow: hidden;
+	display: grid;
+	justify-items: center;
+	gap: 4px;
 	white-space: normal;
+}
+
+.period-dday-wrap {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	max-width: 100%;
+}
+
+.period-dday-label {
+	color: var(--muted);
+	font-size: 0.66rem;
+	font-weight: 800;
+	white-space: nowrap;
+}
+
+.period-dday {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: fit-content;
+	max-width: 100%;
+	padding: 2px 7px;
+	border-radius: 999px;
+	background: rgba(15, 118, 110, 0.1);
+	color: var(--accent-strong);
+	font-size: 0.68rem;
+	font-weight: 900;
+	line-height: 1.2;
+	white-space: nowrap;
 }
 
 .card-actions {

@@ -108,8 +108,8 @@ public class AlioRecruitmentService {
 	);
 
 	private static final List<AlioFilterOptionResponse> SORT_FILTER_OPTIONS = List.of(
-		new AlioFilterOptionResponse("REGISTRATION_DATE", "등록일순"),
-		new AlioFilterOptionResponse("DEADLINE_DATE", "마감일순")
+		new AlioFilterOptionResponse("RECRUITMENT_SEQUENCE", "최근등록순"),
+		new AlioFilterOptionResponse("DEADLINE_DATE", "마감임박순")
 	);
 
 	private static final List<AlioFilterOptionResponse> SORT_DIRECTION_FILTER_OPTIONS = List.of(
@@ -569,12 +569,38 @@ public class AlioRecruitmentService {
 
 	private void sortRecruitmentItems(JsonNode response, String sortBy, String sortDirection) {
 		ArrayNode items = findRecruitmentItems(response);
-		if (items == null || items.size() < 2) {
+		if (items == null) {
 			return;
 		}
 
 		List<JsonNode> sortedItems = new ArrayList<>();
 		items.forEach(sortedItems::add);
+
+		if ("DEADLINE_DATE".equals(sortBy)) {
+			sortedItems = new ArrayList<>(sortedItems.stream()
+				.filter(item -> !isClosedRecruitment(item))
+				.toList());
+			items.removeAll();
+			items.addAll(sortedItems);
+			updateTotalCount(response, sortedItems.size());
+		}
+
+		if (sortedItems.size() < 2) {
+			return;
+		}
+
+		if ("RECRUITMENT_SEQUENCE".equals(sortBy)) {
+			Comparator<Long> sequenceComparator = "ASC".equals(sortDirection)
+				? Comparator.naturalOrder()
+				: Comparator.reverseOrder();
+			sortedItems.sort(Comparator
+				.comparing((JsonNode item) -> extractRecruitmentSequence(item), Comparator.nullsLast(sequenceComparator))
+				.thenComparing(item -> extractSortDate(item, "REGISTRATION_DATE"), Comparator.nullsLast(Comparator.reverseOrder()))
+				.thenComparing(item -> item.path("recrutPbancTtl").asText("")));
+			items.removeAll();
+			items.addAll(sortedItems);
+			return;
+		}
 
 		Comparator<LocalDate> dateComparator = "ASC".equals(sortDirection)
 			? Comparator.naturalOrder()
@@ -648,6 +674,27 @@ public class AlioRecruitmentService {
 		}
 
 		return parseDate(item, "pbancRgtrYmd", "regDt", "frstRegDt", "registrationDate");
+	}
+
+	private boolean isClosedRecruitment(JsonNode item) {
+		LocalDate endDate = parseDate(item, "pbancEndYmd", "aplyEndYmd", "endDate");
+		return endDate != null && LocalDate.now().isAfter(endDate);
+	}
+
+	private Long extractRecruitmentSequence(JsonNode item) {
+		JsonNode sequenceNode = item.path("recrutPblntSn");
+		if (sequenceNode.isIntegralNumber()) {
+			return sequenceNode.asLong();
+		}
+		String sequenceText = sequenceNode.asText(null);
+		if (!StringUtils.hasText(sequenceText)) {
+			return null;
+		}
+		try {
+			return Long.parseLong(sequenceText.trim());
+		} catch (NumberFormatException exception) {
+			return null;
+		}
 	}
 
 	private LocalDate parseDate(JsonNode item, String... fieldNames) {

@@ -9,6 +9,7 @@ import com.gongchae.gongchae_coming.alio.domain.AlioRecruitmentSyncState;
 import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentListRequest;
 import com.gongchae.gongchae_coming.alio.repository.AlioRecruitmentRepository;
 import com.gongchae.gongchae_coming.alio.repository.AlioRecruitmentSyncStateRepository;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
@@ -57,8 +58,8 @@ class AlioRecruitmentServiceTest {
 	@Test
 	void getRecruitmentsSortsItemsByDeadlineDateWhenRequested() {
 		ObjectNode response = createResponse(
-			recruitment("first", "2026-04-20", "2026-04-21"),
-			recruitment("second", "2026-04-10", "2026-04-25")
+			recruitment("first", date(LocalDate.now().minusDays(1)), date(LocalDate.now().plusDays(5))),
+			recruitment("second", date(LocalDate.now().minusDays(1)), date(LocalDate.now().plusDays(2)))
 		);
 		AlioRecruitmentService service = serviceWithCachedItems(response);
 
@@ -66,6 +67,21 @@ class AlioRecruitmentServiceTest {
 
 		assertThat(result.at("/response/body/items/item/0/recrutPbancTtl").asText()).isEqualTo("second");
 		assertThat(result.at("/response/body/items/item/1/recrutPbancTtl").asText()).isEqualTo("first");
+	}
+
+	@Test
+	void getRecruitmentsExcludesClosedItemsWhenSortingByDeadlineDate() {
+		ObjectNode response = createResponse(
+			recruitment("closed", date(LocalDate.now().minusDays(10)), date(LocalDate.now().minusDays(1))),
+			recruitment("active", date(LocalDate.now().minusDays(1)), date(LocalDate.now().plusDays(1)))
+		);
+		AlioRecruitmentService service = serviceWithCachedItems(response);
+
+		var result = service.getRecruitments(request("DEADLINE_DATE"));
+
+		assertThat(result.at("/response/body/items/item")).hasSize(1);
+		assertThat(result.at("/response/body/items/item/0/recrutPbancTtl").asText()).isEqualTo("active");
+		assertThat(result.at("/totalCount").asInt()).isEqualTo(1);
 	}
 
 	@Test
@@ -257,9 +273,22 @@ class AlioRecruitmentServiceTest {
 		service.getRecruitments(request("REGISTRATION_DATE", "DESC"), true);
 
 		verify(client, org.mockito.Mockito.timeout(1000).times(1)).fetchRecruitments(any(AlioRecruitmentListRequest.class));
+		waitUntilStatus(progressStore, "FAILED");
 		assertThat(progressStore.get().status()).isEqualTo("FAILED");
 		assertThat(progressStore.get().failedPage()).isEqualTo(1);
 		assertThat(progressStore.get().failureResponse().path("resultMsg").asText()).isEqualTo("TEMPORARY_ERROR");
+	}
+
+	private void waitUntilStatus(AlioRecruitmentSyncProgressStore progressStore, String status) {
+		long deadline = System.currentTimeMillis() + 1000;
+		while (!status.equals(progressStore.get().status()) && System.currentTimeMillis() < deadline) {
+			try {
+				Thread.sleep(10);
+			} catch (InterruptedException exception) {
+				Thread.currentThread().interrupt();
+				return;
+			}
+		}
 	}
 
 	private AlioRecruitmentService serviceWithCachedItems(ObjectNode response) {
@@ -334,6 +363,10 @@ class AlioRecruitmentServiceTest {
 
 	private ObjectNode recruitment(String title, String registrationDate, String deadlineDate) {
 		return recruitment(title, null, registrationDate, deadlineDate);
+	}
+
+	private String date(LocalDate date) {
+		return date.toString();
 	}
 
 	private ObjectNode recruitment(String title, String institution, String registrationDate, String deadlineDate) {

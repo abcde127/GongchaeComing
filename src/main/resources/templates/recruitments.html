@@ -96,8 +96,12 @@
 						</div>
 					</div>
 					<div class="list-filter-meta">
-						<div class="list-filter-cell list-filter-cell-static">
-							<span>공고 기간</span>
+						<div class="list-filter-cell">
+							<button class="list-filter-trigger" type="button" data-filter-trigger data-sort-trigger aria-controls="listPeriodSortFilter" aria-expanded="false">공고 기간</button>
+							<div class="list-filter-menu" id="listPeriodSortFilter" data-filter-menu data-sort-menu hidden>
+								<label><input type="radio" name="periodSort" value="recent" checked> 최근등록순</label>
+								<label><input type="radio" name="periodSort" value="deadline"> 마감임박순</label>
+							</div>
 						</div>
 						<div class="list-filter-cell">
 							<button class="list-filter-trigger" type="button" data-filter-trigger aria-controls="listCompanyFilter" aria-expanded="false">기업명</button>

@@ -15,6 +15,7 @@ const syncFailureContent = document.querySelector("#syncFailureContent");
 const listFilterRow = document.querySelector("#listFilterRow");
 const listStatusFilter = document.querySelector("#listStatusFilter");
 const listCompanyFilter = document.querySelector("#listCompanyFilter");
+const listPeriodSortFilter = document.querySelector("#listPeriodSortFilter");
 const listCategoryFilter = document.querySelector("#listCategoryFilter");
 const listHireTypeFilter = document.querySelector("#listHireTypeFilter");
 const listNcsFilter = document.querySelector("#listNcsFilter");
@@ -633,6 +634,26 @@ function createStatusBadge(status) {
 	return `<span class="status-badge status-badge-${tone}">${label}</span>`;
 }
 
+function getPeriodDdayBadge(status, startDateValue, endDateValue) {
+	const today = new Date();
+	const normalizedToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+	const startDate = parseRecruitmentDate(startDateValue);
+	const endDate = parseRecruitmentDate(endDateValue);
+	const targetDate = status?.tone === "scheduled" ? startDate : status?.tone === "active" ? endDate : null;
+	if (!targetDate) {
+		return "";
+	}
+
+	const remainingDays = Math.ceil((targetDate.getTime() - normalizedToday.getTime()) / (1000 * 60 * 60 * 24));
+	if (remainingDays < 0) {
+		return "";
+	}
+
+	const label = status.tone === "scheduled" ? "신청까지" : "마감까지";
+	const dayText = remainingDays === 0 ? "D-day" : `D-${remainingDays}`;
+	return `<span class="period-dday-wrap"><span class="period-dday-label">${label}</span><span class="period-dday">${dayText}</span></span>`;
+}
+
 function createRecruitmentCard(item) {
 	const title = getValue(item, "recrutPbancTtl");
 	const institution = getValue(item, "pblntInstNm", "instNm");
@@ -648,6 +669,7 @@ function createRecruitmentCard(item) {
 	const endDate = formatDate(rawEndDate);
 	const period = `${startDate} ~ ${endDate}`;
 	const status = getRecruitmentStatus(rawStartDate, rawEndDate);
+	const periodDdayBadge = getPeriodDdayBadge(status, rawStartDate, rawEndDate);
 	const detailUrl = getValue(item, "recrutPbancUrl", "srcUrl", "url");
 
 	return `
@@ -660,7 +682,7 @@ function createRecruitmentCard(item) {
 			</div>
 
 			<div class="meta-list">
-				${createMetaRow(period, "meta-row-period")}
+				${createMetaRow(`${period}${periodDdayBadge}`, "meta-row-period")}
 				${createCompanyMeta(institution, companyDivision, companyType)}
 				${createMetaRow(region)}
 				${createMetaRow(recruitmentCategory)}
@@ -739,6 +761,16 @@ function renderFilteredItems() {
 	}
 }
 
+function updateListSortTrigger() {
+	document.querySelectorAll("[data-sort-trigger]").forEach((trigger) => {
+		const menu = document.querySelector(`#${trigger.getAttribute("aria-controls")}`);
+		const checkedInput = menu?.querySelector("input:checked");
+		const badgeText = checkedInput?.value === "deadline" ? "마감" : "등록";
+		trigger.classList.add("is-filtered");
+		trigger.dataset.filterCount = badgeText;
+	});
+}
+
 function renderItems(items, summary, options = {}) {
 	const showHeader = options.showHeader ?? items.length > 0;
 	listFilterRow.hidden = !showHeader;
@@ -802,6 +834,7 @@ function renderPagination(totalCount, pageSize, page) {
 function buildQueryString(page = currentPage, refresh = false, resume = false) {
 	const formData = new FormData(form);
 	const params = new URLSearchParams();
+	const periodSort = listPeriodSortFilter.querySelector("input:checked")?.value || "recent";
 
 	formData.forEach((value, key) => {
 		const trimmed = String(value).trim();
@@ -812,6 +845,8 @@ function buildQueryString(page = currentPage, refresh = false, resume = false) {
 
 	params.set("pageNo", String(page));
 	params.set("numOfRows", String(PAGE_SIZE));
+	params.set("sortBy", periodSort === "deadline" ? "DEADLINE_DATE" : "RECRUITMENT_SEQUENCE");
+	params.set("sortDirection", periodSort === "deadline" ? "ASC" : "DESC");
 	if (refresh) {
 		params.set("refresh", "true");
 	}
@@ -989,6 +1024,11 @@ keywordSearchControl.addEventListener("focusout", () => {
 	filter.addEventListener("change", renderFilteredItems);
 });
 
+listPeriodSortFilter.addEventListener("change", () => {
+	updateListFilterIndicators();
+	loadRecruitments(1);
+});
+
 function clearListHeaderFilters() {
 	[listStatusFilter, listCompanyFilter, listCategoryFilter, listHireTypeFilter, listNcsFilter, listRegionFilter].forEach((filter) => {
 		filter.querySelectorAll("input:checked").forEach((input) => {
@@ -1001,10 +1041,14 @@ function clearListHeaderFilters() {
 function updateListFilterIndicators() {
 	document.querySelectorAll("[data-filter-trigger]").forEach((trigger) => {
 		const menu = document.querySelector(`#${trigger.getAttribute("aria-controls")}`);
+		if (menu?.dataset.sortMenu !== undefined) {
+			return;
+		}
 		const checkedCount = getCheckedFilterValues(menu).length;
 		trigger.classList.toggle("is-filtered", checkedCount > 0);
 		trigger.dataset.filterCount = checkedCount > 0 ? String(checkedCount) : "";
 	});
+	updateListSortTrigger();
 }
 
 document.querySelectorAll("[data-filter-trigger]").forEach((trigger) => {
