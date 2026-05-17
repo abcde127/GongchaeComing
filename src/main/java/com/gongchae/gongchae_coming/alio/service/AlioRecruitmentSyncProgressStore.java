@@ -57,6 +57,44 @@ public class AlioRecruitmentSyncProgressStore {
 		);
 	}
 
+	public void paused() {
+		AlioRecruitmentSyncProgressResponse progress = get();
+		progressByKey.put(
+			GLOBAL_PROGRESS_KEY,
+			new AlioRecruitmentSyncProgressResponse(
+				true,
+				progress.currentPage(),
+				progress.totalPages(),
+				progress.fetchedCount(),
+				progress.totalCount(),
+				progress.percentage(),
+				"PAUSED",
+				"데이터 갱신이 일시정지되었습니다.",
+				0,
+				null
+			)
+		);
+	}
+
+	public void resumed() {
+		AlioRecruitmentSyncProgressResponse progress = get();
+		progressByKey.put(
+			GLOBAL_PROGRESS_KEY,
+			new AlioRecruitmentSyncProgressResponse(
+				true,
+				progress.currentPage(),
+				progress.totalPages(),
+				progress.fetchedCount(),
+				progress.totalCount(),
+				progress.percentage(),
+				"RUNNING",
+				"데이터 갱신 중입니다.",
+				0,
+				null
+			)
+		);
+	}
+
 	public void complete(int currentPage, int totalPages, int fetchedCount, int totalCount) {
 		complete(GLOBAL_PROGRESS_KEY, currentPage, totalPages, fetchedCount, totalCount);
 	}

@@ -131,6 +131,8 @@ public class AlioRecruitmentService {
 	private final AlioRecruitmentSyncProgressStore syncProgressStore;
 	private final AtomicBoolean syncInProgress = new AtomicBoolean(false);
 	private final AtomicBoolean syncCancelRequested = new AtomicBoolean(false);
+	private final AtomicBoolean syncPauseRequested = new AtomicBoolean(false);
+	private final Object syncPauseMonitor = new Object();
 	private final ExecutorService syncExecutor = Executors.newSingleThreadExecutor();
 
 	@Transactional
@@ -175,6 +177,7 @@ public class AlioRecruitmentService {
 			return false;
 		}
 		syncCancelRequested.set(false);
+		syncPauseRequested.set(false);
 		AlioRecruitmentSyncProgressResponse previousProgress = syncProgressStore.get();
 		syncProgressStore.start();
 
@@ -205,7 +208,32 @@ public class AlioRecruitmentService {
 			return false;
 		}
 		syncCancelRequested.set(true);
+		syncPauseRequested.set(false);
 		syncProgressStore.canceling();
+		synchronized (syncPauseMonitor) {
+			syncPauseMonitor.notifyAll();
+		}
+		return true;
+	}
+
+	public boolean pauseBackgroundSynchronization() {
+		if (!syncInProgress.get()) {
+			return false;
+		}
+		syncPauseRequested.set(true);
+		syncProgressStore.paused();
+		return true;
+	}
+
+	public boolean resumePausedSynchronization() {
+		if (!syncInProgress.get() || !syncPauseRequested.get()) {
+			return false;
+		}
+		syncPauseRequested.set(false);
+		syncProgressStore.resumed();
+		synchronized (syncPauseMonitor) {
+			syncPauseMonitor.notifyAll();
+		}
 		return true;
 	}
 
@@ -225,6 +253,7 @@ public class AlioRecruitmentService {
 		int totalPages = resume ? previousProgress.totalPages() : 0;
 
 		while (totalCount == null || fetchedCount < totalCount) {
+			waitWhileSynchronizationPaused();
 			if (syncCancelRequested.get()) {
 				syncProgressStore.canceled(pageNo - 1, totalPages, fetchedCount, totalCount == null ? 0 : totalCount);
 				return;
@@ -246,6 +275,11 @@ public class AlioRecruitmentService {
 				? Math.max(totalPages, pageNo + (items.size() == SYNC_PAGE_SIZE ? 1 : 0))
 				: Math.max(1, (int) Math.ceil((double) totalCount / SYNC_PAGE_SIZE));
 			syncProgressStore.update(pageNo, totalPages, fetchedCount, totalCount == null ? 0 : totalCount);
+			if (syncCancelRequested.get()) {
+				syncProgressStore.canceled(pageNo, totalPages, fetchedCount, totalCount == null ? 0 : totalCount);
+				return;
+			}
+			waitWhileSynchronizationPaused();
 			if (syncCancelRequested.get()) {
 				syncProgressStore.canceled(pageNo, totalPages, fetchedCount, totalCount == null ? 0 : totalCount);
 				return;
@@ -280,6 +314,20 @@ public class AlioRecruitmentService {
 			fetchedCount,
 			totalCount == null ? fetchedCount : totalCount
 		);
+	}
+
+	private void waitWhileSynchronizationPaused() {
+		while (syncPauseRequested.get() && !syncCancelRequested.get()) {
+			syncProgressStore.paused();
+			synchronized (syncPauseMonitor) {
+				try {
+					syncPauseMonitor.wait(1000);
+				} catch (InterruptedException exception) {
+					Thread.currentThread().interrupt();
+					syncCancelRequested.set(true);
+				}
+			}
+		}
 	}
 
 	private JsonNode fetchRecruitmentsOrFail(
