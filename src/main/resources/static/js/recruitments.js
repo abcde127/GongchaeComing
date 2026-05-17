@@ -781,23 +781,47 @@ function renderPagination(totalCount, pageSize, page) {
 		return;
 	}
 
-	const startPage = Math.max(1, page - 2);
-	const endPage = Math.min(totalPages, startPage + 4);
-	const visibleStart = Math.max(1, endPage - 4);
-	const pageNumbers = [];
-
-	for (let number = visibleStart; number <= endPage; number += 1) {
-		pageNumbers.push(number);
+	const pageGroupStart = Math.floor((page - 1) / 10) * 10 + 1;
+	const pageGroupEnd = Math.min(pageGroupStart + 9, totalPages);
+	const pageControls = [];
+	for (let number = pageGroupStart; number <= pageGroupEnd; number += 1) {
+		pageControls.push(`
+			<button class="pagination-button ${number === page ? "is-active" : ""}" data-page="${number}" ${number === page ? 'aria-current="page"' : ""}>
+				${number}
+			</button>
+		`);
 	}
 
 	pagination.innerHTML = `
-		<button class="pagination-button" data-page="${page - 1}" ${page === 1 ? "disabled" : ""}>이전</button>
-		${pageNumbers.map((number) => `
-			<button class="pagination-button ${number === page ? "is-active" : ""}" data-page="${number}">
-				${number}
+		<button class="pagination-edge-button" data-page="1" ${page === 1 ? "disabled" : ""}>처음</button>
+		<div class="pagination-center">
+			<button class="pagination-control-button" data-page="${Math.max(1, page - 10)}" ${page <= 10 ? "disabled" : ""} aria-label="10페이지 이전" title="10페이지 이전">
+				<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+					<path d="m11 17-5-5 5-5"></path>
+					<path d="m18 17-5-5 5-5"></path>
+				</svg>
 			</button>
-		`).join("")}
-		<button class="pagination-button" data-page="${page + 1}" ${page === totalPages ? "disabled" : ""}>다음</button>
+			<button class="pagination-control-button" data-page="${page - 1}" ${page === 1 ? "disabled" : ""} aria-label="이전 페이지" title="이전 페이지">
+				<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+					<path d="m15 18-6-6 6-6"></path>
+				</svg>
+			</button>
+			<div class="pagination-pages">
+				${pageControls.join("")}
+			</div>
+			<button class="pagination-control-button" data-page="${page + 1}" ${page === totalPages ? "disabled" : ""} aria-label="다음 페이지" title="다음 페이지">
+				<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+					<path d="m9 18 6-6-6-6"></path>
+				</svg>
+			</button>
+			<button class="pagination-control-button" data-page="${Math.min(totalPages, page + 10)}" ${pageGroupEnd === totalPages ? "disabled" : ""} aria-label="10페이지 다음" title="10페이지 다음">
+				<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+					<path d="m6 17 5-5-5-5"></path>
+					<path d="m13 17 5-5-5-5"></path>
+				</svg>
+			</button>
+		</div>
+		<button class="pagination-edge-button" data-page="${totalPages}" ${page === totalPages ? "disabled" : ""}>마지막</button>
 	`;
 	pagination.hidden = false;
 }
@@ -1077,7 +1101,7 @@ function closeListFilterMenus() {
 }
 
 pagination.addEventListener("click", (event) => {
-	const button = event.target.closest(".pagination-button");
+	const button = event.target.closest("button[data-page]");
 	if (!button || button.disabled) {
 		return;
 	}
