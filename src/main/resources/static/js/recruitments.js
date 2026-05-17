@@ -736,8 +736,7 @@ function updateListSortTrigger() {
 }
 
 function renderItems(items, summary, options = {}) {
-	const showHeader = options.showHeader ?? items.length > 0;
-	listFilterRow.hidden = !showHeader;
+	listFilterRow.hidden = false;
 
 	if (!items.length) {
 		resultList.hidden = true;
@@ -750,12 +749,10 @@ function renderItems(items, summary, options = {}) {
 		const emptyDescription = emptyState.querySelector("p");
 
 		if (emptyTitle) {
-			emptyTitle.textContent = hasListHeaderFilter()
-				? "목록 필터에 맞는 채용공고가 없습니다."
-				: "조건에 맞는 채용공고가 없습니다.";
+			emptyTitle.textContent = "해당 조건을 만족하는 공고가 없습니다.";
 		}
 		if (emptyDescription) {
-			emptyDescription.textContent = summary || "키워드나 제목 필터를 조정한 뒤 다시 시도해보세요.";
+			emptyDescription.textContent = "";
 		}
 		return;
 	}
