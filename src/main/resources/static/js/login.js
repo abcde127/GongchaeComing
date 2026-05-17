@@ -7,6 +7,8 @@ const loginMessage = document.querySelector("#loginMessage");
 const loginButton = document.querySelector("#loginButton");
 const togglePassword = document.querySelector("#togglePassword");
 
+const params = new URLSearchParams(window.location.search);
+
 function setMessage(message) {
 	loginMessage.textContent = message;
 	loginMessage.hidden = !message;
@@ -48,6 +50,14 @@ togglePassword.addEventListener("click", () => {
 	togglePassword.setAttribute("aria-label", isPassword ? "비밀번호 숨기기" : "비밀번호 표시");
 	passwordInput.focus();
 });
+
+if (params.has("error")) {
+	setMessage("이메일 또는 비밀번호가 올바르지 않습니다.");
+}
+
+if (params.has("logout")) {
+	setMessage("로그아웃되었습니다.");
+}
 
 form.addEventListener("submit", (event) => {
 	if (!validateLoginForm()) {
