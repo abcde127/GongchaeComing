@@ -5,6 +5,7 @@ const clearKeywordButton = document.querySelector("#clearKeywordButton");
 const keywordSearchControl = document.querySelector(".list-filter-search-control");
 const loadingState = document.querySelector("#loadingState");
 const emptyState = document.querySelector("#emptyState");
+const resultCountSummary = document.querySelector("#resultCountSummary");
 const dataRefreshText = document.querySelector("#dataRefreshText");
 const dataRefreshButton = document.querySelector("#dataRefreshButton");
 const syncStatusBadge = document.querySelector("#syncStatusBadge");
@@ -207,6 +208,15 @@ function updateDataRefreshText(lastFetchedAt) {
 		hour: "2-digit",
 		minute: "2-digit"
 	}).format(fetchedAt)}`;
+}
+
+function updateResultCountSummary(totalCount, matchedCount) {
+	const total = Number.isFinite(totalCount) ? totalCount : 0;
+	const matched = Number.isFinite(matchedCount) ? matchedCount : 0;
+	resultCountSummary.innerHTML = `
+		전체 <strong>${total.toLocaleString("ko-KR")}</strong>개 중
+		<strong>${matched.toLocaleString("ko-KR")}</strong>개
+	`;
 }
 
 function updateSyncStatus(progress) {
@@ -876,10 +886,12 @@ async function loadRecruitments(page = currentPage, refresh = false, showLoading
 
 		const items = extractItems(payload);
 		const totalCount = Number(payload?.totalCount ?? items.length);
+		const overallTotalCount = Number(payload?.overallTotalCount ?? payload?.response?.body?.overallTotalCount ?? totalCount);
 		const keyword = searchKeyword.value.trim();
 		currentItems = items;
 		currentSummaryContext = { keyword, totalCount };
 		updateDataRefreshText(payload?.lastFetchedAt ?? payload?.response?.body?.lastFetchedAt);
+		updateResultCountSummary(overallTotalCount, totalCount);
 		syncCompanyFilterOptions(payload?.filterOptions?.companies || []);
 		const filteredItems = getFilteredItems(items);
 
