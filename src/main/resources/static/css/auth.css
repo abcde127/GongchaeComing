@@ -348,6 +348,10 @@ input:focus {
 	text-align: center;
 }
 
+.auth-switch + .auth-switch {
+	margin-top: 10px;
+}
+
 .member-summary {
 	display: grid;
 	gap: 0;
