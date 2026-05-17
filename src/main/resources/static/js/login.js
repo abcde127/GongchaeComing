@@ -24,18 +24,12 @@ function validateLoginForm() {
 	setMessage("");
 
 	if (!email) {
-		emailError.textContent = "이메일을 입력해주세요.";
-		valid = false;
-	} else if (!emailInput.validity.valid) {
-		emailError.textContent = "올바른 이메일 형식으로 입력해주세요.";
+		emailError.textContent = "아이디를 입력해주세요.";
 		valid = false;
 	}
 
 	if (!password) {
 		passwordError.textContent = "비밀번호를 입력해주세요.";
-		valid = false;
-	} else if (password.length < 8) {
-		passwordError.textContent = "비밀번호는 8자 이상이어야 합니다.";
 		valid = false;
 	}
 
