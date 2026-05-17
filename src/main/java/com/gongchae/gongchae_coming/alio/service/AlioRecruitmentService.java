@@ -24,6 +24,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -382,6 +383,7 @@ public class AlioRecruitmentService {
 		ObjectNode items = body.putObject("items");
 		ArrayNode itemArray = items.putArray("item");
 		List<AlioRecruitment> recruitments = alioRecruitmentRepository.findAll();
+		addFilterOptions(root, recruitments);
 
 		recruitments.forEach(recruitment -> {
 			ObjectNode item = OBJECT_MAPPER.createObjectNode();
@@ -397,6 +399,24 @@ public class AlioRecruitmentService {
 		}
 		updateTotalCount(root, itemArray.size());
 		return root;
+	}
+
+	private void addFilterOptions(ObjectNode root, List<AlioRecruitment> recruitments) {
+		ArrayNode companies = root.putObject("filterOptions").putArray("companies");
+		recruitments.stream()
+			.map(recruitment -> {
+				ObjectNode item = OBJECT_MAPPER.createObjectNode();
+				recruitment.writeTo(item);
+				return firstNonBlank(
+					item.path("pblntInstNm").asText(""),
+					item.path("instNm").asText("")
+				);
+			})
+			.filter(StringUtils::hasText)
+			.collect(Collectors.toCollection(LinkedHashSet::new))
+			.stream()
+			.sorted()
+			.forEach(companies::add);
 	}
 
 	private void attachDebugInfoWhenAlioReturnsError(AlioRecruitmentListRequest request, JsonNode response) {
@@ -463,13 +483,12 @@ public class AlioRecruitmentService {
 		addContainsAnyPredicate(predicates, request.workRgnLst(), "workRgnLst", "workRgnNmLst");
 		addContainsAnyPredicate(predicates, request.recrutSe(), "recrutSe", "recrutSeNm");
 		addContainsAnyPredicate(predicates, request.acbgCondLst(), "acbgCondLst", "acbgCondNmLst");
+		addRecruitmentStatusPredicate(predicates, request.recruitmentStatus());
 
 		if (StringUtils.hasText(request.instClsf())) {
 			predicates.add(item -> item.path("instClsf").asText("").contains(request.instClsf()));
 		}
-		if (StringUtils.hasText(request.pblntInstCd())) {
-			predicates.add(item -> item.path("pblntInstCd").asText("").contains(request.pblntInstCd()));
-		}
+		addContainsAnyPredicate(predicates, request.pblntInstCd(), "pblntInstCd", "pblntInstNm", "instNm");
 		if (StringUtils.hasText(request.replmprYn())) {
 			predicates.add(item -> request.replmprYn().equals(item.path("replmprYn").asText("")));
 		}
@@ -494,6 +513,36 @@ public class AlioRecruitmentService {
 		}
 
 		return predicates;
+	}
+
+	private void addRecruitmentStatusPredicate(List<Predicate<JsonNode>> predicates, String csvValues) {
+		if (!StringUtils.hasText(csvValues)) {
+			return;
+		}
+
+		Set<String> statuses = List.of(csvValues.split(","))
+			.stream()
+			.map(String::trim)
+			.filter(StringUtils::hasText)
+			.collect(Collectors.toSet());
+
+		predicates.add(item -> statuses.contains(resolveRecruitmentStatus(item)));
+	}
+
+	private String resolveRecruitmentStatus(JsonNode item) {
+		LocalDate today = LocalDate.now();
+		LocalDate startDate = parseDate(item, "pbancBgngYmd", "pbancRgtrYmd");
+		LocalDate endDate = parseDate(item, "pbancEndYmd", "aplyEndYmd", "endDate");
+		if (startDate == null || endDate == null) {
+			return null;
+		}
+		if (today.isBefore(startDate)) {
+			return "scheduled";
+		}
+		if (today.isAfter(endDate)) {
+			return "closed";
+		}
+		return "active";
 	}
 
 	private void addContainsAnyPredicate(

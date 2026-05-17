@@ -86,6 +86,7 @@ class AlioRecruitmentClientTest {
 			null,
 			null,
 			null,
+			null,
 			null
 		);
 	}

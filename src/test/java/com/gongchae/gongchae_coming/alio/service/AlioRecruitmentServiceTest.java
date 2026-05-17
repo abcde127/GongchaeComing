@@ -148,6 +148,7 @@ class AlioRecruitmentServiceTest {
 			null,
 			1,
 			null,
+			null,
 			2,
 			null,
 			null,
@@ -325,6 +326,7 @@ class AlioRecruitmentServiceTest {
 
 	private AlioRecruitmentListRequest request(String sortBy, String sortDirection, String searchKeyword) {
 		return new AlioRecruitmentListRequest(
+			null,
 			null,
 			null,
 			null,

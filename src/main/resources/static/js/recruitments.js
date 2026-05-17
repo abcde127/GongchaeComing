@@ -165,13 +165,10 @@ function createListFilterCheckbox(value, label) {
 	return wrapper;
 }
 
-function syncCompanyFilterOptions(items) {
+function syncCompanyFilterOptions(companyOptions = []) {
 	const selectedValues = new Set(getCheckedFilterValues(listCompanyFilter));
-	const companyNames = Array.from(new Set(
-		items
-			.map((item) => getValue(item, "pblntInstNm", "instNm"))
-			.filter(Boolean)
-	)).sort((first, second) => first.localeCompare(second, "ko"));
+	const companyNames = Array.from(new Set(companyOptions.filter(Boolean)))
+		.sort((first, second) => first.localeCompare(second, "ko"));
 
 	listCompanyFilter.innerHTML = "";
 	companyNames.forEach((companyName) => {
@@ -698,40 +695,7 @@ function createRecruitmentCard(item) {
 }
 
 function getFilteredItems(items) {
-	const statusFilters = getCheckedFilterValues(listStatusFilter);
-	const companyFilters = getCheckedFilterValues(listCompanyFilter);
-	const categoryFilters = getCheckedFilterValues(listCategoryFilter);
-	const hireTypeFilters = getCheckedFilterValues(listHireTypeFilter);
-	const ncsFilters = getCheckedFilterValues(listNcsFilter);
-	const regionFilters = getCheckedFilterValues(listRegionFilter);
-
-	return items.filter((item) => {
-		const rawStartDate = getValue(item, "pbancBgngYmd", "pbancRgtrYmd");
-		const rawEndDate = getValue(item, "pbancEndYmd", "aplyEndYmd", "endDate");
-		const status = getRecruitmentStatus(rawStartDate, rawEndDate);
-
-		if (statusFilters.length && !statusFilters.includes(status?.tone)) {
-			return false;
-		}
-
-		if (companyFilters.length && !companyFilters.includes(getValue(item, "pblntInstNm", "instNm"))) {
-			return false;
-		}
-
-		if (categoryFilters.length && !categoryFilters.some((categoryFilter) => getRecruitmentCategoryCodes(item).includes(categoryFilter))) {
-			return false;
-		}
-
-		if (hireTypeFilters.length && !hireTypeFilters.some((hireTypeFilter) => itemMatchesHireType(item, hireTypeFilter))) {
-			return false;
-		}
-
-		if (ncsFilters.length && !ncsFilters.some((ncsFilter) => itemMatchesNcs(item, ncsFilter))) {
-			return false;
-		}
-
-		return !regionFilters.length || regionFilters.some((regionFilter) => itemMatchesRegion(item, regionFilter));
-	});
+	return items;
 }
 
 function hasListHeaderFilter() {
@@ -835,6 +799,12 @@ function buildQueryString(page = currentPage, refresh = false, resume = false) {
 	const formData = new FormData(form);
 	const params = new URLSearchParams();
 	const periodSort = listPeriodSortFilter.querySelector("input:checked")?.value || "recent";
+	const statusFilters = getCheckedFilterValues(listStatusFilter);
+	const companyFilters = getCheckedFilterValues(listCompanyFilter);
+	const regionFilters = getCheckedFilterValues(listRegionFilter);
+	const categoryFilters = getCheckedFilterValues(listCategoryFilter);
+	const hireTypeFilters = getCheckedFilterValues(listHireTypeFilter);
+	const ncsFilters = getCheckedFilterValues(listNcsFilter);
 
 	formData.forEach((value, key) => {
 		const trimmed = String(value).trim();
@@ -847,6 +817,24 @@ function buildQueryString(page = currentPage, refresh = false, resume = false) {
 	params.set("numOfRows", String(PAGE_SIZE));
 	params.set("sortBy", periodSort === "deadline" ? "DEADLINE_DATE" : "RECRUITMENT_SEQUENCE");
 	params.set("sortDirection", periodSort === "deadline" ? "ASC" : "DESC");
+	if (statusFilters.length) {
+		params.set("recruitmentStatus", statusFilters.join(","));
+	}
+	if (companyFilters.length) {
+		params.set("pblntInstCd", companyFilters.join(","));
+	}
+	if (regionFilters.length) {
+		params.set("workRgnLst", regionFilters.join(","));
+	}
+	if (categoryFilters.length) {
+		params.set("recrutSe", categoryFilters.join(","));
+	}
+	if (hireTypeFilters.length) {
+		params.set("hireTypeLst", hireTypeFilters.join(","));
+	}
+	if (ncsFilters.length) {
+		params.set("ncsCdLst", ncsFilters.join(","));
+	}
 	if (refresh) {
 		params.set("refresh", "true");
 	}
@@ -895,7 +883,7 @@ async function loadRecruitments(page = currentPage, refresh = false, showLoading
 		currentItems = items;
 		currentSummaryContext = { keyword, totalCount };
 		updateDataRefreshText(payload?.lastFetchedAt ?? payload?.response?.body?.lastFetchedAt);
-		syncCompanyFilterOptions(items);
+		syncCompanyFilterOptions(payload?.filterOptions?.companies || []);
 		const filteredItems = getFilteredItems(items);
 
 		setStatus("");
@@ -1021,7 +1009,10 @@ keywordSearchControl.addEventListener("focusout", () => {
 });
 
 [listStatusFilter, listCompanyFilter, listCategoryFilter, listHireTypeFilter, listNcsFilter, listRegionFilter].forEach((filter) => {
-	filter.addEventListener("change", renderFilteredItems);
+	filter.addEventListener("change", () => {
+		updateListFilterIndicators();
+		loadRecruitments(1);
+	});
 });
 
 listPeriodSortFilter.addEventListener("change", () => {
