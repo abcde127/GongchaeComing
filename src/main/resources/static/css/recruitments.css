@@ -533,6 +533,11 @@ select:focus {
 	user-select: none;
 }
 
+.result-content-area {
+	position: relative;
+	min-height: 180px;
+}
+
 .loading-overlay {
 	position: absolute;
 	inset: 0;

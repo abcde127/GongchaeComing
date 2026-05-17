@@ -59,14 +59,7 @@
 				<div class="sync-failure-panel" id="syncFailurePanel" hidden>
 					<pre id="syncFailureContent"></pre>
 				</div>
-				<div class="loading-overlay" id="loadingState" hidden>
-					<div class="loading-overlay-card">
-						<div class="spinner" aria-hidden="true"></div>
-						<p>채용공고를 불러오고 있습니다</p>
-					</div>
-				</div>
-
-				<div class="list-filter-row" id="listFilterRow" hidden>
+				<div class="list-filter-row" id="listFilterRow">
 					<div class="list-filter-search">
 						<div class="list-filter-status">
 							<button class="list-filter-trigger" type="button" data-filter-trigger aria-controls="listStatusFilter" aria-expanded="false">상태</button>
@@ -129,12 +122,20 @@
 						<span>원문보기</span>
 					</div>
 				</div>
-				<div class="empty-state" id="emptyState">
-					<h3>해당 조건을 만족하는 공고가 없습니다.</h3>
-					<p></p>
+				<div class="result-content-area">
+					<div class="loading-overlay" id="loadingState" hidden>
+						<div class="loading-overlay-card">
+							<div class="spinner" aria-hidden="true"></div>
+							<p>채용공고를 불러오고 있습니다</p>
+						</div>
+					</div>
+					<div class="empty-state" id="emptyState" hidden>
+						<h3>해당 조건을 만족하는 공고가 없습니다.</h3>
+						<p></p>
+					</div>
+					<div class="card-grid" id="resultList" hidden></div>
+					<nav class="pagination" id="pagination" aria-label="채용공고 페이지 이동" hidden></nav>
 				</div>
-				<div class="card-grid" id="resultList" hidden></div>
-				<nav class="pagination" id="pagination" aria-label="채용공고 페이지 이동" hidden></nav>
 			</div>
 		</section>
 	</main>
