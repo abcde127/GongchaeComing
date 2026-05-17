@@ -1119,4 +1119,4 @@ initializeListFilterOptions();
 updateListFilterIndicators();
 updateKeywordSearchState();
 checkSyncProgress();
-loadRecruitments();
+loadRecruitments(1);
