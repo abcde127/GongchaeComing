@@ -371,6 +371,106 @@ select:focus {
 	font-weight: 700;
 }
 
+.sync-status-badge {
+	--sync-progress: 0%;
+	position: relative;
+	overflow: hidden;
+	padding: 5px 8px;
+	border-radius: 8px;
+	border: 1px solid rgba(15, 118, 110, 0.16);
+	background: rgba(217, 242, 238, 0.7);
+	color: var(--accent-dark);
+	font-size: 0.76rem;
+}
+
+.sync-status-badge.running::before {
+	content: "";
+	position: absolute;
+	inset: 0 auto 0 0;
+	width: var(--sync-progress);
+	pointer-events: none;
+	background: rgba(20, 184, 166, 0.28);
+	transition: width 420ms ease;
+}
+
+.sync-status-badge.pending {
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--muted);
+	overflow: visible;
+}
+
+.sync-status-badge.pending::after {
+	content: "";
+	display: inline-block;
+	width: 1.2em;
+	text-align: left;
+	animation: syncStatusDots 1.2s steps(4, end) infinite;
+}
+
+@keyframes syncStatusDots {
+	0% {
+		content: "";
+	}
+	25% {
+		content: ".";
+	}
+	50% {
+		content: "..";
+	}
+	75%, 100% {
+		content: "...";
+	}
+}
+
+.sync-status-badge.failed {
+	border-color: rgba(185, 28, 28, 0.18);
+	background: rgba(254, 226, 226, 0.82);
+	color: #991b1b;
+}
+
+.sync-status-badge.completed {
+	border-color: rgba(22, 101, 52, 0.16);
+	background: var(--success-bg);
+	color: var(--success-ink);
+}
+
+.sync-inline-button {
+	min-height: 30px;
+	padding: 0 9px;
+	border: 1px solid rgba(23, 32, 51, 0.12);
+	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.84);
+	color: var(--ink);
+	font-size: 0.76rem;
+	font-weight: 800;
+	cursor: pointer;
+}
+
+.sync-inline-button:hover {
+	background: rgba(217, 242, 238, 0.82);
+}
+
+.sync-failure-panel {
+	margin: -2px 0 10px;
+	padding: 12px;
+	border: 1px dashed rgba(185, 28, 28, 0.22);
+	border-radius: 8px;
+	background: rgba(254, 242, 242, 0.85);
+}
+
+.sync-failure-panel pre {
+	margin: 0;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	word-break: break-word;
+	font-family: Consolas, monospace;
+	font-size: 0.78rem;
+	line-height: 1.5;
+	color: #7f1d1d;
+}
+
 .data-refresh-button {
 	display: inline-grid;
 	place-items: center;
@@ -400,6 +500,15 @@ select:focus {
 	stroke-width: 2;
 	stroke-linecap: round;
 	stroke-linejoin: round;
+}
+
+.data-refresh-button.is-stop {
+	border-color: rgba(185, 28, 28, 0.18);
+	color: #991b1b;
+}
+
+.data-refresh-button.is-stop:hover {
+	background: rgba(254, 226, 226, 0.82);
 }
 
 .result-stage.is-loading .card-grid,
@@ -435,29 +544,6 @@ select:focus {
 .loading-overlay-card p {
 	margin: 0;
 	color: var(--muted);
-	font-weight: 700;
-}
-
-.loading-progress {
-	overflow: hidden;
-	width: min(280px, 62vw);
-	height: 8px;
-	border-radius: 999px;
-	background: rgba(23, 32, 51, 0.1);
-}
-
-.loading-progress-bar {
-	width: 0;
-	height: 100%;
-	border-radius: inherit;
-	background: var(--accent);
-	transition: width 180ms ease;
-}
-
-.loading-progress-detail {
-	min-height: 18px;
-	color: var(--muted);
-	font-size: 0.82rem;
 	font-weight: 700;
 }
 

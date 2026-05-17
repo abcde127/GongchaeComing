@@ -4,12 +4,14 @@ const keywordSearchButton = document.querySelector("#keywordSearchButton");
 const clearKeywordButton = document.querySelector("#clearKeywordButton");
 const keywordSearchControl = document.querySelector(".list-filter-search-control");
 const loadingState = document.querySelector("#loadingState");
-const loadingProgressMessage = document.querySelector("#loadingProgressMessage");
-const loadingProgressBar = document.querySelector("#loadingProgressBar");
-const loadingProgressDetail = document.querySelector("#loadingProgressDetail");
 const emptyState = document.querySelector("#emptyState");
 const dataRefreshText = document.querySelector("#dataRefreshText");
 const dataRefreshButton = document.querySelector("#dataRefreshButton");
+const syncStatusBadge = document.querySelector("#syncStatusBadge");
+const syncFailureDetailButton = document.querySelector("#syncFailureDetailButton");
+const syncResumeButton = document.querySelector("#syncResumeButton");
+const syncFailurePanel = document.querySelector("#syncFailurePanel");
+const syncFailureContent = document.querySelector("#syncFailureContent");
 const listFilterRow = document.querySelector("#listFilterRow");
 const listStatusFilter = document.querySelector("#listStatusFilter");
 const listCompanyFilter = document.querySelector("#listCompanyFilter");
@@ -30,8 +32,22 @@ let currentItems = [];
 let currentSummaryContext = { keyword: "", totalCount: 0 };
 let isClearingKeyword = false;
 let syncProgressTimer = null;
-let shouldPollInitialSyncProgress = true;
+let lastSyncStatus = "IDLE";
+let syncCompletionHideTimer = null;
 const MIN_LOADING_MS = 350;
+const refreshButtonIcon = `
+	<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+		<path d="M21 12a9 9 0 0 1-15.5 6.2"></path>
+		<path d="M3 12a9 9 0 0 1 15.5-6.2"></path>
+		<path d="M18 3v4h-4"></path>
+		<path d="M6 21v-4h4"></path>
+	</svg>
+`;
+const stopButtonIcon = `
+	<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+		<rect x="7" y="7" width="10" height="10" rx="1"></rect>
+	</svg>
+`;
 
 const selectOptions = {
 	hireTypeLst: [
@@ -171,10 +187,7 @@ function setLoading(isLoading) {
 	resultStage.classList.toggle("is-loading", isLoading);
 	keywordSearchButton.disabled = isLoading;
 	clearKeywordButton.disabled = isLoading;
-	dataRefreshButton.disabled = isLoading;
-	if (isLoading) {
-		resetLoadingProgress();
-	}
+	dataRefreshButton.disabled = isLoading || dataRefreshButton.dataset.syncing === "true";
 }
 
 function updateDataRefreshText(lastFetchedAt) {
@@ -198,48 +211,132 @@ function updateDataRefreshText(lastFetchedAt) {
 	}).format(fetchedAt)}`;
 }
 
-function resetLoadingProgress() {
-	loadingProgressMessage.textContent = "채용공고를 불러오고 있습니다.";
-	loadingProgressBar.style.width = "0%";
-	loadingProgressDetail.textContent = "";
-}
-
-function updateLoadingProgress(progress) {
+function updateSyncStatus(progress) {
+	const status = progress?.status || "IDLE";
+	const previousStatus = lastSyncStatus;
 	const percentage = Number(progress?.percentage ?? 0);
 	const currentPage = Number(progress?.currentPage ?? 0);
 	const totalPages = Number(progress?.totalPages ?? 0);
-	const fetchedCount = Number(progress?.fetchedCount ?? 0);
-	const totalCount = Number(progress?.totalCount ?? 0);
+	const isPendingStatus = Boolean(progress?.inProgress && (status === "CANCELING" || !totalPages));
+	const isRunningStatus = Boolean(progress?.inProgress && !isPendingStatus);
+	lastSyncStatus = status;
 
-	if (!totalPages) {
-		resetLoadingProgress();
+	syncStatusBadge.classList.toggle("failed", status === "FAILED");
+	syncStatusBadge.classList.toggle("completed", status === "COMPLETED");
+	syncStatusBadge.classList.toggle("pending", isPendingStatus);
+	syncStatusBadge.classList.toggle("running", isRunningStatus);
+	syncStatusBadge.style.setProperty("--sync-progress", `${Math.max(0, Math.min(100, percentage))}%`);
+	dataRefreshButton.dataset.syncing = progress?.inProgress ? "true" : "false";
+	dataRefreshButton.disabled = status === "CANCELING" || !loadingState.hidden;
+	dataRefreshButton.hidden = false;
+	dataRefreshButton.classList.toggle("is-stop", Boolean(progress?.inProgress));
+	dataRefreshButton.innerHTML = progress?.inProgress ? stopButtonIcon : refreshButtonIcon;
+	dataRefreshButton.setAttribute("aria-label", progress?.inProgress ? "갱신 중지" : "데이터 갱신");
+	dataRefreshButton.title = progress?.inProgress ? "갱신 중지" : "데이터 갱신";
+	syncFailureDetailButton.hidden = status !== "FAILED";
+	syncResumeButton.hidden = status !== "FAILED";
+
+	if (progress?.inProgress) {
+		window.clearTimeout(syncCompletionHideTimer);
+		syncStatusBadge.hidden = false;
+		dataRefreshText.hidden = true;
+		syncStatusBadge.textContent = status === "CANCELING"
+			? "갱신 중지 중"
+			: (totalPages ? `갱신 중 ${percentage}% (${currentPage}/${totalPages})` : "갱신 준비 중");
+		syncFailurePanel.hidden = true;
 		return;
 	}
 
-	loadingProgressBar.style.width = `${Math.max(0, Math.min(100, percentage))}%`;
-	loadingProgressMessage.textContent = `전체 데이터 갱신 중 ${percentage}%`;
-	loadingProgressDetail.textContent = totalCount
-		? `${currentPage} / ${totalPages}페이지 · ${fetchedCount.toLocaleString("ko-KR")} / ${totalCount.toLocaleString("ko-KR")}건`
-		: `${currentPage} / ${totalPages}페이지`;
+	if (status === "FAILED") {
+		window.clearTimeout(syncCompletionHideTimer);
+		syncStatusBadge.hidden = false;
+		dataRefreshText.hidden = true;
+		syncStatusBadge.textContent = progress?.message || "갱신 실패";
+		syncFailureContent.textContent = JSON.stringify(progress?.failureResponse || {}, null, 2);
+		return;
+	}
+
+	if (status === "COMPLETED") {
+		if (previousStatus !== "COMPLETED") {
+			syncStatusBadge.hidden = false;
+			dataRefreshText.hidden = true;
+			syncStatusBadge.textContent = "갱신 완료";
+			loadRecruitments(currentPage, false, false);
+			window.clearTimeout(syncCompletionHideTimer);
+			syncCompletionHideTimer = window.setTimeout(() => {
+				syncStatusBadge.hidden = true;
+				dataRefreshText.hidden = false;
+			}, 3000);
+		}
+		return;
+	}
+
+	if (status === "CANCELED") {
+		window.clearTimeout(syncCompletionHideTimer);
+		syncStatusBadge.hidden = true;
+		dataRefreshText.hidden = false;
+		syncStatusBadge.textContent = "";
+		return;
+	}
+
+	window.clearTimeout(syncCompletionHideTimer);
+	syncStatusBadge.hidden = true;
+	dataRefreshText.hidden = false;
+	syncStatusBadge.textContent = "";
+	syncFailurePanel.hidden = true;
+}
+
+async function fetchSyncProgress() {
+	const response = await fetch("/api/recruitments/alio/sync-progress", {
+		headers: {
+			Accept: "application/json"
+		}
+	});
+	if (!response.ok) {
+		return null;
+	}
+	return response.json();
+}
+
+async function checkSyncProgress({ showCompleted = false } = {}) {
+	try {
+		const progress = await fetchSyncProgress();
+		if (!progress) {
+			return;
+		}
+		if (progress.inProgress || progress.status === "FAILED" || showCompleted) {
+			updateSyncStatus(progress);
+		}
+		if (progress.inProgress) {
+			startSyncProgressPolling();
+		} else {
+			stopSyncProgressPolling();
+		}
+	} catch (error) {
+		// The main list request owns visible error handling.
+	}
 }
 
 function startSyncProgressPolling() {
+	if (syncProgressTimer) {
+		return;
+	}
 	stopSyncProgressPolling();
 	syncProgressTimer = window.setInterval(async () => {
 		try {
-			const response = await fetch("/api/recruitments/alio/sync-progress", {
-				headers: {
-					Accept: "application/json"
-				}
-			});
-			if (!response.ok) {
+			const progress = await fetchSyncProgress();
+			if (!progress) {
+				stopSyncProgressPolling();
 				return;
 			}
-			updateLoadingProgress(await response.json());
+			updateSyncStatus(progress);
+			if (!progress.inProgress) {
+				stopSyncProgressPolling();
+			}
 		} catch (error) {
-			// The main list request owns visible error handling.
+			stopSyncProgressPolling();
 		}
-	}, 250);
+	}, 1000);
 }
 
 function stopSyncProgressPolling() {
@@ -702,7 +799,7 @@ function renderPagination(totalCount, pageSize, page) {
 	pagination.hidden = false;
 }
 
-function buildQueryString(page = currentPage, refresh = false) {
+function buildQueryString(page = currentPage, refresh = false, resume = false) {
 	const formData = new FormData(form);
 	const params = new URLSearchParams();
 
@@ -718,22 +815,23 @@ function buildQueryString(page = currentPage, refresh = false) {
 	if (refresh) {
 		params.set("refresh", "true");
 	}
+	if (resume) {
+		params.set("resume", "true");
+	}
 	return params.toString();
 }
 
-async function loadRecruitments(page = currentPage, refresh = false) {
+async function loadRecruitments(page = currentPage, refresh = false, showLoading = true, resume = false) {
 	currentPage = page;
 	const loadingStartedAt = Date.now();
-	setLoading(true);
-	const shouldPollProgress = shouldPollInitialSyncProgress || refresh;
-	if (shouldPollProgress) {
-		startSyncProgressPolling();
+	if (showLoading) {
+		setLoading(true);
 	}
 	setStatus("");
 	setDebug(null);
 
 	try {
-		const query = buildQueryString(page, refresh);
+		const query = buildQueryString(page, refresh, resume);
 		const response = await fetch(`/api/recruitments/alio?${query}`, {
 			headers: {
 				Accept: "application/json"
@@ -769,20 +867,21 @@ async function loadRecruitments(page = currentPage, refresh = false) {
 		setDebug(null);
 		renderItems(filteredItems, buildSummary(filteredItems), { showHeader: items.length > 0 });
 		renderPagination(totalCount, PAGE_SIZE, currentPage);
+		if (refresh) {
+			checkSyncProgress();
+		}
 	} catch (error) {
 		setStatus("네트워크 오류가 발생했습니다. 서버 실행 상태를 확인해주세요.");
 		setDebug({ message: error.message });
 		renderItems([], "네트워크 오류로 인해 목록을 불러오지 못했습니다.");
 	} finally {
 		const elapsed = Date.now() - loadingStartedAt;
-		if (elapsed < MIN_LOADING_MS) {
+		if (showLoading && elapsed < MIN_LOADING_MS) {
 			await new Promise((resolve) => window.setTimeout(resolve, MIN_LOADING_MS - elapsed));
 		}
-		if (shouldPollProgress) {
-			stopSyncProgressPolling();
-			shouldPollInitialSyncProgress = false;
+		if (showLoading) {
+			setLoading(false);
 		}
-		setLoading(false);
 	}
 }
 
@@ -828,7 +927,42 @@ keywordSearchButton.addEventListener("click", () => {
 });
 
 dataRefreshButton.addEventListener("click", () => {
-	loadRecruitments(1, true);
+	if (dataRefreshButton.dataset.syncing === "true") {
+		cancelRecruitmentSync();
+		return;
+	}
+	loadRecruitments(currentPage, true, false);
+});
+
+async function cancelRecruitmentSync() {
+	try {
+		dataRefreshButton.disabled = true;
+		const response = await fetch("/api/recruitments/alio/sync-cancel", {
+			method: "POST",
+			headers: {
+				Accept: "application/json"
+			}
+		});
+		if (response.ok) {
+			const progress = await response.json();
+			updateSyncStatus(progress);
+			if (!progress.inProgress) {
+				stopSyncProgressPolling();
+			}
+		}
+	} catch (error) {
+		setStatus("갱신 중지 요청 중 오류가 발생했습니다.");
+		dataRefreshButton.disabled = false;
+	}
+}
+
+syncFailureDetailButton.addEventListener("click", () => {
+	syncFailurePanel.hidden = !syncFailurePanel.hidden;
+});
+
+syncResumeButton.addEventListener("click", () => {
+	syncFailurePanel.hidden = true;
+	loadRecruitments(currentPage, true, false, true);
 });
 
 clearKeywordButton.addEventListener("click", () => {
@@ -916,4 +1050,5 @@ initializeSelectOptions();
 initializeListFilterOptions();
 updateListFilterIndicators();
 updateKeywordSearchState();
+checkSyncProgress();
 loadRecruitments();

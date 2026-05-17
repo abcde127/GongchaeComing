@@ -5,11 +5,14 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.gongchae.gongchae_coming.alio.client.AlioRecruitmentClient;
 import com.gongchae.gongchae_coming.alio.domain.AlioRecruitment;
+import com.gongchae.gongchae_coming.alio.domain.AlioRecruitmentSyncState;
 import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentListRequest;
 import com.gongchae.gongchae_coming.alio.repository.AlioRecruitmentRepository;
+import com.gongchae.gongchae_coming.alio.repository.AlioRecruitmentSyncStateRepository;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -66,30 +69,32 @@ class AlioRecruitmentServiceTest {
 	}
 
 	@Test
-	void getRecruitmentsAttachesDebugInfoWhenAlioReturnsErrorPayload() {
+	void getRecruitmentsStartsBackgroundRefreshAndReturnsCachedData() {
 		AlioRecruitmentClient client = mock(AlioRecruitmentClient.class);
 		AlioRecruitmentRepository recruitmentRepository = mock(AlioRecruitmentRepository.class);
+		AlioRecruitmentSyncStateRepository syncStateRepository = mock(AlioRecruitmentSyncStateRepository.class);
 		AlioRecruitmentService service = new AlioRecruitmentService(
 			client,
 			recruitmentRepository,
+			syncStateRepository,
 			new AlioRecruitmentSyncProgressStore()
 		);
-		ObjectNode errorResponse = OBJECT_MAPPER.createObjectNode();
-		errorResponse.put("resultCode", "6");
-		errorResponse.put("resultMsgEng", "SERVER_UNKNOWN_ERROR");
+		ObjectNode apiResponse = OBJECT_MAPPER.createObjectNode();
+		apiResponse.put("resultCode", 200);
+		apiResponse.put("totalCount", 1);
+		apiResponse.putArray("result").add(recruitment("fresh", "2026-04-01", "2026-04-10"));
+		when(client.fetchRecruitments(any(AlioRecruitmentListRequest.class))).thenReturn(apiResponse);
+		when(recruitmentRepository.findAll()).thenReturn(toRecruitments(createResponse(
+			recruitment("cached", "2026-04-01", "2026-04-10")
+		)));
+		when(recruitmentRepository.findBySourceRecruitmentIdIn(any())).thenReturn(List.of());
+		when(syncStateRepository.findById(any())).thenReturn(Optional.empty());
 
-		when(client.fetchRecruitments(any(AlioRecruitmentListRequest.class))).thenReturn(errorResponse);
-		when(client.buildRequestMethodForDebug()).thenReturn("GET");
-		when(client.buildRequestUriForDebug(any(AlioRecruitmentListRequest.class)))
-			.thenReturn("https://opendata.alio.go.kr/new/v1/recruit/list.do?recrutPbancTtl=nhis");
+		var result = service.getRecruitments(request("REGISTRATION_DATE", null), true);
 
-		var result = service.getRecruitments(request("REGISTRATION_DATE", null, "nhis"), true);
-
-		assertThat(result.at("/_debug/alioRequestMethod").asText()).isEqualTo("GET");
-		assertThat(result.at("/_debug/alioRequestUri").asText())
-			.isEqualTo("https://opendata.alio.go.kr/new/v1/recruit/list.do?recrutPbancTtl=nhis");
-		assertThat(result.at("/_debug/searchKeyword").asText()).isEmpty();
-		assertThat(result.at("/_debug/recrutPbancTtl").asText()).isEmpty();
+		assertThat(result.at("/response/body/items/item/0/recrutPbancTtl").asText()).isEqualTo("cached");
+		org.mockito.Mockito.verify(client, org.mockito.Mockito.timeout(1000))
+			.fetchRecruitments(any(AlioRecruitmentListRequest.class));
 	}
 
 	@Test
@@ -200,9 +205,11 @@ class AlioRecruitmentServiceTest {
 	void getRecruitmentsRefreshesFromRootResultArrayWithOneThousandRows() {
 		AlioRecruitmentClient client = mock(AlioRecruitmentClient.class);
 		AlioRecruitmentRepository recruitmentRepository = mock(AlioRecruitmentRepository.class);
+		AlioRecruitmentSyncStateRepository syncStateRepository = mock(AlioRecruitmentSyncStateRepository.class);
 		AlioRecruitmentService service = new AlioRecruitmentService(
 			client,
 			recruitmentRepository,
+			syncStateRepository,
 			new AlioRecruitmentSyncProgressStore()
 		);
 		ObjectNode apiResponse = OBJECT_MAPPER.createObjectNode();
@@ -217,22 +224,59 @@ class AlioRecruitmentServiceTest {
 		when(recruitmentRepository.findAll()).thenReturn(toRecruitments(createResponse(
 			recruitment("식품안전정보원 개방형 직위 공개 모집", "20260515", "20260601")
 		)));
+		when(syncStateRepository.findById(any())).thenReturn(Optional.empty());
 
 		var result = service.getRecruitments(request("REGISTRATION_DATE", "DESC"), true);
 
-		verify(client).fetchRecruitments(argThat(request ->
+		verify(client, org.mockito.Mockito.timeout(1000)).fetchRecruitments(argThat(request ->
 			request.resolvedPageNo() == 1 && request.resolvedNumOfRows() == 1000
 		));
 		assertThat(result.at("/response/body/items/item/0/recrutPbancTtl").asText())
 			.isEqualTo("식품안전정보원 개방형 직위 공개 모집");
 	}
 
+	@Test
+	void failedRefreshStoresFailureResponseWithoutAutomaticRetry() {
+		AlioRecruitmentClient client = mock(AlioRecruitmentClient.class);
+		AlioRecruitmentRepository recruitmentRepository = mock(AlioRecruitmentRepository.class);
+		AlioRecruitmentSyncStateRepository syncStateRepository = mock(AlioRecruitmentSyncStateRepository.class);
+		AlioRecruitmentSyncProgressStore progressStore = new AlioRecruitmentSyncProgressStore();
+		AlioRecruitmentService service = new AlioRecruitmentService(
+			client,
+			recruitmentRepository,
+			syncStateRepository,
+			progressStore
+		);
+		ObjectNode errorResponse = OBJECT_MAPPER.createObjectNode();
+		errorResponse.put("resultCode", "500");
+		errorResponse.put("resultMsg", "TEMPORARY_ERROR");
+
+		when(client.fetchRecruitments(any(AlioRecruitmentListRequest.class))).thenReturn(errorResponse);
+		when(recruitmentRepository.findAll()).thenReturn(List.of());
+
+		service.getRecruitments(request("REGISTRATION_DATE", "DESC"), true);
+
+		verify(client, org.mockito.Mockito.timeout(1000).times(1)).fetchRecruitments(any(AlioRecruitmentListRequest.class));
+		assertThat(progressStore.get().status()).isEqualTo("FAILED");
+		assertThat(progressStore.get().failedPage()).isEqualTo(1);
+		assertThat(progressStore.get().failureResponse().path("resultMsg").asText()).isEqualTo("TEMPORARY_ERROR");
+	}
+
 	private AlioRecruitmentService serviceWithCachedItems(ObjectNode response) {
 		AlioRecruitmentClient client = mock(AlioRecruitmentClient.class);
 		AlioRecruitmentRepository recruitmentRepository = mock(AlioRecruitmentRepository.class);
+		AlioRecruitmentSyncStateRepository syncStateRepository = mock(AlioRecruitmentSyncStateRepository.class);
 
 		when(recruitmentRepository.findAll()).thenReturn(toRecruitments(response));
-		return new AlioRecruitmentService(client, recruitmentRepository, new AlioRecruitmentSyncProgressStore());
+		when(syncStateRepository.findById(any())).thenReturn(Optional.of(
+			AlioRecruitmentSyncState.global(LocalDateTime.of(2026, 5, 16, 10, 30))
+		));
+		return new AlioRecruitmentService(
+			client,
+			recruitmentRepository,
+			syncStateRepository,
+			new AlioRecruitmentSyncProgressStore()
+		);
 	}
 
 	private List<AlioRecruitment> toRecruitments(ObjectNode response) {
