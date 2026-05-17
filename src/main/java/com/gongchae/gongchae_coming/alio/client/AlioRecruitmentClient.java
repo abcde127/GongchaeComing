@@ -17,27 +17,39 @@ import java.net.URI;
 @RequiredArgsConstructor
 public class AlioRecruitmentClient {
 
+	private static final String REQUEST_METHOD = "GET";
+
 	private final RestClient restClient;
 	private final AlioApiProperties properties;
 
 	public JsonNode fetchRecruitments(AlioRecruitmentListRequest request) {
 		validateConfiguration();
+		URI uri = buildUri(request);
 
 		try {
-			return restClient.post()
-				.uri(buildUri(request))
+			return restClient.get()
+				.uri(uri)
 				.retrieve()
 				.body(JsonNode.class);
 		} catch (Exception exception) {
-			throw new AlioApiException(buildErrorMessage(exception), exception);
+			throw buildAlioApiException(uri, exception);
 		}
 	}
 
+	public String buildRequestUriForDebug(AlioRecruitmentListRequest request) {
+		validateConfiguration();
+		return buildUri(request).toString();
+	}
+
+	public String buildRequestMethodForDebug() {
+		return REQUEST_METHOD;
+	}
+
 	private URI buildUri(AlioRecruitmentListRequest request) {
+		String recruitmentTitleKeyword = request.resolvedRecruitmentTitleKeyword();
 		UriComponentsBuilder builder = UriComponentsBuilder
 			.fromUriString(properties.baseUrl())
 			.path(properties.recruitListPath())
-			.queryParam("serviceKey", properties.serviceKey())
 			.queryParam("resultType", resolveResultType(request))
 			.queryParam("pageNo", request.resolvedPageNo())
 			.queryParam("numOfRows", request.resolvedNumOfRows());
@@ -51,12 +63,13 @@ public class AlioRecruitmentClient {
 		addQueryParam(builder, "pbancBgngYmd", request.pbancBgngYmd());
 		addQueryParam(builder, "pbancEndYmd", request.pbancEndYmd());
 		addQueryParam(builder, "pblntInstCd", request.pblntInstCd());
-		addQueryParam(builder, "recrutPbancTtl", request.recrutPbancTtl());
+		addQueryParam(builder, "recrutPbancTtl", recruitmentTitleKeyword);
 		addQueryParam(builder, "recrutSe", request.recrutSe());
 		addQueryParam(builder, "replmprYn", request.replmprYn());
 		addQueryParam(builder, "workRgnLst", request.workRgnLst());
 
-		return builder.encode().build().toUri();
+		String uri = builder.build().toUri().toString();
+		return URI.create(uri + "&serviceKey=" + properties.serviceKey());
 	}
 
 	private String resolveResultType(AlioRecruitmentListRequest request) {
@@ -79,24 +92,37 @@ public class AlioRecruitmentClient {
 		}
 	}
 
-	private String buildErrorMessage(Exception exception) {
+	private AlioApiException buildAlioApiException(URI requestUri, Exception exception) {
 		StringBuilder message = new StringBuilder("Failed to fetch recruitment list from ALIO API");
+		String requestUriText = requestUri.toString();
 
 		if (exception instanceof RestClientResponseException responseException) {
 			message.append(" (status: ").append(responseException.getStatusCode()).append(")");
+			message.append(". Request method: ").append(REQUEST_METHOD);
+			message.append(". Request URI: ").append(requestUriText);
 
 			String responseBody = responseException.getResponseBodyAsString();
 			if (StringUtils.hasText(responseBody)) {
 				message.append(". Response body: ").append(responseBody);
 			}
 
-			return message.toString();
+			return new AlioApiException(
+				message.toString(),
+				exception,
+				responseException.getStatusCode(),
+				responseBody,
+				REQUEST_METHOD,
+				requestUriText
+			);
 		}
+
+		message.append(". Request method: ").append(REQUEST_METHOD);
+		message.append(". Request URI: ").append(requestUriText);
 
 		if (StringUtils.hasText(exception.getMessage())) {
 			message.append(". Cause: ").append(exception.getMessage());
 		}
 
-		return message.toString();
+		return new AlioApiException(message.toString(), exception, null, null, REQUEST_METHOD, requestUriText);
 	}
 }
