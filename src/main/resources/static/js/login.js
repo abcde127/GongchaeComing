@@ -38,10 +38,14 @@ function validateLoginForm() {
 
 togglePassword.addEventListener("click", () => {
 	const isPassword = passwordInput.type === "password";
+	const hiddenIcon = togglePassword.querySelector('[data-visible="false"]');
+	const visibleIcon = togglePassword.querySelector('[data-visible="true"]');
 
 	passwordInput.type = isPassword ? "text" : "password";
-	togglePassword.textContent = isPassword ? "숨김" : "보기";
 	togglePassword.setAttribute("aria-label", isPassword ? "비밀번호 숨기기" : "비밀번호 표시");
+	togglePassword.setAttribute("aria-pressed", String(isPassword));
+	hiddenIcon.hidden = isPassword;
+	visibleIcon.hidden = !isPassword;
 	passwordInput.focus();
 });
 
