@@ -96,6 +96,7 @@ class AlioRecruitmentListRequestTest {
 			null,
 			null,
 			null,
+			null,
 			searchKeyword,
 			recrutPbancTtl,
 			null,
