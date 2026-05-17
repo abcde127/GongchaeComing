@@ -944,14 +944,25 @@ select:focus {
 }
 
 .pagination {
-	display: flex;
-	flex-wrap: wrap;
+	display: grid;
+	grid-template-columns: 72px minmax(0, auto) 72px;
+	align-items: center;
 	justify-content: center;
 	gap: 8px;
 	margin-top: 20px;
 }
 
+.pagination-center,
+.pagination-pages {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+}
+
 .pagination-button {
+	display: inline-grid;
+	place-items: center;
 	min-width: 40px;
 	height: 40px;
 	padding: 0 12px;
@@ -964,6 +975,42 @@ select:focus {
 	transition: transform 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
 }
 
+.pagination-control-button,
+.pagination-edge-button {
+	border: 0;
+	background: transparent;
+	color: var(--muted);
+	cursor: pointer;
+	transition: color 0.16s ease, transform 0.16s ease;
+}
+
+.pagination-control-button {
+	display: inline-grid;
+	place-items: center;
+	width: 30px;
+	height: 40px;
+	padding: 0;
+}
+
+.pagination-control-button svg {
+	width: 18px;
+	height: 18px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2.3;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.pagination-edge-button {
+	min-width: 58px;
+	height: 40px;
+	padding: 0 8px;
+	font-size: 0.8rem;
+	font-weight: 800;
+	white-space: nowrap;
+}
+
 .pagination-button.is-active {
 	border-color: transparent;
 	background: var(--accent);
@@ -973,6 +1020,19 @@ select:focus {
 .pagination-button:disabled {
 	cursor: not-allowed;
 	opacity: 0.45;
+	transform: none;
+}
+
+.pagination-control-button:hover:not(:disabled),
+.pagination-edge-button:hover:not(:disabled) {
+	color: var(--accent-strong);
+	transform: translateY(-1px);
+}
+
+.pagination-control-button:disabled,
+.pagination-edge-button:disabled {
+	cursor: not-allowed;
+	opacity: 0.35;
 	transform: none;
 }
 
