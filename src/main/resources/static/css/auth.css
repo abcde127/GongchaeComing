@@ -233,6 +233,40 @@ input:focus {
 	padding: 8px;
 }
 
+.password-toggle {
+	display: inline-grid;
+	place-items: center;
+	width: 36px;
+	height: 36px;
+	border-radius: 8px;
+	color: var(--muted);
+}
+
+.password-toggle:hover,
+.password-toggle:focus-visible {
+	color: var(--accent-strong);
+	background: var(--accent-soft);
+}
+
+.password-toggle-icon {
+	display: inline-grid;
+	place-items: center;
+}
+
+.password-toggle-icon[hidden] {
+	display: none;
+}
+
+.password-toggle svg {
+	width: 20px;
+	height: 20px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
 .field-error {
 	min-height: 19px;
 	margin: 0;
