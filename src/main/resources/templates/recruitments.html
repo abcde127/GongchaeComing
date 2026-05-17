@@ -43,6 +43,9 @@
 			<div class="result-stage" id="resultStage">
 				<div class="data-refresh-row" id="dataRefreshRow">
 					<span id="dataRefreshText">최종 갱신: 정보 없음</span>
+					<span class="sync-status-badge" id="syncStatusBadge" hidden></span>
+					<button type="button" class="sync-inline-button" id="syncFailureDetailButton" hidden>실패사유보기</button>
+					<button type="button" class="sync-inline-button" id="syncResumeButton" hidden>이어서 갱신하기</button>
 					<button type="button" class="data-refresh-button" id="dataRefreshButton" aria-label="데이터 갱신" title="데이터 갱신">
 						<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
 							<path d="M21 12a9 9 0 0 1-15.5 6.2"></path>
@@ -52,14 +55,13 @@
 						</svg>
 					</button>
 				</div>
+				<div class="sync-failure-panel" id="syncFailurePanel" hidden>
+					<pre id="syncFailureContent"></pre>
+				</div>
 				<div class="loading-overlay" id="loadingState" hidden>
 					<div class="loading-overlay-card">
 						<div class="spinner" aria-hidden="true"></div>
-						<p id="loadingProgressMessage">채용공고를 불러오고 있습니다.</p>
-						<div class="loading-progress" aria-hidden="true">
-							<div class="loading-progress-bar" id="loadingProgressBar"></div>
-						</div>
-						<span class="loading-progress-detail" id="loadingProgressDetail"></span>
+						<p>채용공고를 불러오고 있습니다</p>
 					</div>
 				</div>
 

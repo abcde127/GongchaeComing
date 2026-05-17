@@ -6,10 +6,15 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.gongchae.gongchae_coming.alio.client.AlioRecruitmentClient;
 import com.gongchae.gongchae_coming.alio.domain.AlioRecruitment;
+import com.gongchae.gongchae_coming.alio.domain.AlioRecruitmentSyncState;
 import com.gongchae.gongchae_coming.alio.dto.AlioFilterOptionResponse;
 import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentListRequest;
+import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentSyncProgressResponse;
+import com.gongchae.gongchae_coming.alio.exception.AlioApiException;
 import com.gongchae.gongchae_coming.alio.repository.AlioRecruitmentRepository;
+import com.gongchae.gongchae_coming.alio.repository.AlioRecruitmentSyncStateRepository;
 import lombok.RequiredArgsConstructor;
+import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -22,6 +27,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -118,7 +126,11 @@ public class AlioRecruitmentService {
 
 	private final AlioRecruitmentClient alioRecruitmentClient;
 	private final AlioRecruitmentRepository alioRecruitmentRepository;
+	private final AlioRecruitmentSyncStateRepository syncStateRepository;
 	private final AlioRecruitmentSyncProgressStore syncProgressStore;
+	private final AtomicBoolean syncInProgress = new AtomicBoolean(false);
+	private final AtomicBoolean syncCancelRequested = new AtomicBoolean(false);
+	private final ExecutorService syncExecutor = Executors.newSingleThreadExecutor();
 
 	@Transactional
 	public JsonNode getRecruitments(AlioRecruitmentListRequest request) {
@@ -127,14 +139,23 @@ public class AlioRecruitmentService {
 
 	@Transactional
 	public JsonNode getRecruitments(AlioRecruitmentListRequest request, boolean refresh) {
-		return getRecruitments(request, refresh, null);
+		return getRecruitments(request, refresh, false, null);
 	}
 
 	@Transactional
 	public JsonNode getRecruitments(AlioRecruitmentListRequest request, boolean refresh, String progressKey) {
-		JsonNode syncErrorResponse = refresh ? synchronizeRecruitments(request, progressKey) : null;
-		if (syncErrorResponse != null) {
-			return syncErrorResponse;
+		return getRecruitments(request, refresh, false, progressKey);
+	}
+
+	@Transactional
+	public JsonNode getRecruitments(
+		AlioRecruitmentListRequest request,
+		boolean refresh,
+		boolean resume,
+		String progressKey
+	) {
+		if (refresh) {
+			startBackgroundSynchronization(request, resume);
 		}
 
 		ObjectNode response = buildResponseFromCachedRecruitments(request);
@@ -144,24 +165,71 @@ public class AlioRecruitmentService {
 		return response;
 	}
 
-	private JsonNode synchronizeRecruitments(AlioRecruitmentListRequest request, String progressKey) {
+	public boolean startBackgroundSynchronization(AlioRecruitmentListRequest request) {
+		return startBackgroundSynchronization(request, false);
+	}
+
+	public boolean startBackgroundSynchronization(AlioRecruitmentListRequest request, boolean resume) {
+		if (!syncInProgress.compareAndSet(false, true)) {
+			return false;
+		}
+		syncCancelRequested.set(false);
+		AlioRecruitmentSyncProgressResponse previousProgress = syncProgressStore.get();
+		syncProgressStore.start();
+
+		syncExecutor.submit(() -> {
+			try {
+				synchronizeRecruitments(request, resume, previousProgress);
+			} catch (Exception exception) {
+				if (!"FAILED".equals(syncProgressStore.get().status())) {
+					syncProgressStore.fail(
+						0,
+						0,
+						0,
+						0,
+						"데이터 갱신 중 오류가 발생했습니다.",
+						0,
+						failureResponseFromException(exception)
+					);
+				}
+			} finally {
+				syncInProgress.set(false);
+			}
+		});
+		return true;
+	}
+
+	public boolean cancelBackgroundSynchronization() {
+		if (!syncInProgress.get()) {
+			return false;
+		}
+		syncCancelRequested.set(true);
+		syncProgressStore.canceling();
+		return true;
+	}
+
+	private void synchronizeRecruitments(
+		AlioRecruitmentListRequest request,
+		boolean resume,
+		AlioRecruitmentSyncProgressResponse previousProgress
+	) {
 		LocalDateTime now = LocalDateTime.now();
 		AlioRecruitmentListRequest syncRequest = request.withoutSearchAndFilters();
-		List<JsonNode> fetchedItems = new ArrayList<>();
-		int pageNo = 1;
+		int pageNo = resume && previousProgress.failedPage() > 0 ? previousProgress.failedPage() : 1;
+		int fetchedCount = resume ? previousProgress.fetchedCount() : 0;
 		Integer totalCount = null;
-		int totalPages = 0;
-		if (StringUtils.hasText(progressKey)) {
-			syncProgressStore.start(progressKey);
+		if (resume && previousProgress.totalCount() > 0) {
+			totalCount = previousProgress.totalCount();
 		}
+		int totalPages = resume ? previousProgress.totalPages() : 0;
 
-		while (totalCount == null || fetchedItems.size() < totalCount) {
-			AlioRecruitmentListRequest pageRequest = syncRequest.withPage(pageNo, SYNC_PAGE_SIZE);
-			JsonNode response = alioRecruitmentClient.fetchRecruitments(pageRequest);
-			if (isAlioErrorResponse(response)) {
-				attachDebugInfoWhenAlioReturnsError(pageRequest, response);
-				return response;
+		while (totalCount == null || fetchedCount < totalCount) {
+			if (syncCancelRequested.get()) {
+				syncProgressStore.canceled(pageNo - 1, totalPages, fetchedCount, totalCount == null ? 0 : totalCount);
+				return;
 			}
+			AlioRecruitmentListRequest pageRequest = syncRequest.withPage(pageNo, SYNC_PAGE_SIZE);
+			JsonNode response = fetchRecruitmentsOrFail(pageRequest, pageNo, totalPages, fetchedCount, totalCount);
 
 			ArrayNode items = findRecruitmentItems(response);
 			if (items == null || items.isEmpty()) {
@@ -169,18 +237,17 @@ public class AlioRecruitmentService {
 			}
 
 			totalCount = extractTotalCount(response);
-			items.forEach(fetchedItems::add);
+			List<JsonNode> pageItems = new ArrayList<>();
+			items.forEach(pageItems::add);
+			upsertRecruitments(pageItems, now);
+			fetchedCount += pageItems.size();
 			totalPages = totalCount == null
 				? Math.max(totalPages, pageNo + (items.size() == SYNC_PAGE_SIZE ? 1 : 0))
 				: Math.max(1, (int) Math.ceil((double) totalCount / SYNC_PAGE_SIZE));
-			if (StringUtils.hasText(progressKey)) {
-				syncProgressStore.update(
-					progressKey,
-					pageNo,
-					totalPages,
-					fetchedItems.size(),
-					totalCount == null ? 0 : totalCount
-				);
+			syncProgressStore.update(pageNo, totalPages, fetchedCount, totalCount == null ? 0 : totalCount);
+			if (syncCancelRequested.get()) {
+				syncProgressStore.canceled(pageNo, totalPages, fetchedCount, totalCount == null ? 0 : totalCount);
+				return;
 			}
 			if (totalCount == null && items.size() < SYNC_PAGE_SIZE) {
 				break;
@@ -188,18 +255,93 @@ public class AlioRecruitmentService {
 			pageNo++;
 		}
 
-		upsertRecruitments(fetchedItems, now);
-		if (StringUtils.hasText(progressKey)) {
-			int completedPages = totalPages == 0 ? 0 : Math.min(pageNo, totalPages);
-			syncProgressStore.complete(
-				progressKey,
+		int completedPages = totalPages == 0 ? 0 : Math.min(pageNo, totalPages);
+		if (totalCount != null && fetchedCount < totalCount) {
+			ObjectNode failureResponse = OBJECT_MAPPER.createObjectNode();
+			failureResponse.put("message", "API totalCount보다 적은 데이터만 수집된 상태로 갱신이 종료되었습니다.");
+			failureResponse.put("fetchedCount", fetchedCount);
+			failureResponse.put("totalCount", totalCount);
+			syncProgressStore.fail(
 				completedPages,
 				totalPages,
-				fetchedItems.size(),
-				totalCount == null ? fetchedItems.size() : totalCount
+				fetchedCount,
+				totalCount,
+				"전체 데이터 갱신을 완료하지 못했습니다.",
+				pageNo,
+				failureResponse
 			);
+			return;
 		}
-		return null;
+		syncStateRepository.save(AlioRecruitmentSyncState.global(LocalDateTime.now()));
+		syncProgressStore.complete(
+			completedPages,
+			totalPages,
+			fetchedCount,
+			totalCount == null ? fetchedCount : totalCount
+		);
+	}
+
+	private JsonNode fetchRecruitmentsOrFail(
+		AlioRecruitmentListRequest request,
+		int pageNo,
+		int totalPages,
+		int fetchedCount,
+		Integer totalCount
+	) {
+		try {
+			JsonNode response = alioRecruitmentClient.fetchRecruitments(request);
+			if (!isAlioErrorResponse(response)) {
+				return response;
+			}
+			failSynchronization(pageNo, totalPages, fetchedCount, totalCount, response);
+			throw new IllegalStateException("ALIO API returned error response.");
+		} catch (RuntimeException exception) {
+			if (!"FAILED".equals(syncProgressStore.get().status())) {
+				JsonNode failureResponse = failureResponseFromException(exception);
+				failSynchronization(pageNo, totalPages, fetchedCount, totalCount, failureResponse);
+			}
+			throw exception;
+		}
+	}
+
+	private void failSynchronization(
+		int pageNo,
+		int totalPages,
+		int fetchedCount,
+		Integer totalCount,
+		JsonNode failureResponse
+	) {
+		syncProgressStore.fail(
+			pageNo,
+			totalPages,
+			fetchedCount,
+			totalCount == null ? 0 : totalCount,
+			"%d페이지 호출에 실패했습니다.".formatted(pageNo),
+			pageNo,
+			failureResponse
+		);
+	}
+
+	private JsonNode failureResponseFromException(Exception exception) {
+		if (exception instanceof AlioApiException alioApiException
+			&& StringUtils.hasText(alioApiException.getAlioResponseBody())) {
+			try {
+				return OBJECT_MAPPER.readTree(alioApiException.getAlioResponseBody());
+			} catch (Exception ignored) {
+				ObjectNode response = OBJECT_MAPPER.createObjectNode();
+				response.put("responseBody", alioApiException.getAlioResponseBody());
+				return response;
+			}
+		}
+
+		ObjectNode response = OBJECT_MAPPER.createObjectNode();
+		response.put("message", exception.getMessage());
+		return response;
+	}
+
+	@PreDestroy
+	void shutdownSyncExecutor() {
+		syncExecutor.shutdownNow();
 	}
 
 	private void upsertRecruitments(List<JsonNode> items, LocalDateTime fetchedAt) {
@@ -239,7 +381,6 @@ public class AlioRecruitmentService {
 		body.put("numOfRows", request.resolvedNumOfRows());
 		ObjectNode items = body.putObject("items");
 		ArrayNode itemArray = items.putArray("item");
-		LocalDateTime lastFetchedAt = null;
 		List<AlioRecruitment> recruitments = alioRecruitmentRepository.findAll();
 
 		recruitments.forEach(recruitment -> {
@@ -247,11 +388,9 @@ public class AlioRecruitmentService {
 			recruitment.writeTo(item);
 			itemArray.add(item);
 		});
-		for (AlioRecruitment recruitment : recruitments) {
-			if (lastFetchedAt == null || recruitment.getFetchedAt().isAfter(lastFetchedAt)) {
-				lastFetchedAt = recruitment.getFetchedAt();
-			}
-		}
+		LocalDateTime lastFetchedAt = syncStateRepository.findById(AlioRecruitmentSyncState.GLOBAL_ID)
+			.map(AlioRecruitmentSyncState::getLastSucceededAt)
+			.orElse(null);
 		if (lastFetchedAt != null) {
 			root.put("lastFetchedAt", lastFetchedAt.toString());
 			body.put("lastFetchedAt", lastFetchedAt.toString());
