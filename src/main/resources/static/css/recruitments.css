@@ -371,6 +371,19 @@ select:focus {
 	font-weight: 700;
 }
 
+.result-count-summary {
+	margin-right: auto;
+	color: var(--ink);
+	font-weight: 700;
+	white-space: nowrap;
+}
+
+.result-count-summary strong {
+	color: var(--accent-strong);
+	font-size: 0.92rem;
+	font-weight: 900;
+}
+
 .sync-status-badge {
 	--sync-progress: 0%;
 	position: relative;

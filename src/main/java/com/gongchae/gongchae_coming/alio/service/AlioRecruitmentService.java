@@ -383,6 +383,8 @@ public class AlioRecruitmentService {
 		ObjectNode items = body.putObject("items");
 		ArrayNode itemArray = items.putArray("item");
 		List<AlioRecruitment> recruitments = alioRecruitmentRepository.findAll();
+		root.put("overallTotalCount", recruitments.size());
+		body.put("overallTotalCount", recruitments.size());
 		addFilterOptions(root, recruitments);
 
 		recruitments.forEach(recruitment -> {
