@@ -7,6 +7,8 @@ const loginMessage = document.querySelector("#loginMessage");
 const loginButton = document.querySelector("#loginButton");
 const togglePassword = document.querySelector("#togglePassword");
 
+const params = new URLSearchParams(window.location.search);
+
 function setMessage(message) {
 	loginMessage.textContent = message;
 	loginMessage.hidden = !message;
@@ -22,18 +24,12 @@ function validateLoginForm() {
 	setMessage("");
 
 	if (!email) {
-		emailError.textContent = "이메일을 입력해주세요.";
-		valid = false;
-	} else if (!emailInput.validity.valid) {
-		emailError.textContent = "올바른 이메일 형식으로 입력해주세요.";
+		emailError.textContent = "아이디를 입력해주세요.";
 		valid = false;
 	}
 
 	if (!password) {
 		passwordError.textContent = "비밀번호를 입력해주세요.";
-		valid = false;
-	} else if (password.length < 8) {
-		passwordError.textContent = "비밀번호는 8자 이상이어야 합니다.";
 		valid = false;
 	}
 
@@ -42,12 +38,24 @@ function validateLoginForm() {
 
 togglePassword.addEventListener("click", () => {
 	const isPassword = passwordInput.type === "password";
+	const hiddenIcon = togglePassword.querySelector('[data-visible="false"]');
+	const visibleIcon = togglePassword.querySelector('[data-visible="true"]');
 
 	passwordInput.type = isPassword ? "text" : "password";
-	togglePassword.textContent = isPassword ? "숨김" : "보기";
 	togglePassword.setAttribute("aria-label", isPassword ? "비밀번호 숨기기" : "비밀번호 표시");
+	togglePassword.setAttribute("aria-pressed", String(isPassword));
+	hiddenIcon.hidden = isPassword;
+	visibleIcon.hidden = !isPassword;
 	passwordInput.focus();
 });
+
+if (params.has("error")) {
+	setMessage("아이디 또는 비밀번호가 올바르지 않습니다.");
+}
+
+if (params.has("logout")) {
+	setMessage("로그아웃되었습니다.");
+}
 
 form.addEventListener("submit", (event) => {
 	if (!validateLoginForm()) {
