@@ -95,7 +95,17 @@ select {
 	border-radius: 8px;
 	border: 1px solid rgba(255, 255, 255, 0.62);
 	background: rgba(255, 255, 255, 0.12);
+	color: inherit;
 	font-weight: 700;
+}
+
+.logout-form {
+	margin: 0;
+}
+
+.logout-button {
+	font: inherit;
+	cursor: pointer;
 }
 
 .hero-content {
@@ -562,6 +572,8 @@ select:focus {
 .data-refresh-button svg {
 	position: relative;
 	z-index: 1;
+	justify-self: center;
+	align-self: center;
 	width: var(--refresh-icon-size);
 	height: var(--refresh-icon-size);
 	fill: none;
