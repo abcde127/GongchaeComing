@@ -19,7 +19,10 @@
 					<strong>Gongchae Coming</strong>
 				</span>
 			</a>
-			<a class="login-link" href="/login">로그인</a>
+			<a class="login-link" href="/login" th:if="${!isLoggedIn}">로그인</a>
+			<form class="logout-form" th:if="${isLoggedIn}" method="post" action="/logout">
+				<button type="submit" class="login-link logout-button">로그아웃</button>
+			</form>
 		</nav>
 
 		<div class="hero-content">
