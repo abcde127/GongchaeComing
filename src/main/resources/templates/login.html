@@ -25,20 +25,19 @@
 			<div class="auth-heading">
 				<p class="eyebrow">Welcome back</p>
 				<h2 id="login-title">로그인</h2>
-				<p>가입한 이메일과 비밀번호를 입력해주세요.</p>
+				<p>가입한 아이디와 비밀번호를 입력해주세요.</p>
 			</div>
 
 			<div class="alert" id="loginMessage" role="alert" aria-live="polite" hidden></div>
 
 			<form class="login-form" id="loginForm" method="post" action="/login" novalidate>
 				<div class="field-group">
-					<label for="email">이메일</label>
+					<label for="email">아이디</label>
 					<input
 						type="text"
 						id="email"
 						name="username"
 						autocomplete="email"
-						placeholder="아이디"
 						required>
 					<p class="field-error" id="emailError"></p>
 				</div>
@@ -51,7 +50,6 @@
 							id="password"
 							name="password"
 							autocomplete="current-password"
-							placeholder="비밀번호"
 							required>
 						<button
 							type="button"
