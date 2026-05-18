@@ -55,6 +55,10 @@ public class Member {
 		this.password = encodedPassword;
 	}
 
+	public void updateProfile(String nickname) {
+		this.nickname = nickname;
+	}
+
 	@PrePersist
 	void prePersist() {
 		createdAt = LocalDateTime.now();

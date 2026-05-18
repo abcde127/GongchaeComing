@@ -20,6 +20,7 @@
 				</span>
 			</a>
 			<a class="login-link" href="/login" th:if="${!isLoggedIn}">로그인</a>
+			<a class="login-link" href="/mypage" th:if="${isLoggedIn}">마이페이지</a>
 			<form class="logout-form" th:if="${isLoggedIn}" method="post" action="/logout">
 				<button type="submit" class="login-link logout-button">로그아웃</button>
 			</form>

@@ -25,7 +25,10 @@ public class SecurityConfig {
 					"/css/**",
 					"/js/**",
 					"/h2-console/**",
-					"/api/members/**",
+					"/api/members/email-availability",
+					"/api/members/signup",
+					"/api/members/find-id",
+					"/api/members/reset-password",
 					"/api/recruitments/**"
 				).permitAll()
 				.anyRequest().authenticated()

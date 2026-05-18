@@ -20,4 +20,9 @@ public class AuthViewController {
 	public String signupComplete() {
 		return "signup-complete";
 	}
+
+	@GetMapping("/mypage")
+	public String mypage() {
+		return "mypage";
+	}
 }
