@@ -3,6 +3,9 @@ package com.gongchae.gongchae_coming.member.controller;
 import com.gongchae.gongchae_coming.member.dto.MemberEmailAvailabilityResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberFindIdRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberFindIdResponse;
+import com.gongchae.gongchae_coming.member.dto.MemberNicknameUpdateRequest;
+import com.gongchae.gongchae_coming.member.dto.MemberProfileResponse;
+import com.gongchae.gongchae_coming.member.dto.MemberProfileUpdateRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberResetPasswordRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberResetPasswordResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberSignupRequest;
@@ -14,9 +17,12 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -56,5 +62,26 @@ public class MemberController {
 	@PostMapping("/reset-password")
 	public MemberResetPasswordResponse resetPassword(@Valid @RequestBody MemberResetPasswordRequest request) {
 		return memberService.resetPassword(request);
+	}
+
+	@GetMapping("/me")
+	public MemberProfileResponse getProfile(Authentication authentication) {
+		return memberService.getProfile(authentication.getName());
+	}
+
+	@PutMapping("/me")
+	public MemberProfileResponse updateProfile(
+		Authentication authentication,
+		@Valid @RequestBody MemberProfileUpdateRequest request
+	) {
+		return memberService.updateProfile(authentication.getName(), request);
+	}
+
+	@PatchMapping("/me/nickname")
+	public MemberProfileResponse updateNickname(
+		Authentication authentication,
+		@Valid @RequestBody MemberNicknameUpdateRequest request
+	) {
+		return memberService.updateNickname(authentication.getName(), request);
 	}
 }

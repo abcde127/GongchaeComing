@@ -6,6 +6,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.gongchae.gongchae_coming.member.domain.Member;
 import com.gongchae.gongchae_coming.member.dto.MemberFindIdRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberFindIdResponse;
+import com.gongchae.gongchae_coming.member.dto.MemberNicknameUpdateRequest;
+import com.gongchae.gongchae_coming.member.dto.MemberProfileResponse;
+import com.gongchae.gongchae_coming.member.dto.MemberProfileUpdateRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberResetPasswordRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberResetPasswordResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberSignupRequest;
@@ -156,5 +159,130 @@ class MemberServiceTest {
 			"newpassword1"
 		))).isInstanceOf(MemberNotFoundException.class)
 			.hasMessage("member not found");
+	}
+
+	@Test
+	void getProfileReturnsMemberProfile() {
+		MemberSignupResponse signupResponse = memberService.signup(new MemberSignupRequest(
+			"user@example.com",
+			"gongchae",
+			"password1"
+		));
+
+		MemberProfileResponse response = memberService.getProfile("user@example.com");
+
+		assertThat(response.id()).isEqualTo(signupResponse.id());
+		assertThat(response.email()).isEqualTo("user@example.com");
+		assertThat(response.nickname()).isEqualTo("gongchae");
+	}
+
+	@Test
+	void updateProfileChangesNickname() {
+		MemberSignupResponse signupResponse = memberService.signup(new MemberSignupRequest(
+			"user@example.com",
+			"gongchae",
+			"password1"
+		));
+
+		MemberProfileResponse response = memberService.updateProfile(
+			"user@example.com",
+			new MemberProfileUpdateRequest("newgongchae", "password1", "")
+		);
+
+		Member savedMember = memberRepository.findById(signupResponse.id()).orElseThrow();
+		assertThat(response.nickname()).isEqualTo("newgongchae");
+		assertThat(savedMember.getNickname()).isEqualTo("newgongchae");
+		assertThat(passwordEncoder.matches("password1", savedMember.getPassword())).isTrue();
+	}
+
+	@Test
+	void updateProfileChangesPasswordWhenNewPasswordIsProvided() {
+		MemberSignupResponse signupResponse = memberService.signup(new MemberSignupRequest(
+			"user@example.com",
+			"gongchae",
+			"password1"
+		));
+
+		memberService.updateProfile(
+			"user@example.com",
+			new MemberProfileUpdateRequest("gongchae", "password1", "newpassword1")
+		);
+
+		Member savedMember = memberRepository.findById(signupResponse.id()).orElseThrow();
+		assertThat(passwordEncoder.matches("newpassword1", savedMember.getPassword())).isTrue();
+		assertThat(passwordEncoder.matches("password1", savedMember.getPassword())).isFalse();
+	}
+
+	@Test
+	void updateProfileRejectsWrongCurrentPassword() {
+		memberService.signup(new MemberSignupRequest(
+			"user@example.com",
+			"gongchae",
+			"password1"
+		));
+
+		assertThatThrownBy(() -> memberService.updateProfile(
+			"user@example.com",
+			new MemberProfileUpdateRequest("newgongchae", "wrongpassword", "")
+		)).isInstanceOf(IllegalArgumentException.class)
+			.hasMessage("current password does not match");
+	}
+
+	@Test
+	void updateProfileRejectsDuplicateNicknameOwnedByAnotherMember() {
+		memberService.signup(new MemberSignupRequest(
+			"user@example.com",
+			"gongchae",
+			"password1"
+		));
+		memberService.signup(new MemberSignupRequest(
+			"other@example.com",
+			"othergongchae",
+			"password1"
+		));
+
+		assertThatThrownBy(() -> memberService.updateProfile(
+			"user@example.com",
+			new MemberProfileUpdateRequest("othergongchae", "password1", "")
+		)).isInstanceOf(DuplicateMemberException.class)
+			.hasMessage("nickname already exists");
+	}
+
+	@Test
+	void updateNicknameChangesNicknameWithoutPassword() {
+		MemberSignupResponse signupResponse = memberService.signup(new MemberSignupRequest(
+			"user@example.com",
+			"gongchae",
+			"password1"
+		));
+
+		MemberProfileResponse response = memberService.updateNickname(
+			"user@example.com",
+			new MemberNicknameUpdateRequest("newgongchae")
+		);
+
+		Member savedMember = memberRepository.findById(signupResponse.id()).orElseThrow();
+		assertThat(response.nickname()).isEqualTo("newgongchae");
+		assertThat(savedMember.getNickname()).isEqualTo("newgongchae");
+	}
+
+	@Test
+	void updateNicknameRejectsDuplicateNicknameOwnedByAnotherMember() {
+		memberService.signup(new MemberSignupRequest(
+			"user@example.com",
+			"gongchae",
+			"password1"
+		));
+		memberService.signup(new MemberSignupRequest(
+			"other@example.com",
+			"othergongchae",
+			"password1"
+		));
+
+		assertThatThrownBy(() -> memberService.updateNickname(
+			"user@example.com",
+			new MemberNicknameUpdateRequest("othergongchae")
+		)).isInstanceOf(DuplicateMemberException.class)
+			.hasMessage("nickname already exists");
 	}
 }
