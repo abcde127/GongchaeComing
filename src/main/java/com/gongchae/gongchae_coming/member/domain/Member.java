@@ -55,7 +55,7 @@ public class Member {
 		this.password = encodedPassword;
 	}
 
-	public void updateProfile(String nickname) {
+	public void updateNickname(String nickname) {
 		this.nickname = nickname;
 	}
 

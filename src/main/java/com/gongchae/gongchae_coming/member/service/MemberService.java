@@ -4,8 +4,8 @@ import com.gongchae.gongchae_coming.member.domain.Member;
 import com.gongchae.gongchae_coming.member.dto.MemberFindIdRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberFindIdResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberNicknameUpdateRequest;
+import com.gongchae.gongchae_coming.member.dto.MemberPasswordUpdateRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberProfileResponse;
-import com.gongchae.gongchae_coming.member.dto.MemberProfileUpdateRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberResetPasswordRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberResetPasswordResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberSignupRequest;
@@ -17,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -69,27 +68,6 @@ public class MemberService {
 	}
 
 	@Transactional
-	public MemberProfileResponse updateProfile(String email, MemberProfileUpdateRequest request) {
-		Member member = findByEmail(email);
-
-		if (!passwordEncoder.matches(request.currentPassword(), member.getPassword())) {
-			throw new IllegalArgumentException("current password does not match");
-		}
-
-		if (memberRepository.existsByNicknameAndIdNot(request.nickname(), member.getId())) {
-			throw new DuplicateMemberException("nickname already exists");
-		}
-
-		member.updateProfile(request.nickname());
-
-		if (StringUtils.hasText(request.newPassword())) {
-			member.resetPassword(passwordEncoder.encode(request.newPassword()));
-		}
-
-		return MemberProfileResponse.from(member);
-	}
-
-	@Transactional
 	public MemberProfileResponse updateNickname(String email, MemberNicknameUpdateRequest request) {
 		Member member = findByEmail(email);
 
@@ -97,7 +75,20 @@ public class MemberService {
 			throw new DuplicateMemberException("nickname already exists");
 		}
 
-		member.updateProfile(request.nickname());
+		member.updateNickname(request.nickname());
+
+		return MemberProfileResponse.from(member);
+	}
+
+	@Transactional
+	public MemberProfileResponse updatePassword(String email, MemberPasswordUpdateRequest request) {
+		Member member = findByEmail(email);
+
+		if (!passwordEncoder.matches(request.currentPassword(), member.getPassword())) {
+			throw new IllegalArgumentException("current password does not match");
+		}
+
+		member.resetPassword(passwordEncoder.encode(request.newPassword()));
 
 		return MemberProfileResponse.from(member);
 	}

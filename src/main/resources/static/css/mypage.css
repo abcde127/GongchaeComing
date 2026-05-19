@@ -258,6 +258,52 @@
 	max-width: 760px;
 }
 
+.password-change-form {
+	box-sizing: border-box;
+	width: 100%;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	background: #fbfcfe;
+	padding: 28px;
+}
+
+.password-change-form .primary-button {
+	justify-self: end;
+	min-width: 160px;
+	padding: 0 18px;
+}
+
+.password-change-form input[aria-invalid="true"] {
+	border-color: var(--danger);
+}
+
+.password-change-form .password-toggle {
+	display: inline-grid;
+	place-items: center;
+	width: 36px;
+	height: 36px;
+	padding: 0;
+}
+
+.password-change-form .password-toggle-icon {
+	display: inline-grid;
+	place-items: center;
+}
+
+.password-change-form .password-toggle-icon[hidden] {
+	display: none;
+}
+
+.password-change-form .password-toggle svg {
+	width: 20px;
+	height: 20px;
+	fill: none;
+	stroke: currentColor;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-width: 2;
+}
+
 .profile-view[hidden] {
 	display: none;
 }
