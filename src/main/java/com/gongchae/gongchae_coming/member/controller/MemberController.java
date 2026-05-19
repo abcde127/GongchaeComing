@@ -4,8 +4,8 @@ import com.gongchae.gongchae_coming.member.dto.MemberEmailAvailabilityResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberFindIdRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberFindIdResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberNicknameUpdateRequest;
+import com.gongchae.gongchae_coming.member.dto.MemberPasswordUpdateRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberProfileResponse;
-import com.gongchae.gongchae_coming.member.dto.MemberProfileUpdateRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberResetPasswordRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberResetPasswordResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberSignupRequest;
@@ -22,7 +22,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -69,19 +68,19 @@ public class MemberController {
 		return memberService.getProfile(authentication.getName());
 	}
 
-	@PutMapping("/me")
-	public MemberProfileResponse updateProfile(
-		Authentication authentication,
-		@Valid @RequestBody MemberProfileUpdateRequest request
-	) {
-		return memberService.updateProfile(authentication.getName(), request);
-	}
-
 	@PatchMapping("/me/nickname")
 	public MemberProfileResponse updateNickname(
 		Authentication authentication,
 		@Valid @RequestBody MemberNicknameUpdateRequest request
 	) {
 		return memberService.updateNickname(authentication.getName(), request);
+	}
+
+	@PatchMapping("/me/password")
+	public MemberProfileResponse updatePassword(
+		Authentication authentication,
+		@Valid @RequestBody MemberPasswordUpdateRequest request
+	) {
+		return memberService.updatePassword(authentication.getName(), request);
 	}
 }
