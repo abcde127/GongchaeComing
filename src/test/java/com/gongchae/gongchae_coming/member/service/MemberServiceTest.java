@@ -3,9 +3,15 @@ package com.gongchae.gongchae_coming.member.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.gongchae.gongchae_coming.alio.domain.PublicInstitution;
+import com.gongchae.gongchae_coming.alio.repository.PublicInstitutionRepository;
 import com.gongchae.gongchae_coming.member.domain.Member;
 import com.gongchae.gongchae_coming.member.dto.MemberFindIdRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberFindIdResponse;
+import com.gongchae.gongchae_coming.member.dto.MemberJobPreferenceRequest;
+import com.gongchae.gongchae_coming.member.dto.MemberJobPreferenceResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberNicknameUpdateRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberPasswordUpdateRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberProfileResponse;
@@ -16,6 +22,7 @@ import com.gongchae.gongchae_coming.member.dto.MemberSignupResponse;
 import com.gongchae.gongchae_coming.member.exception.DuplicateMemberException;
 import com.gongchae.gongchae_coming.member.exception.MemberNotFoundException;
 import com.gongchae.gongchae_coming.member.repository.MemberRepository;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -26,11 +33,16 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class MemberServiceTest {
 
+	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
 	@Autowired
 	private MemberService memberService;
 
 	@Autowired
 	private MemberRepository memberRepository;
+
+	@Autowired
+	private PublicInstitutionRepository publicInstitutionRepository;
 
 	@Autowired
 	private PasswordEncoder passwordEncoder;
@@ -246,5 +258,90 @@ class MemberServiceTest {
 			new MemberPasswordUpdateRequest("wrongpassword", "newpassword1")
 		)).isInstanceOf(IllegalArgumentException.class)
 			.hasMessage("current password does not match");
+	}
+
+	@Test
+	void updateJobPreferenceStoresAllowedFilters() {
+		memberService.signup(new MemberSignupRequest(
+			"user@example.com",
+			"gongchae",
+			"password1"
+		));
+		savePublicInstitution("C0001", "88관광개발(주)");
+		savePublicInstitution("C0002", "한국가스공사");
+
+		MemberJobPreferenceResponse response = memberService.updateJobPreference(
+			"user@example.com",
+			new MemberJobPreferenceRequest(
+				" 전산 ",
+				List.of("C0001", "C0001", "C0002"),
+				List.of("active", "active", "scheduled"),
+				List.of("R3010"),
+				List.of("R2010"),
+				List.of("R1010"),
+				List.of("R600020")
+			)
+		);
+
+		assertThat(response.searchKeyword()).isEqualTo("전산");
+		assertThat(response.companies()).containsExactly("C0001", "C0002");
+		assertThat(response.recruitmentStatuses()).containsExactly("active", "scheduled");
+		assertThat(response.regions()).containsExactly("R3010");
+		assertThat(response.categories()).containsExactly("R2010");
+		assertThat(response.hireTypes()).containsExactly("R1010");
+		assertThat(response.ncsCodes()).containsExactly("R600020");
+	}
+
+	@Test
+	void updateJobPreferenceRejectsInvalidFilterValue() {
+		memberService.signup(new MemberSignupRequest(
+			"user@example.com",
+			"gongchae",
+			"password1"
+		));
+
+		assertThatThrownBy(() -> memberService.updateJobPreference(
+			"user@example.com",
+			new MemberJobPreferenceRequest(
+				null,
+				List.of(),
+				List.of("active"),
+				List.of("INVALID"),
+				List.of(),
+				List.of(),
+				List.of()
+			)
+		)).isInstanceOf(IllegalArgumentException.class)
+			.hasMessage("invalid region");
+	}
+
+	@Test
+	void updateJobPreferenceRejectsInvalidCompany() {
+		memberService.signup(new MemberSignupRequest(
+			"user@example.com",
+			"gongchae",
+			"password1"
+		));
+
+		assertThatThrownBy(() -> memberService.updateJobPreference(
+			"user@example.com",
+			new MemberJobPreferenceRequest(
+				null,
+				List.of("INVALID"),
+				List.of(),
+				List.of(),
+				List.of(),
+				List.of(),
+				List.of()
+			)
+		)).isInstanceOf(IllegalArgumentException.class)
+			.hasMessage("invalid company");
+	}
+
+	private void savePublicInstitution(String instCd, String instNm) {
+		ObjectNode item = OBJECT_MAPPER.createObjectNode();
+		item.put("instCd", instCd);
+		item.put("instNm", instNm);
+		publicInstitutionRepository.save(PublicInstitution.from(item, java.time.LocalDateTime.now()));
 	}
 }

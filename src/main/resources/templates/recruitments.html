@@ -7,7 +7,7 @@
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
-	<link rel="stylesheet" th:href="@{/css/recruitments.css}">
+	<link rel="stylesheet" th:href="@{/css/recruitments.css(v=2)}">
 </head>
 <body>
 <div class="page-shell">
@@ -47,6 +47,13 @@
 			<div class="result-stage" id="resultStage">
 				<div class="data-refresh-row" id="dataRefreshRow">
 					<span class="result-count-summary" id="resultCountSummary">전체 0개 중 0개</span>
+					<label class="preference-toggle" th:if="${isLoggedIn}">
+						<input type="checkbox" id="jobPreferenceToggle">
+						<span class="preference-toggle-copy">
+							<strong>맞춤공고</strong>
+						</span>
+						<span class="preference-toggle-track" aria-hidden="true"></span>
+					</label>
 					<span id="dataRefreshText">최종 갱신: 정보 없음</span>
 					<span class="sync-status-badge" id="syncStatusBadge" hidden></span>
 					<button type="button" class="sync-failure-button" id="syncFailureDetailButton" aria-label="실패 사유 보기" title="실패 사유 보기" hidden>

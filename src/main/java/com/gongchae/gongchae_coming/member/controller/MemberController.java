@@ -3,6 +3,9 @@ package com.gongchae.gongchae_coming.member.controller;
 import com.gongchae.gongchae_coming.member.dto.MemberEmailAvailabilityResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberFindIdRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberFindIdResponse;
+import com.gongchae.gongchae_coming.member.dto.MemberJobPreferenceCompanyResponse;
+import com.gongchae.gongchae_coming.member.dto.MemberJobPreferenceRequest;
+import com.gongchae.gongchae_coming.member.dto.MemberJobPreferenceResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberNicknameUpdateRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberPasswordUpdateRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberProfileResponse;
@@ -15,6 +18,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -82,5 +86,23 @@ public class MemberController {
 		@Valid @RequestBody MemberPasswordUpdateRequest request
 	) {
 		return memberService.updatePassword(authentication.getName(), request);
+	}
+
+	@GetMapping("/me/job-preference")
+	public MemberJobPreferenceResponse getJobPreference(Authentication authentication) {
+		return memberService.getJobPreference(authentication.getName());
+	}
+
+	@GetMapping("/me/job-preference/companies")
+	public List<MemberJobPreferenceCompanyResponse> getJobPreferenceCompanies() {
+		return memberService.getJobPreferenceCompanies();
+	}
+
+	@PatchMapping("/me/job-preference")
+	public MemberJobPreferenceResponse updateJobPreference(
+		Authentication authentication,
+		@Valid @RequestBody MemberJobPreferenceRequest request
+	) {
+		return memberService.updateJobPreference(authentication.getName(), request);
 	}
 }

@@ -27,6 +27,7 @@ const resultStage = document.querySelector("#resultStage");
 const statusBanner = document.querySelector("#statusBanner");
 const debugPanel = document.querySelector("#debugPanel");
 const debugContent = document.querySelector("#debugContent");
+const jobPreferenceToggle = document.querySelector("#jobPreferenceToggle");
 const PAGE_SIZE = 10;
 
 let currentPage = 1;
@@ -38,6 +39,8 @@ let lastSyncStatus = "IDLE";
 let syncCompletionHideTimer = null;
 let refreshButtonStateTimer = null;
 let refreshButtonContentTimer = null;
+let jobPreferenceCache = null;
+let jobPreferenceCompanyOptionsCache = null;
 const MIN_LOADING_MS = 350;
 const refreshButtonIcon = `
 	<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -225,15 +228,66 @@ function syncCompanyFilterOptions(companyOptions = []) {
 	const selectedValues = new Set(getCheckedFilterValues(listCompanyFilter));
 	const companyNames = Array.from(new Set(companyOptions.filter(Boolean)))
 		.sort((first, second) => first.localeCompare(second, "ko"));
+	const companyLabelByValue = new Map(
+		(jobPreferenceCompanyOptionsCache || []).map((company) => [company.detailCode, company.detailName])
+	);
 
 	listCompanyFilter.innerHTML = "";
+	selectedValues.forEach((value) => {
+		if (!companyNames.includes(value)) {
+			companyNames.push(value);
+		}
+	});
+
 	companyNames.forEach((companyName) => {
-		const option = createListFilterCheckbox(companyName, companyName);
+		const option = createListFilterCheckbox(companyName, companyLabelByValue.get(companyName) || companyName);
 		const checkbox = option.querySelector("input");
 		checkbox.checked = selectedValues.has(companyName);
 		listCompanyFilter.appendChild(option);
 	});
 	updateListFilterIndicators();
+}
+
+async function fetchJobPreferenceCompanyOptions() {
+	if (jobPreferenceCompanyOptionsCache) {
+		return jobPreferenceCompanyOptionsCache;
+	}
+
+	const response = await fetch("/api/members/me/job-preference/companies", {
+		headers: {
+			Accept: "application/json"
+		}
+	});
+
+	if (!response.ok) {
+		throw new Error("기업 목록을 불러오지 못했습니다.");
+	}
+
+	jobPreferenceCompanyOptionsCache = await response.json();
+	return jobPreferenceCompanyOptionsCache;
+}
+
+async function ensureCompanyFilterOptions(values = []) {
+	if (!values.length) {
+		return;
+	}
+
+	const existingValues = new Set(getCheckedFilterValues(listCompanyFilter));
+	listCompanyFilter.querySelectorAll("input").forEach((input) => {
+		existingValues.add(input.value);
+	});
+
+	const missingValues = values.filter((value) => !existingValues.has(value));
+	if (!missingValues.length) {
+		return;
+	}
+
+	const companyOptions = await fetchJobPreferenceCompanyOptions();
+	const labelByValue = new Map(companyOptions.map((company) => [company.detailCode, company.detailName]));
+
+	missingValues.forEach((value) => {
+		listCompanyFilter.appendChild(createListFilterCheckbox(value, labelByValue.get(value) || value));
+	});
 }
 
 function setLoading(isLoading) {
@@ -842,6 +896,31 @@ function getCheckedFilterValues(filter) {
 	return Array.from(filter.querySelectorAll("input:checked"), (input) => input.value);
 }
 
+function setCheckedFilterValues(filter, values = []) {
+	const selectedValues = new Set(values);
+	filter.querySelectorAll("input").forEach((input) => {
+		input.checked = selectedValues.has(input.value);
+	});
+}
+
+function setPeriodSort(value = "recent") {
+	const periodSortInput = listPeriodSortFilter.querySelector(`input[value="${value}"]`);
+	if (periodSortInput) {
+		periodSortInput.checked = true;
+	}
+}
+
+function hasJobPreferenceValues(preference) {
+	return Boolean(
+		preference?.searchKeyword
+			|| preference?.recruitmentStatuses?.length
+			|| preference?.regions?.length
+			|| preference?.categories?.length
+			|| preference?.hireTypes?.length
+			|| preference?.ncsCodes?.length
+	);
+}
+
 function buildSummary(items) {
 	const { keyword, totalCount } = currentSummaryContext;
 	const filterText = hasListHeaderFilter() ? ` 목록 필터 적용 후 ${items.length}건을 표시하고 있습니다.` : "";
@@ -1078,12 +1157,59 @@ async function loadRecruitments(page = currentPage, refresh = false, showLoading
 function resetForm() {
 	searchKeyword.value = "";
 	keywordSearchControl.classList.remove("is-expanded");
+	if (jobPreferenceToggle) {
+		jobPreferenceToggle.checked = false;
+	}
 	updateKeywordSearchState();
 	currentPage = 1;
 	clearListHeaderFilters();
+	setPeriodSort("recent");
 	setStatus("");
 	setDebug(null);
 	loadRecruitments(1);
+}
+
+async function fetchJobPreference() {
+	if (jobPreferenceCache) {
+		return jobPreferenceCache;
+	}
+
+	const response = await fetch("/api/members/me/job-preference", {
+		headers: {
+			Accept: "application/json"
+		}
+	});
+
+	if (!response.ok) {
+		const problem = await response.json().catch(() => null);
+		throw new Error(problem?.detail || "맞춤공고 설정을 불러오지 못했습니다.");
+	}
+
+	jobPreferenceCache = await response.json();
+	return jobPreferenceCache;
+}
+
+async function applyJobPreference(preference) {
+	searchKeyword.value = preference.searchKeyword || "";
+	keywordSearchControl.classList.toggle("is-expanded", Boolean(searchKeyword.value.trim()));
+	updateKeywordSearchState();
+	clearListHeaderFilters();
+	await ensureCompanyFilterOptions(preference.companies || []);
+	setCheckedFilterValues(listCompanyFilter, preference.companies);
+	setCheckedFilterValues(listStatusFilter, preference.recruitmentStatuses);
+	setCheckedFilterValues(listRegionFilter, preference.regions);
+	setCheckedFilterValues(listCategoryFilter, preference.categories);
+	setCheckedFilterValues(listHireTypeFilter, preference.hireTypes);
+	setCheckedFilterValues(listNcsFilter, preference.ncsCodes);
+	updateListFilterIndicators();
+}
+
+function clearJobPreferenceApplication() {
+	searchKeyword.value = "";
+	keywordSearchControl.classList.remove("is-expanded");
+	updateKeywordSearchState();
+	clearListHeaderFilters();
+	updateListFilterIndicators();
 }
 
 form.addEventListener("submit", (event) => {
@@ -1245,6 +1371,33 @@ listPeriodSortFilter.addEventListener("change", () => {
 	updateListFilterIndicators();
 	loadRecruitments(1);
 });
+
+if (jobPreferenceToggle) {
+	jobPreferenceToggle.addEventListener("change", async () => {
+		jobPreferenceToggle.disabled = true;
+		setStatus("");
+
+		try {
+			if (jobPreferenceToggle.checked) {
+				const preference = await fetchJobPreference();
+				await applyJobPreference(preference);
+				if (!hasJobPreferenceValues(preference)) {
+					setStatus("저장된 맞춤공고 조건이 없습니다. 마이페이지에서 조건을 저장해주세요.", "success");
+				}
+				loadRecruitments(1);
+				return;
+			}
+
+			clearJobPreferenceApplication();
+			loadRecruitments(1);
+		} catch (error) {
+			jobPreferenceToggle.checked = false;
+			setStatus(error.message);
+		} finally {
+			jobPreferenceToggle.disabled = false;
+		}
+	});
+}
 
 function clearListHeaderFilters() {
 	[listStatusFilter, listCompanyFilter, listCategoryFilter, listHireTypeFilter, listNcsFilter, listRegionFilter].forEach((filter) => {

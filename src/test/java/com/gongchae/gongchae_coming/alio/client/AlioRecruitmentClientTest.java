@@ -19,6 +19,7 @@ class AlioRecruitmentClientTest {
 		var properties = new AlioApiProperties(
 			"https://apis.data.go.kr/1051000/recruitment",
 			"/list",
+			"https://apis.data.go.kr/1051000/public_inst/list",
 			"abc%2B%2F%3D",
 			"json"
 		);
@@ -35,6 +36,7 @@ class AlioRecruitmentClientTest {
 		var properties = new AlioApiProperties(
 			"https://apis.data.go.kr/1051000/recruitment",
 			"/list",
+			"https://apis.data.go.kr/1051000/public_inst/list",
 			"abc+/=",
 			"json"
 		);
@@ -53,6 +55,7 @@ class AlioRecruitmentClientTest {
 		var properties = new AlioApiProperties(
 			"https://apis.data.go.kr/1051000/recruitment",
 			"/list",
+			"https://apis.data.go.kr/1051000/public_inst/list",
 			"abc%2B%2F%3D",
 			"json"
 		);

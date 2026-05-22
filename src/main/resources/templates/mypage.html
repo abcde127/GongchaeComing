@@ -8,7 +8,7 @@
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
 	<link rel="stylesheet" th:href="@{/css/auth.css}">
-	<link rel="stylesheet" th:href="@{/css/mypage.css(v=7)}">
+	<link rel="stylesheet" th:href="@{/css/mypage.css(v=8)}">
 </head>
 <body>
 <div class="mypage-shell">
@@ -45,6 +45,12 @@
 						<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
 					</span>
 					<span>비밀번호 변경</span>
+				</button>
+				<button type="button" class="mypage-menu-item" data-section-target="job-preference">
+					<span class="menu-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M4 21v-7"></path><path d="M4 10V3"></path><path d="M12 21v-9"></path><path d="M12 8V3"></path><path d="M20 21v-5"></path><path d="M20 12V3"></path><path d="M2 14h4"></path><path d="M10 8h4"></path><path d="M18 16h4"></path></svg>
+					</span>
+					<span>맞춤공고 설정</span>
 				</button>
 				<button type="button" class="mypage-menu-item" data-section-target="favorites">
 					<span class="menu-icon" aria-hidden="true">
@@ -246,6 +252,125 @@
 
 					<button type="submit" class="primary-button" id="passwordSaveButton">비밀번호 변경</button>
 				</form>
+			</section>
+
+			<section class="mypage-section" id="section-job-preference" data-section="job-preference" aria-labelledby="job-preference-title" hidden>
+				<div class="section-heading">
+					<div>
+						<p class="eyebrow">Job preference</p>
+						<h2 id="job-preference-title">맞춤공고 설정</h2>
+					</div>
+					<div class="job-preference-heading-actions" id="jobPreferenceHeadingActions">
+						<button type="button" class="secondary-action" id="jobPreferenceEditButton">수정</button>
+						<div class="job-preference-edit-actions" id="jobPreferenceEditActions">
+							<button type="button" class="secondary-action" id="jobPreferenceResetButton">초기화</button>
+							<button type="submit" class="primary-button" id="jobPreferenceSaveButton" form="jobPreferenceForm">저장</button>
+						</div>
+					</div>
+				</div>
+
+				<div class="alert" id="jobPreferenceMessage" role="alert" aria-live="polite" hidden></div>
+
+				<div class="job-preference-mode-frame">
+					<div class="job-preference-read-view job-preference-mode is-active" id="jobPreferenceReadView">
+						<div class="preference-read-card">
+							<strong>공고 키워드</strong>
+							<div class="preference-read-values" data-preference-read="searchKeyword"></div>
+						</div>
+						<div class="preference-read-card">
+							<strong>기업</strong>
+							<div class="preference-read-values" data-preference-read="companies"></div>
+						</div>
+						<div class="preference-read-card">
+							<strong>공고 상태</strong>
+							<div class="preference-read-values" data-preference-read="recruitmentStatuses"></div>
+						</div>
+						<div class="preference-read-card">
+							<strong>근무지</strong>
+							<div class="preference-read-values" data-preference-read="regions"></div>
+						</div>
+						<div class="preference-read-card">
+							<strong>채용 구분</strong>
+							<div class="preference-read-values" data-preference-read="categories"></div>
+						</div>
+						<div class="preference-read-card">
+							<strong>고용 형태</strong>
+							<div class="preference-read-values" data-preference-read="hireTypes"></div>
+						</div>
+						<div class="preference-read-card">
+							<strong>표준직무</strong>
+							<div class="preference-read-values" data-preference-read="ncsCodes"></div>
+						</div>
+					</div>
+
+					<form class="job-preference-form job-preference-mode" id="jobPreferenceForm" novalidate>
+						<div class="preference-card preference-card-keyword">
+							<label for="preferenceSearchKeyword">공고 키워드</label>
+							<div class="preference-input-control">
+								<input
+									type="text"
+									id="preferenceSearchKeyword"
+									name="searchKeyword"
+									maxlength="100"
+									placeholder="예: 행정, 전산, 연구">
+								<button type="button" class="preference-input-clear" data-preference-clear="preferenceSearchKeyword" aria-label="공고 키워드 지우기" hidden>x</button>
+							</div>
+						</div>
+
+					<div class="preference-card preference-card-companies">
+						<div class="preference-card-heading preference-card-heading-with-control">
+							<strong>기업</strong>
+							<div class="preference-input-control">
+								<input
+									type="text"
+									id="preferenceCompanySearch"
+									placeholder="기관명 검색"
+									autocomplete="off"
+									aria-label="기관명 검색">
+								<button type="button" class="preference-input-clear" data-preference-clear="preferenceCompanySearch" aria-label="기관명 검색어 지우기" hidden>x</button>
+							</div>
+						</div>
+						<div class="preference-selected-summary" id="selectedCompaniesSummary" aria-live="polite"></div>
+						<div class="preference-options preference-options-dense" data-preference-options="companies"></div>
+					</div>
+
+					<div class="preference-card">
+						<div class="preference-card-heading">
+							<strong>공고 상태</strong>
+						</div>
+						<div class="preference-options" data-preference-options="recruitmentStatuses"></div>
+					</div>
+
+					<div class="preference-card">
+						<div class="preference-card-heading">
+							<strong>근무지</strong>
+						</div>
+						<div class="preference-options preference-options-dense" data-preference-options="regions"></div>
+					</div>
+
+					<div class="preference-card">
+						<div class="preference-card-heading">
+							<strong>채용 구분</strong>
+						</div>
+						<div class="preference-options" data-preference-options="categories"></div>
+					</div>
+
+					<div class="preference-card">
+						<div class="preference-card-heading">
+							<strong>고용 형태</strong>
+						</div>
+						<div class="preference-options" data-preference-options="hireTypes"></div>
+					</div>
+
+					<div class="preference-card">
+						<div class="preference-card-heading">
+							<strong>표준직무</strong>
+						</div>
+						<div class="preference-options preference-options-dense" data-preference-options="ncsCodes"></div>
+					</div>
+
+					</form>
+				</div>
 			</section>
 
 			<section class="mypage-section" id="section-favorites" data-section="favorites" aria-labelledby="favorites-title" hidden>
