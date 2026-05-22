@@ -556,6 +556,346 @@
 	accent-color: var(--accent);
 }
 
+.job-preference-form {
+	display: grid;
+	gap: 14px;
+}
+
+.job-preference-mode-frame {
+	display: grid;
+}
+
+.job-preference-mode {
+	grid-area: 1 / 1;
+	min-width: 0;
+	max-height: 0;
+	opacity: 0;
+	overflow: hidden;
+	pointer-events: none;
+	visibility: hidden;
+}
+
+.job-preference-mode.is-active {
+	display: grid;
+	max-height: none;
+	opacity: 1;
+	overflow: visible;
+	pointer-events: auto;
+	visibility: visible;
+	z-index: 1;
+}
+
+.job-preference-heading-actions {
+	position: relative;
+	flex: 0 0 auto;
+	width: 108px;
+	height: 54px;
+	transition: width 0.22s ease;
+}
+
+.job-preference-heading-actions.is-editing {
+	width: 224px;
+}
+
+#jobPreferenceEditButton,
+.job-preference-edit-actions {
+	position: absolute;
+	top: 0;
+	right: 0;
+}
+
+#jobPreferenceEditButton {
+	width: 108px;
+	height: 54px;
+	opacity: 1;
+	transition: opacity 0.16s ease;
+}
+
+.job-preference-edit-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	width: 224px;
+	pointer-events: none;
+}
+
+#jobPreferenceSaveButton {
+	opacity: 0;
+	transition: opacity 0.16s ease;
+}
+
+#jobPreferenceResetButton {
+	opacity: 0;
+	transform: translateX(116px);
+	transition: opacity 0.16s ease, transform 0.22s ease;
+}
+
+.job-preference-heading-actions.is-editing #jobPreferenceEditButton {
+	opacity: 0;
+	pointer-events: none;
+}
+
+.job-preference-heading-actions.is-editing .job-preference-edit-actions {
+	pointer-events: auto;
+}
+
+.job-preference-heading-actions.is-editing #jobPreferenceSaveButton {
+	opacity: 1;
+}
+
+.job-preference-heading-actions.is-editing #jobPreferenceResetButton {
+	opacity: 1;
+	transform: translateX(0) scale(1);
+}
+
+#jobPreferenceEditButton,
+.job-preference-edit-actions .primary-button,
+.job-preference-edit-actions .secondary-action {
+	box-sizing: border-box;
+	width: 108px;
+	min-width: 108px;
+	height: 54px;
+	min-height: 54px;
+	padding: 0 14px;
+}
+
+.job-preference-read-view {
+	display: grid;
+	gap: 12px;
+}
+
+.preference-read-card {
+	display: grid;
+	grid-template-columns: 160px minmax(0, 1fr);
+	gap: 14px;
+	align-items: center;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	background: #fbfcfe;
+	padding: 18px;
+}
+
+.preference-read-card.is-empty {
+	background: #f7f8fb;
+	border-color: rgba(15, 23, 42, 0.08);
+	opacity: 0.58;
+}
+
+.preference-read-card strong {
+	color: var(--ink);
+	font-size: 0.92rem;
+	font-weight: 800;
+}
+
+.preference-read-values {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 7px;
+	min-width: 0;
+	color: var(--ink);
+	font-size: 0.9rem;
+	font-weight: 700;
+}
+
+.preference-read-chip {
+	display: inline-flex;
+	align-items: center;
+	min-height: 30px;
+	border: 1px solid rgba(12, 148, 136, 0.22);
+	border-radius: 999px;
+	background: rgba(12, 148, 136, 0.07);
+	padding: 0 10px;
+	color: var(--accent-strong);
+	font-size: 0.84rem;
+	font-weight: 800;
+}
+
+.preference-read-empty {
+	color: var(--muted);
+	font-size: 0.86rem;
+}
+
+.preference-card {
+	display: grid;
+	gap: 12px;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	background: #fbfcfe;
+	padding: 18px;
+}
+
+.preference-card-companies {
+	align-content: start;
+}
+
+.preference-card-keyword {
+	grid-template-columns: 160px minmax(0, 1fr);
+	align-items: center;
+}
+
+.preference-card-heading-with-control {
+	display: grid;
+	grid-template-columns: 160px minmax(0, 1fr);
+	align-items: center;
+	gap: 12px;
+}
+
+.preference-card label,
+.preference-card-heading strong {
+	color: var(--ink);
+	font-size: 0.92rem;
+	font-weight: 800;
+}
+
+.preference-selection-count {
+	margin-left: 5px;
+	color: var(--accent-strong);
+	font-size: 0.86rem;
+}
+
+.preference-input-control {
+	position: relative;
+	min-width: 0;
+}
+
+.preference-card input[type="text"] {
+	width: 100%;
+	min-height: 42px;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	background: #ffffff;
+	padding: 0 42px 0 12px;
+	font: inherit;
+	outline: none;
+}
+
+.preference-input-clear {
+	position: absolute;
+	top: 50%;
+	right: 8px;
+	display: grid;
+	place-items: center;
+	width: 26px;
+	height: 26px;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--muted);
+	cursor: pointer;
+	font: inherit;
+	font-size: 0.9rem;
+	font-weight: 800;
+	transform: translateY(-50%);
+}
+
+.preference-input-clear:hover,
+.preference-input-clear:focus-visible {
+	background: var(--accent-soft);
+	color: var(--accent-strong);
+}
+
+.preference-input-clear[hidden] {
+	display: none;
+}
+
+.preference-card input[type="text"]:focus {
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px rgba(12, 148, 136, 0.13);
+}
+
+.preference-options {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.preference-options-dense {
+	gap: 7px;
+}
+
+.preference-card-companies .preference-options {
+	max-height: 260px;
+	min-height: 132px;
+	overflow-y: auto;
+	align-content: flex-start;
+	padding-right: 6px;
+	scrollbar-color: rgba(15, 23, 42, 0.28) transparent;
+}
+
+.preference-selected-summary {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 7px;
+	min-height: 34px;
+	align-items: center;
+	padding: 10px 12px;
+	border: 1px solid rgba(12, 148, 136, 0.18);
+	border-radius: 8px;
+	background: rgba(12, 148, 136, 0.06);
+}
+
+.preference-selected-empty {
+	color: var(--muted);
+	font-size: 0.84rem;
+	font-weight: 700;
+}
+
+.preference-selected-chip {
+	min-height: 28px;
+	border: 1px solid rgba(12, 148, 136, 0.26);
+	border-radius: 999px;
+	background: #ffffff;
+	padding: 0 10px;
+	color: var(--accent-strong);
+	font: inherit;
+	font-size: 0.82rem;
+	font-weight: 800;
+	cursor: pointer;
+}
+
+.preference-selected-chip::after {
+	content: "x";
+	margin-left: 7px;
+	color: var(--muted);
+}
+
+.preference-option {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	min-height: 36px;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	background: #ffffff;
+	padding: 0 11px;
+	color: var(--muted);
+	cursor: pointer;
+	font-size: 0.88rem;
+	font-weight: 800;
+}
+
+.preference-option.is-filtered-out {
+	display: none;
+}
+
+.preference-option:has(input:checked) {
+	border-color: rgba(12, 148, 136, 0.36);
+	background: var(--accent-soft);
+	color: var(--accent-strong);
+}
+
+.preference-option input {
+	width: 15px;
+	height: 15px;
+	margin: 0;
+	accent-color: var(--accent);
+}
+
+.job-preference-edit-actions .primary-button,
+.job-preference-edit-actions .secondary-action {
+	min-width: 108px;
+}
+
 @media (max-width: 860px) {
 	.mypage-topbar {
 		padding: 0 20px;
@@ -572,7 +912,7 @@
 	}
 
 	.mypage-menu {
-		grid-template-columns: repeat(4, minmax(0, 1fr));
+		grid-template-columns: repeat(5, minmax(0, 1fr));
 	}
 
 	.mypage-menu-item {
@@ -615,6 +955,18 @@
 	}
 
 	.profile-overview {
+		grid-template-columns: 1fr;
+	}
+
+	.preference-card-keyword {
+		grid-template-columns: 1fr;
+	}
+
+	.preference-card-heading-with-control {
+		grid-template-columns: 1fr;
+	}
+
+	.preference-read-card {
 		grid-template-columns: 1fr;
 	}
 
