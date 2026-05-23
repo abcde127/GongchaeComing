@@ -672,6 +672,64 @@
 	overflow: hidden;
 }
 
+.notification-settings-shell {
+	position: relative;
+}
+
+.notification-settings-shell[data-kakao-linked="false"] .setting-list {
+	filter: blur(3px);
+	opacity: 0.48;
+	pointer-events: none;
+	user-select: none;
+}
+
+.kakao-connect-overlay {
+	position: absolute;
+	inset: 0;
+	display: none;
+	align-content: center;
+	justify-items: center;
+	gap: 12px;
+	padding: 20px;
+	text-align: center;
+}
+
+.notification-settings-shell[data-kakao-linked="false"] .kakao-connect-overlay {
+	display: grid;
+}
+
+.kakao-connect-copy {
+	margin: 0;
+	color: var(--ink);
+	font-size: 0.92rem;
+	font-weight: 900;
+	line-height: 1.45;
+}
+
+.kakao-connect-button {
+	display: inline-grid;
+	place-items: center;
+	padding: 0;
+	border: 0;
+	border-radius: 8px;
+	background: transparent;
+	cursor: pointer;
+	box-shadow: 0 14px 28px rgba(23, 32, 51, 0.14);
+	line-height: 0;
+}
+
+.kakao-connect-button img {
+	display: block;
+	width: 183px;
+	height: auto;
+	border-radius: 8px;
+}
+
+.kakao-connect-button:focus-visible {
+	outline: 3px solid rgba(250, 229, 0, 0.34);
+	outline-offset: 2px;
+}
+
 .setting-row {
 	display: flex;
 	align-items: center;
