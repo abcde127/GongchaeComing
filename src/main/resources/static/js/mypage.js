@@ -33,6 +33,7 @@ const favoritesToolbar = document.querySelector("#favoritesToolbar");
 const favoriteSelectAll = document.querySelector("#favoriteSelectAll");
 const favoriteDeleteSelectedButton = document.querySelector("#favoriteDeleteSelectedButton");
 const favoritesList = document.querySelector("#favoritesList");
+const kakaoConnectButton = document.querySelector("#kakaoConnectButton");
 const sectionButtons = document.querySelectorAll("[data-section-target]");
 const sections = document.querySelectorAll("[data-section]");
 const preferenceInputClearButtons = document.querySelectorAll("[data-preference-clear]");
@@ -866,6 +867,12 @@ if (favoritesList) {
 
 if (favoriteDeleteSelectedButton) {
 	favoriteDeleteSelectedButton.addEventListener("click", deleteSelectedFavorites);
+}
+
+if (kakaoConnectButton) {
+	kakaoConnectButton.addEventListener("click", () => {
+		showMessage("카카오톡 계정 연동 기능은 준비 중입니다.");
+	});
 }
 
 editNicknameButton.addEventListener("click", () => {

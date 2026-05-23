@@ -406,21 +406,29 @@
 						<h2 id="notifications-title">알림설정</h2>
 					</div>
 				</div>
-				<div class="setting-list">
-					<label class="setting-row">
-						<span>
-							<strong>마감 임박 알림</strong>
-							<small>관심공고 마감 전 알림</small>
-						</span>
-						<input type="checkbox" disabled>
-					</label>
-					<label class="setting-row">
-						<span>
-							<strong>신규 공고 알림</strong>
-							<small>저장한 조건과 맞는 공고 알림</small>
-						</span>
-						<input type="checkbox" disabled>
-					</label>
+				<div class="notification-settings-shell" data-kakao-linked="false">
+					<div class="setting-list">
+						<label class="setting-row">
+							<span>
+								<strong>마감 임박 알림</strong>
+								<small>관심공고 마감 전 알림</small>
+							</span>
+							<input type="checkbox" disabled>
+						</label>
+						<label class="setting-row">
+							<span>
+								<strong>신규 공고 알림</strong>
+								<small>저장한 조건과 맞는 공고 알림</small>
+							</span>
+							<input type="checkbox" disabled>
+						</label>
+					</div>
+					<div class="kakao-connect-overlay">
+						<p class="kakao-connect-copy">알림기능을 사용하기 위해서는 SNS 계정 연동이 필요합니다.</p>
+						<button type="button" class="kakao-connect-button" id="kakaoConnectButton">
+							<img src="/images/kakao_login_image.png" alt="카카오톡 계정 연동">
+						</button>
+					</div>
 				</div>
 			</section>
 		</section>
