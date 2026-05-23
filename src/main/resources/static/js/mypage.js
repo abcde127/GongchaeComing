@@ -29,11 +29,16 @@ const jobPreferenceEditButton = document.querySelector("#jobPreferenceEditButton
 const jobPreferenceEditActions = document.querySelector("#jobPreferenceEditActions");
 const jobPreferenceSaveButton = document.querySelector("#jobPreferenceSaveButton");
 const jobPreferenceResetButton = document.querySelector("#jobPreferenceResetButton");
+const favoritesToolbar = document.querySelector("#favoritesToolbar");
+const favoriteSelectAll = document.querySelector("#favoriteSelectAll");
+const favoriteDeleteSelectedButton = document.querySelector("#favoriteDeleteSelectedButton");
+const favoritesList = document.querySelector("#favoritesList");
 const sectionButtons = document.querySelectorAll("[data-section-target]");
 const sections = document.querySelectorAll("[data-section]");
 const preferenceInputClearButtons = document.querySelectorAll("[data-preference-clear]");
 
 let currentMember = null;
+let currentFavorites = [];
 
 const preferenceOptions = {
 	companies: [],
@@ -178,6 +183,164 @@ function formatDate(value) {
 		month: "2-digit",
 		day: "2-digit"
 	}).format(date);
+}
+
+function escapeHtml(value) {
+	return String(value ?? "")
+		.replaceAll("&", "&amp;")
+		.replaceAll("<", "&lt;")
+		.replaceAll(">", "&gt;")
+		.replaceAll('"', "&quot;")
+		.replaceAll("'", "&#39;");
+}
+
+function parseFavoriteDate(value) {
+	if (!value) {
+		return null;
+	}
+
+	const normalized = String(value).replaceAll(/[^0-9]/g, "");
+	if (normalized.length < 8) {
+		return null;
+	}
+
+	const year = Number(normalized.slice(0, 4));
+	const month = Number(normalized.slice(4, 6)) - 1;
+	const day = Number(normalized.slice(6, 8));
+	const date = new Date(year, month, day);
+	return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function getFavoriteStatus(favorite) {
+	const today = new Date();
+	const normalizedToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+	const startDate = parseFavoriteDate(favorite.recruitmentStartDate);
+	const endDate = parseFavoriteDate(favorite.recruitmentEndDate);
+
+	if (startDate && normalizedToday < startDate) {
+		return { label: "예정", tone: "scheduled" };
+	}
+	if (endDate && normalizedToday <= endDate) {
+		const remainingDays = Math.ceil((endDate.getTime() - normalizedToday.getTime()) / (1000 * 60 * 60 * 24));
+		const dday = remainingDays === 0 ? "D-day" : `D-${remainingDays}`;
+		return { label: `진행중 ${dday}`, tone: "active" };
+	}
+	return { label: "마감", tone: "closed" };
+}
+
+function updateFavoriteSelectionState() {
+	if (!favoritesList || !favoriteSelectAll || !favoriteDeleteSelectedButton) {
+		return;
+	}
+
+	const checkboxes = Array.from(favoritesList.querySelectorAll(".favorite-checkbox"));
+	const checkedCount = checkboxes.filter((checkbox) => checkbox.checked).length;
+	favoriteSelectAll.checked = checkboxes.length > 0 && checkedCount === checkboxes.length;
+	favoriteSelectAll.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+	favoriteDeleteSelectedButton.disabled = checkedCount === 0;
+	const deleteLabel = checkedCount > 0 ? `선택 삭제 (${checkedCount})` : "선택 삭제";
+	favoriteDeleteSelectedButton.setAttribute("aria-label", deleteLabel);
+	favoriteDeleteSelectedButton.setAttribute("title", deleteLabel);
+}
+
+function renderFavoriteRecruitments(favorites) {
+	if (!favoritesList || !favoritesToolbar) {
+		return;
+	}
+
+	currentFavorites = favorites;
+	if (!favorites.length) {
+		favoritesToolbar.hidden = true;
+		favoritesList.innerHTML = `<div class="favorites-empty-message">설정된 관심공고가 없습니다.</div>`;
+		favoritesList.hidden = false;
+		updateFavoriteSelectionState();
+		return;
+	}
+
+	favoritesList.innerHTML = favorites.map((favorite) => {
+		const title = escapeHtml(favorite.recruitmentTitle || "제목 정보 없음");
+		const institution = escapeHtml(favorite.institutionName || "기관 정보 없음");
+		const source = escapeHtml(favorite.source || "ALIO");
+		const sourceRecruitmentId = escapeHtml(favorite.sourceRecruitmentId || "");
+		const status = getFavoriteStatus(favorite);
+		return `
+			<article class="favorite-card" data-source="${source}" data-source-recruitment-id="${sourceRecruitmentId}">
+				<label class="favorite-card-check" aria-label="관심공고 선택">
+					<input type="checkbox" class="favorite-checkbox">
+				</label>
+				<div class="favorite-card-main">
+					<h3>${title}</h3>
+					<p>${institution}</p>
+				</div>
+				<span class="favorite-status favorite-status-${status.tone}">${escapeHtml(status.label)}</span>
+			</article>
+		`;
+	}).join("");
+	favoritesToolbar.hidden = false;
+	favoritesList.hidden = false;
+	updateFavoriteSelectionState();
+}
+
+async function loadFavoriteRecruitments() {
+	const response = await fetch("/api/members/me/favorite-recruitments", {
+		headers: {
+			Accept: "application/json"
+		}
+	});
+
+	if (!response.ok) {
+		const problem = await response.json().catch(() => null);
+		throw new Error(problem?.detail || "관심공고를 불러오지 못했습니다.");
+	}
+
+	renderFavoriteRecruitments(await response.json());
+}
+
+async function deleteFavoriteRecruitment(sourceRecruitmentId, source = "ALIO") {
+	const response = await fetch(
+		`/api/members/me/favorite-recruitments/${encodeURIComponent(sourceRecruitmentId)}?source=${encodeURIComponent(source)}`,
+		{
+			method: "DELETE",
+			headers: {
+				Accept: "application/json"
+			}
+		}
+	);
+
+	if (!response.ok) {
+		const problem = await response.json().catch(() => null);
+		throw new Error(problem?.detail || "관심공고를 삭제하지 못했습니다.");
+	}
+}
+
+async function deleteSelectedFavorites() {
+	if (!favoritesList) {
+		return;
+	}
+
+	const selectedCards = Array.from(favoritesList.querySelectorAll(".favorite-card"))
+		.filter((card) => card.querySelector(".favorite-checkbox")?.checked);
+	if (!selectedCards.length) {
+		return;
+	}
+
+	if (!window.confirm(`선택한 관심공고 ${selectedCards.length}개를 삭제하시겠습니까?`)) {
+		return;
+	}
+
+	favoriteDeleteSelectedButton.disabled = true;
+
+	try {
+		await Promise.all(selectedCards.map((card) => deleteFavoriteRecruitment(
+			card.dataset.sourceRecruitmentId,
+			card.dataset.source || "ALIO"
+		)));
+		showMessage("선택한 관심공고가 삭제되었습니다.", "success");
+		await loadFavoriteRecruitments();
+	} catch (error) {
+		showMessage(error.message);
+		updateFavoriteSelectionState();
+	}
 }
 
 function setNicknameEditMode(isEditing) {
@@ -565,6 +728,11 @@ sectionButtons.forEach((button) => {
 			return;
 		}
 		activateSection(button.dataset.sectionTarget);
+		if (button.dataset.sectionTarget === "favorites") {
+			loadFavoriteRecruitments().catch((error) => {
+				showMessage(error.message);
+			});
+		}
 	});
 });
 
@@ -659,6 +827,46 @@ selectedCompaniesSummary.addEventListener("click", (event) => {
 		updatePreferenceSelectionCounts();
 	}
 });
+
+if (favoriteSelectAll) {
+	favoriteSelectAll.addEventListener("change", () => {
+		if (!favoritesList) {
+			return;
+		}
+
+		favoritesList.querySelectorAll(".favorite-checkbox").forEach((checkbox) => {
+			checkbox.checked = favoriteSelectAll.checked;
+		});
+		updateFavoriteSelectionState();
+	});
+}
+
+if (favoritesList) {
+	favoritesList.addEventListener("click", (event) => {
+		if (event.target.matches("input, button, a")) {
+			return;
+		}
+
+		const card = event.target.closest(".favorite-card");
+		const checkbox = card?.querySelector(".favorite-checkbox");
+		if (!checkbox) {
+			return;
+		}
+
+		checkbox.checked = !checkbox.checked;
+		updateFavoriteSelectionState();
+	});
+
+	favoritesList.addEventListener("change", (event) => {
+		if (event.target.matches(".favorite-checkbox")) {
+			updateFavoriteSelectionState();
+		}
+	});
+}
+
+if (favoriteDeleteSelectedButton) {
+	favoriteDeleteSelectedButton.addEventListener("click", deleteSelectedFavorites);
+}
 
 editNicknameButton.addEventListener("click", () => {
 	setNicknameEditMode(true);
@@ -819,4 +1027,8 @@ initializeJobPreferenceOptions()
 	})
 	.catch((error) => {
 	showJobPreferenceMessage(error.message);
+});
+
+loadFavoriteRecruitments().catch((error) => {
+	showMessage(error.message);
 });
