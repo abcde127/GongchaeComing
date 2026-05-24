@@ -615,13 +615,12 @@ public class AlioRecruitmentService {
 			return;
 		}
 
-		if ("RECRUITMENT_SEQUENCE".equals(sortBy)) {
-			Comparator<Long> sequenceComparator = "ASC".equals(sortDirection)
+		if ("RECRUITMENT_SEQUENCE".equals(sortBy) || "REGISTRATION_DATE".equals(sortBy)) {
+			Comparator<Long> sequenceComparator = "ASC".equals(sortDirection) && "RECRUITMENT_SEQUENCE".equals(sortBy)
 				? Comparator.naturalOrder()
 				: Comparator.reverseOrder();
 			sortedItems.sort(Comparator
 				.comparing((JsonNode item) -> extractRecruitmentSequence(item), Comparator.nullsLast(sequenceComparator))
-				.thenComparing(item -> extractSortDate(item, "REGISTRATION_DATE"), Comparator.nullsLast(Comparator.reverseOrder()))
 				.thenComparing(item -> item.path("recrutPbancTtl").asText("")));
 			items.removeAll();
 			items.addAll(sortedItems);

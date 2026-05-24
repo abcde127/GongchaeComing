@@ -44,7 +44,7 @@ class AlioRecruitmentServiceTest {
 	}
 
 	@Test
-	void getRecruitmentsSortsItemsByRegistrationDateAscendingWhenRequested() {
+	void getRecruitmentsSortsItemsByRecruitmentSequenceDescendingForRegistrationDate() {
 		ObjectNode response = createResponse(
 			recruitment("first", "2026-04-01", "2026-04-10"),
 			recruitment("second", "2026-04-15", "2026-04-20")
@@ -53,8 +53,8 @@ class AlioRecruitmentServiceTest {
 
 		var result = service.getRecruitments(request("REGISTRATION_DATE", "ASC"));
 
-		assertThat(result.at("/response/body/items/item/0/recrutPbancTtl").asText()).isEqualTo("first");
-		assertThat(result.at("/response/body/items/item/1/recrutPbancTtl").asText()).isEqualTo("second");
+		assertThat(result.at("/response/body/items/item/0/recrutPbancTtl").asText()).isEqualTo("second");
+		assertThat(result.at("/response/body/items/item/1/recrutPbancTtl").asText()).isEqualTo("first");
 	}
 
 	@Test
