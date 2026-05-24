@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -86,7 +87,7 @@ class AlioRecruitmentServiceTest {
 	}
 
 	@Test
-	void getRecruitmentsStartsBackgroundRefreshAndReturnsCachedData() {
+	void startBackgroundSynchronizationRefreshesCachedData() {
 		AlioRecruitmentClient client = mock(AlioRecruitmentClient.class);
 		AlioRecruitmentRepository recruitmentRepository = mock(AlioRecruitmentRepository.class);
 		AlioRecruitmentSyncStateRepository syncStateRepository = mock(AlioRecruitmentSyncStateRepository.class);
@@ -105,10 +106,12 @@ class AlioRecruitmentServiceTest {
 		when(recruitmentRepository.findAll()).thenReturn(toRecruitments(createResponse(
 			recruitment("cached", "2026-04-01", "2026-04-10")
 		)));
+		when(recruitmentRepository.findMaxRecrutPblntSn()).thenReturn(Optional.empty());
 		when(recruitmentRepository.findBySourceRecruitmentIdIn(any())).thenReturn(List.of());
 		when(syncStateRepository.findById(any())).thenReturn(Optional.empty());
 
-		var result = service.getRecruitments(request("REGISTRATION_DATE", null), true);
+		service.startBackgroundSynchronization(request("REGISTRATION_DATE", null));
+		var result = service.getRecruitments(request("REGISTRATION_DATE", null));
 
 		assertThat(result.at("/response/body/items/item/0/recrutPbancTtl").asText()).isEqualTo("cached");
 		org.mockito.Mockito.verify(client, org.mockito.Mockito.timeout(1000))
@@ -221,7 +224,7 @@ class AlioRecruitmentServiceTest {
 	}
 
 	@Test
-	void getRecruitmentsRefreshesFromRootResultArrayWithOneThousandRows() {
+	void startBackgroundSynchronizationRefreshesFromRootResultArrayWithOneThousandRows() {
 		AlioRecruitmentClient client = mock(AlioRecruitmentClient.class);
 		AlioRecruitmentRepository recruitmentRepository = mock(AlioRecruitmentRepository.class);
 		AlioRecruitmentSyncStateRepository syncStateRepository = mock(AlioRecruitmentSyncStateRepository.class);
@@ -240,13 +243,15 @@ class AlioRecruitmentServiceTest {
 		resultArray.add(recruitment("식품안전정보원 개방형 직위 공개 모집", "20260515", "20260601"));
 
 		when(client.fetchRecruitments(any(AlioRecruitmentListRequest.class))).thenReturn(apiResponse);
+		when(recruitmentRepository.findMaxRecrutPblntSn()).thenReturn(Optional.empty());
 		when(recruitmentRepository.findBySourceRecruitmentIdIn(any())).thenReturn(List.of());
 		when(recruitmentRepository.findAll()).thenReturn(toRecruitments(createResponse(
 			recruitment("식품안전정보원 개방형 직위 공개 모집", "20260515", "20260601")
 		)));
 		when(syncStateRepository.findById(any())).thenReturn(Optional.empty());
 
-		var result = service.getRecruitments(request("REGISTRATION_DATE", "DESC"), true);
+		service.startBackgroundSynchronization(request("REGISTRATION_DATE", "DESC"));
+		var result = service.getRecruitments(request("REGISTRATION_DATE", "DESC"));
 
 		verify(client, org.mockito.Mockito.timeout(1000)).fetchRecruitments(argThat(request ->
 			request.resolvedPageNo() == 1 && request.resolvedNumOfRows() == 1000
@@ -280,16 +285,122 @@ class AlioRecruitmentServiceTest {
 		);
 
 		when(client.fetchRecruitments(any(AlioRecruitmentListRequest.class))).thenReturn(apiResponse);
+		when(recruitmentRepository.findMaxRecrutPblntSn()).thenReturn(Optional.empty());
 		when(recruitmentRepository.findBySourceRecruitmentIdIn(any())).thenReturn(List.of(existingRecruitment));
 		when(recruitmentRepository.findAll()).thenReturn(List.of());
 		when(syncStateRepository.findById(any())).thenReturn(Optional.empty());
 
-		service.getRecruitments(request("REGISTRATION_DATE", "DESC"), true);
+		service.startBackgroundSynchronization(request("REGISTRATION_DATE", "DESC"));
 
 		verify(notificationService, org.mockito.Mockito.timeout(1000))
 			.sendNewRecruitmentNotifications(argThat(recruitments ->
 				recruitments.size() == 1 && titleOf(recruitments.get(0)).equals("신규 공고")
 			));
+	}
+
+	@Test
+	void refreshStopsWhenStoredRecruitmentSequenceIsReached() {
+		AlioRecruitmentClient client = mock(AlioRecruitmentClient.class);
+		AlioRecruitmentRepository recruitmentRepository = mock(AlioRecruitmentRepository.class);
+		AlioRecruitmentSyncStateRepository syncStateRepository = mock(AlioRecruitmentSyncStateRepository.class);
+		AlioRecruitmentSyncProgressStore progressStore = new AlioRecruitmentSyncProgressStore();
+		AlioRecruitmentService service = new AlioRecruitmentService(
+			client,
+			recruitmentRepository,
+			syncStateRepository,
+			progressStore,
+			mock(NewRecruitmentNotificationService.class)
+		);
+		ObjectNode apiResponse = OBJECT_MAPPER.createObjectNode();
+		apiResponse.put("resultCode", 200);
+		apiResponse.put("totalCount", 3);
+		apiResponse.putArray("result")
+			.add(recruitment("신규 공고", 103L, "20260515", date(LocalDate.now().plusDays(10))))
+			.add(recruitment("이미 저장된 공고", 102L, "20260515", date(LocalDate.now().plusDays(10))))
+			.add(recruitment("오래된 공고", 101L, "20260515", date(LocalDate.now().plusDays(10))));
+
+		when(client.fetchRecruitments(any(AlioRecruitmentListRequest.class))).thenReturn(apiResponse);
+		when(recruitmentRepository.findMaxRecrutPblntSn()).thenReturn(Optional.of(102L));
+		when(recruitmentRepository.findBySourceRecruitmentIdIn(any())).thenReturn(List.of());
+
+		service.startBackgroundSynchronization(request("RECRUITMENT_SEQUENCE", "DESC"));
+
+		@SuppressWarnings("unchecked")
+		ArgumentCaptor<Iterable<AlioRecruitment>> captor = ArgumentCaptor.forClass(Iterable.class);
+		verify(recruitmentRepository, org.mockito.Mockito.timeout(1000)).saveAll(captor.capture());
+		assertThat(captor.getValue())
+			.extracting(this::titleOf)
+			.containsExactly("신규 공고");
+		waitUntilStatus(progressStore, "COMPLETED");
+		assertThat(progressStore.get().status()).isEqualTo("COMPLETED");
+	}
+
+	@Test
+	void refreshStopsWhenDeadlineIsBeforeSynchronizationDate() {
+		AlioRecruitmentClient client = mock(AlioRecruitmentClient.class);
+		AlioRecruitmentRepository recruitmentRepository = mock(AlioRecruitmentRepository.class);
+		AlioRecruitmentSyncStateRepository syncStateRepository = mock(AlioRecruitmentSyncStateRepository.class);
+		AlioRecruitmentSyncProgressStore progressStore = new AlioRecruitmentSyncProgressStore();
+		AlioRecruitmentService service = new AlioRecruitmentService(
+			client,
+			recruitmentRepository,
+			syncStateRepository,
+			progressStore,
+			mock(NewRecruitmentNotificationService.class)
+		);
+		ObjectNode apiResponse = OBJECT_MAPPER.createObjectNode();
+		apiResponse.put("resultCode", 200);
+		apiResponse.put("totalCount", 3);
+		apiResponse.putArray("result")
+			.add(recruitment("마감 전 공고", 103L, "20260515", date(LocalDate.now().plusDays(10))))
+			.add(recruitment("마감 지난 공고", 102L, "20260515", date(LocalDate.now().minusDays(1))))
+			.add(recruitment("중단 이후 공고", 101L, "20260515", date(LocalDate.now().plusDays(10))));
+
+		when(client.fetchRecruitments(any(AlioRecruitmentListRequest.class))).thenReturn(apiResponse);
+		when(recruitmentRepository.findMaxRecrutPblntSn()).thenReturn(Optional.empty());
+		when(recruitmentRepository.findBySourceRecruitmentIdIn(any())).thenReturn(List.of());
+
+		service.startBackgroundSynchronization(request("RECRUITMENT_SEQUENCE", "DESC"));
+
+		@SuppressWarnings("unchecked")
+		ArgumentCaptor<Iterable<AlioRecruitment>> captor = ArgumentCaptor.forClass(Iterable.class);
+		verify(recruitmentRepository, org.mockito.Mockito.timeout(1000)).saveAll(captor.capture());
+		assertThat(captor.getValue())
+			.extracting(this::titleOf)
+			.containsExactly("마감 전 공고");
+		waitUntilStatus(progressStore, "COMPLETED");
+		assertThat(progressStore.get().status()).isEqualTo("COMPLETED");
+	}
+
+	@Test
+	void refreshProgressUsesStoredCountAndApiTotalCount() {
+		AlioRecruitmentClient client = mock(AlioRecruitmentClient.class);
+		AlioRecruitmentRepository recruitmentRepository = mock(AlioRecruitmentRepository.class);
+		AlioRecruitmentSyncStateRepository syncStateRepository = mock(AlioRecruitmentSyncStateRepository.class);
+		AlioRecruitmentSyncProgressStore progressStore = mock(AlioRecruitmentSyncProgressStore.class);
+		AlioRecruitmentService service = new AlioRecruitmentService(
+			client,
+			recruitmentRepository,
+			syncStateRepository,
+			progressStore,
+			mock(NewRecruitmentNotificationService.class)
+		);
+		ObjectNode apiResponse = OBJECT_MAPPER.createObjectNode();
+		apiResponse.put("resultCode", 200);
+		apiResponse.put("totalCount", 1003);
+		apiResponse.putArray("result")
+			.add(recruitment("신규 공고", 1003L, "20260515", date(LocalDate.now().plusDays(10))))
+			.add(recruitment("이미 저장된 공고", 1002L, "20260515", date(LocalDate.now().plusDays(10))));
+
+		when(client.fetchRecruitments(any(AlioRecruitmentListRequest.class))).thenReturn(apiResponse);
+		when(recruitmentRepository.findMaxRecrutPblntSn()).thenReturn(Optional.of(1002L));
+		when(recruitmentRepository.count()).thenReturn(1002L);
+		when(recruitmentRepository.findBySourceRecruitmentIdIn(any())).thenReturn(List.of());
+
+		service.startBackgroundSynchronization(request("RECRUITMENT_SEQUENCE", "DESC"));
+
+		verify(progressStore, org.mockito.Mockito.timeout(1000)).update(1, 1, 1003, 1003);
+		verify(progressStore, org.mockito.Mockito.timeout(1000)).complete(1, 1, 1003, 1003);
 	}
 
 	@Test
@@ -310,9 +421,10 @@ class AlioRecruitmentServiceTest {
 		errorResponse.put("resultMsg", "TEMPORARY_ERROR");
 
 		when(client.fetchRecruitments(any(AlioRecruitmentListRequest.class))).thenReturn(errorResponse);
+		when(recruitmentRepository.findMaxRecrutPblntSn()).thenReturn(Optional.empty());
 		when(recruitmentRepository.findAll()).thenReturn(List.of());
 
-		service.getRecruitments(request("REGISTRATION_DATE", "DESC"), true);
+		service.startBackgroundSynchronization(request("REGISTRATION_DATE", "DESC"));
 
 		verify(client, org.mockito.Mockito.timeout(1000).times(1)).fetchRecruitments(any(AlioRecruitmentListRequest.class));
 		waitUntilStatus(progressStore, "FAILED");
@@ -406,7 +518,7 @@ class AlioRecruitmentServiceTest {
 	}
 
 	private ObjectNode recruitment(String title, String registrationDate, String deadlineDate) {
-		return recruitment(title, null, registrationDate, deadlineDate);
+		return recruitment(title, (String) null, registrationDate, deadlineDate);
 	}
 
 	private String date(LocalDate date) {
@@ -421,6 +533,12 @@ class AlioRecruitmentServiceTest {
 		}
 		node.put("pbancBgngYmd", registrationDate);
 		node.put("pbancEndYmd", deadlineDate);
+		return node;
+	}
+
+	private ObjectNode recruitment(String title, Long recruitmentSequence, String registrationDate, String deadlineDate) {
+		ObjectNode node = recruitment(title, registrationDate, deadlineDate);
+		node.put("recrutPblntSn", recruitmentSequence);
 		return node;
 	}
 

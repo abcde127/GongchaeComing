@@ -2,9 +2,13 @@ package com.gongchae.gongchae_coming.alio.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentSyncProgressResponse;
+import java.io.IOException;
 import java.util.Map;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Component
 public class AlioRecruitmentSyncProgressStore {
@@ -12,13 +16,24 @@ public class AlioRecruitmentSyncProgressStore {
 	public static final String GLOBAL_PROGRESS_KEY = "GLOBAL";
 
 	private final Map<String, AlioRecruitmentSyncProgressResponse> progressByKey = new ConcurrentHashMap<>();
+	private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
+
+	public SseEmitter subscribe() {
+		SseEmitter emitter = new SseEmitter(0L);
+		emitters.add(emitter);
+		emitter.onCompletion(() -> emitters.remove(emitter));
+		emitter.onTimeout(() -> emitters.remove(emitter));
+		emitter.onError(exception -> emitters.remove(emitter));
+		send(emitter, get());
+		return emitter;
+	}
 
 	public void start() {
 		start(GLOBAL_PROGRESS_KEY);
 	}
 
 	public void start(String sessionId) {
-		progressByKey.put(sessionId, new AlioRecruitmentSyncProgressResponse(
+		put(sessionId, new AlioRecruitmentSyncProgressResponse(
 			true,
 			0,
 			0,
@@ -40,7 +55,7 @@ public class AlioRecruitmentSyncProgressStore {
 		int percentage = totalPages > 0
 			? Math.min(100, Math.round((currentPage * 100.0f) / totalPages))
 			: 0;
-		progressByKey.put(
+		put(
 			sessionId,
 			new AlioRecruitmentSyncProgressResponse(
 				true,
@@ -57,50 +72,12 @@ public class AlioRecruitmentSyncProgressStore {
 		);
 	}
 
-	public void paused() {
-		AlioRecruitmentSyncProgressResponse progress = get();
-		progressByKey.put(
-			GLOBAL_PROGRESS_KEY,
-			new AlioRecruitmentSyncProgressResponse(
-				true,
-				progress.currentPage(),
-				progress.totalPages(),
-				progress.fetchedCount(),
-				progress.totalCount(),
-				progress.percentage(),
-				"PAUSED",
-				"데이터 갱신이 일시정지되었습니다.",
-				0,
-				null
-			)
-		);
-	}
-
-	public void resumed() {
-		AlioRecruitmentSyncProgressResponse progress = get();
-		progressByKey.put(
-			GLOBAL_PROGRESS_KEY,
-			new AlioRecruitmentSyncProgressResponse(
-				true,
-				progress.currentPage(),
-				progress.totalPages(),
-				progress.fetchedCount(),
-				progress.totalCount(),
-				progress.percentage(),
-				"RUNNING",
-				"데이터 갱신 중입니다.",
-				0,
-				null
-			)
-		);
-	}
-
 	public void complete(int currentPage, int totalPages, int fetchedCount, int totalCount) {
 		complete(GLOBAL_PROGRESS_KEY, currentPage, totalPages, fetchedCount, totalCount);
 	}
 
 	public void complete(String sessionId, int currentPage, int totalPages, int fetchedCount, int totalCount) {
-		progressByKey.put(
+		put(
 			sessionId,
 			new AlioRecruitmentSyncProgressResponse(
 				false,
@@ -117,46 +94,6 @@ public class AlioRecruitmentSyncProgressStore {
 		);
 	}
 
-	public void canceling() {
-		AlioRecruitmentSyncProgressResponse progress = get();
-		progressByKey.put(
-			GLOBAL_PROGRESS_KEY,
-			new AlioRecruitmentSyncProgressResponse(
-				true,
-				progress.currentPage(),
-				progress.totalPages(),
-				progress.fetchedCount(),
-				progress.totalCount(),
-				progress.percentage(),
-				"CANCELING",
-				"데이터 갱신 중지를 요청했습니다.",
-				0,
-				null
-			)
-		);
-	}
-
-	public void canceled(int currentPage, int totalPages, int fetchedCount, int totalCount) {
-		int percentage = totalPages > 0
-			? Math.min(99, Math.round((currentPage * 100.0f) / totalPages))
-			: 0;
-		progressByKey.put(
-			GLOBAL_PROGRESS_KEY,
-			new AlioRecruitmentSyncProgressResponse(
-				false,
-				currentPage,
-				totalPages,
-				fetchedCount,
-				totalCount,
-				percentage,
-				"CANCELED",
-				"데이터 갱신이 중단되었습니다.",
-				0,
-				null
-			)
-		);
-	}
-
 	public void fail(
 		int currentPage,
 		int totalPages,
@@ -166,7 +103,7 @@ public class AlioRecruitmentSyncProgressStore {
 		int failedPage,
 		JsonNode failureResponse
 	) {
-		progressByKey.put(
+		put(
 			GLOBAL_PROGRESS_KEY,
 			new AlioRecruitmentSyncProgressResponse(
 				false,
@@ -181,6 +118,27 @@ public class AlioRecruitmentSyncProgressStore {
 				failureResponse
 			)
 		);
+	}
+
+	private void put(String sessionId, AlioRecruitmentSyncProgressResponse progress) {
+		progressByKey.put(sessionId, progress);
+		if (GLOBAL_PROGRESS_KEY.equals(sessionId)) {
+			publish(progress);
+		}
+	}
+
+	private void publish(AlioRecruitmentSyncProgressResponse progress) {
+		emitters.forEach(emitter -> send(emitter, progress));
+	}
+
+	private void send(SseEmitter emitter, AlioRecruitmentSyncProgressResponse progress) {
+		try {
+			emitter.send(SseEmitter.event()
+				.name("progress")
+				.data(progress));
+		} catch (IOException | IllegalStateException exception) {
+			emitters.remove(emitter);
+		}
 	}
 
 	public AlioRecruitmentSyncProgressResponse get() {
