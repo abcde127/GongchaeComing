@@ -4,6 +4,7 @@ import com.gongchae.gongchae_coming.alio.repository.PublicInstitutionRepository;
 import com.gongchae.gongchae_coming.member.domain.Member;
 import com.gongchae.gongchae_coming.member.dto.MemberFindIdRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberFindIdResponse;
+import com.gongchae.gongchae_coming.member.dto.MemberFavoriteReminderRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberJobPreferenceCompanyResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberJobPreferenceRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberJobPreferenceResponse;
@@ -17,6 +18,7 @@ import com.gongchae.gongchae_coming.member.dto.MemberSignupResponse;
 import com.gongchae.gongchae_coming.member.exception.DuplicateMemberException;
 import com.gongchae.gongchae_coming.member.exception.MemberNotFoundException;
 import com.gongchae.gongchae_coming.member.repository.MemberRepository;
+import java.time.LocalTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -142,6 +144,13 @@ public class MemberService {
 		);
 
 		return MemberJobPreferenceResponse.from(member);
+	}
+
+	@Transactional
+	public MemberProfileResponse updateFavoriteReminder(String email, MemberFavoriteReminderRequest request) {
+		Member member = findByEmail(email);
+		member.updateFavoriteReminder(request.enabled(), LocalTime.parse(request.reminderTime()));
+		return MemberProfileResponse.from(member);
 	}
 
 	private void validateDuplicateMember(MemberSignupRequest request) {

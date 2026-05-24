@@ -20,15 +20,19 @@ public class SecurityConfig {
 					"/",
 					"/login",
 					"/recruitments",
+					"/recruitments/*/redirect",
 					"/signup",
 					"/signup-complete",
 					"/css/**",
 					"/js/**",
 					"/h2-console/**",
+					"/api/kakao/oauth/callback",
 					"/api/members/email-availability",
 					"/api/members/signup",
 					"/api/members/find-id",
 					"/api/members/reset-password",
+					"/api/recruitments/*/redirect",
+					"/api/recruitments/*/redirect-url",
 					"/api/recruitments/**"
 				).permitAll()
 				.anyRequest().authenticated()

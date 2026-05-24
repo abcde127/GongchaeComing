@@ -405,23 +405,60 @@
 						<p class="eyebrow">Notifications</p>
 						<h2 id="notifications-title">알림설정</h2>
 					</div>
+					<div class="notification-heading-actions" id="notificationHeadingActions" data-kakao-linked="false">
+						<div class="kakao-linked-banner" id="kakaoLinkedBanner" hidden>
+							<img class="kakao-linked-mark" src="/images/kakao_logo.png" alt="" aria-hidden="true">
+							<span class="kakao-linked-text">
+								<strong>계정연동 완료</strong>
+								<small id="kakaoLinkedAtText">-</small>
+							</span>
+						</div>
+						<button type="button" class="notification-history-toggle" id="notificationHistoryButton" aria-label="알림 발송이력" aria-controls="notificationHistoryPanel" aria-expanded="false" title="알림 발송이력">
+							<svg viewBox="0 0 24 24" aria-hidden="true">
+								<path d="M3 12a9 9 0 1 0 3-6.7"></path>
+								<path d="M3 4v5h5"></path>
+								<path d="M12 7v5l3 2"></path>
+							</svg>
+						</button>
+					</div>
 				</div>
 				<div class="notification-settings-shell" data-kakao-linked="false">
 					<div class="setting-list">
-						<label class="setting-row">
+						<div class="setting-row">
 							<span>
-								<strong>마감 임박 알림</strong>
-								<small>관심공고 마감 전 알림</small>
+								<strong>관심공고 리마인드</strong>
+								<small>지정한 시간에 관심공고로 설정한 공고의 리마인드 알림을 전송합니다</small>
 							</span>
-							<input type="checkbox" disabled>
-						</label>
-						<label class="setting-row">
+							<button type="button" class="notification-toggle" id="favoriteReminderToggle" aria-label="관심공고 리마인드" aria-pressed="false" disabled>
+								<span aria-hidden="true"></span>
+							</button>
+							<div class="notification-time-setting" id="favoriteReminderTimeSetting" hidden>
+								<label for="favoriteReminderTime">매일</label>
+								<div class="time-dial" id="favoriteReminderTimeDial">
+									<button type="button" class="time-dial-trigger" id="favoriteReminderTime" aria-expanded="false" disabled>
+										<span class="time-dial-value" id="favoriteReminderTimeText">
+											<span data-time-display="hour">09</span>
+											<span aria-hidden="true">:</span>
+											<span data-time-display="minute">00</span>
+										</span>
+									</button>
+									<div class="time-dial-panel" id="favoriteReminderTimePanel" hidden>
+										<div class="time-dial-window" data-time-wheel="hour" aria-label="시"></div>
+										<span class="time-dial-separator" aria-hidden="true">:</span>
+										<div class="time-dial-window" data-time-wheel="minute" aria-label="분"></div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="setting-row">
 							<span>
-								<strong>신규 공고 알림</strong>
-								<small>저장한 조건과 맞는 공고 알림</small>
+								<strong>신규 공고 등록 알림</strong>
+								<small>맞춤공고 조건에 맞는 새로운 공고가 등록되면 알림을 전송합니다</small>
 							</span>
-							<input type="checkbox" disabled>
-						</label>
+							<button type="button" class="notification-toggle" aria-label="신규 공고 등록 알림" aria-pressed="false" disabled>
+								<span aria-hidden="true"></span>
+							</button>
+						</div>
 					</div>
 					<div class="kakao-connect-overlay">
 						<p class="kakao-connect-copy">알림기능을 사용하기 위해서는 SNS 계정 연동이 필요합니다.</p>
@@ -429,6 +466,34 @@
 							<img src="/images/kakao_login_image.png" alt="카카오톡 계정 연동">
 						</button>
 					</div>
+				</div>
+				<div class="notification-history-modal" id="notificationHistoryPanel" role="dialog" aria-modal="true" aria-labelledby="notificationHistoryTitle" hidden>
+					<div class="notification-history-backdrop" data-notification-history-close></div>
+					<section class="notification-history-dialog">
+						<div class="notification-history-heading">
+							<div>
+								<p class="eyebrow">Notification History</p>
+								<h3 id="notificationHistoryTitle">알림 발송이력</h3>
+							</div>
+							<div class="notification-history-dialog-actions">
+								<button type="button" class="notification-history-refresh" id="notificationHistoryRefreshButton" aria-label="알림 발송이력 새로고침">
+									<svg viewBox="0 0 24 24" aria-hidden="true">
+										<path d="M21 12a9 9 0 0 1-15.4 6.4"></path>
+										<path d="M3 12a9 9 0 0 1 15.4-6.4"></path>
+										<path d="M18 3v5h-5"></path>
+										<path d="M6 21v-5h5"></path>
+									</svg>
+								</button>
+								<button type="button" class="notification-history-close" aria-label="알림 발송이력 닫기" data-notification-history-close>
+									<svg viewBox="0 0 24 24" aria-hidden="true">
+										<path d="M18 6 6 18"></path>
+										<path d="m6 6 12 12"></path>
+									</svg>
+								</button>
+							</div>
+						</div>
+						<div class="notification-history-list" id="notificationHistoryList"></div>
+					</section>
 				</div>
 			</section>
 		</section>

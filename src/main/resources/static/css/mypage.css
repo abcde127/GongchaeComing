@@ -48,6 +48,48 @@
 	gap: 18px;
 }
 
+.kakao-linked-banner {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-height: 42px;
+	padding: 7px 12px 7px 8px;
+	border: 1px solid rgba(230, 188, 20, 0.34);
+	border-radius: 8px;
+	background: #fff8d7;
+	color: #5f4700;
+}
+
+.kakao-linked-banner[hidden] {
+	display: none;
+}
+
+.kakao-linked-mark {
+	display: block;
+	width: 46px;
+	height: 28px;
+	border-radius: 4px;
+	object-fit: contain;
+}
+
+.kakao-linked-text {
+	display: grid;
+	gap: 1px;
+	line-height: 1.15;
+	white-space: nowrap;
+}
+
+.kakao-linked-text strong {
+	font-size: 0.84rem;
+	font-weight: 900;
+}
+
+.kakao-linked-text small {
+	color: #7a5d00;
+	font-size: 0.74rem;
+	font-weight: 800;
+}
+
 .mypage-topnav a,
 .mypage-topnav button,
 .secondary-action,
@@ -731,7 +773,8 @@
 }
 
 .setting-row {
-	display: flex;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
 	align-items: center;
 	justify-content: space-between;
 	gap: 20px;
@@ -741,14 +784,491 @@
 	border-bottom: 1px solid var(--line);
 }
 
+.notification-time-setting {
+	grid-column: 1 / -1;
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 10px;
+	padding-top: 4px;
+}
+
+.notification-time-setting[hidden] {
+	display: none;
+}
+
+.notification-time-setting label {
+	color: var(--accent-strong);
+	font-size: 0.82rem;
+	font-weight: 800;
+}
+
+.time-dial {
+	--time-dial-width: 112px;
+	--time-dial-separator-width: 10px;
+	--time-dial-column-width: calc((var(--time-dial-width) - var(--time-dial-separator-width)) / 2);
+	--time-dial-border: rgba(52, 211, 153, 0.28);
+	--time-dial-font-size: 0.9rem;
+	--time-dial-font-weight: 900;
+	position: relative;
+	display: grid;
+	justify-items: end;
+	width: var(--time-dial-width);
+}
+
+.time-dial,
+.time-dial * {
+	box-sizing: border-box;
+}
+
+.time-dial-trigger {
+	display: grid;
+	place-items: center;
+	align-items: center;
+	justify-content: center;
+	width: var(--time-dial-width);
+	min-height: 36px;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	box-shadow: inset 0 0 0 1px var(--time-dial-border);
+	color: var(--accent-strong);
+	cursor: pointer;
+	font: inherit;
+	font-size: var(--time-dial-font-size);
+	font-weight: var(--time-dial-font-weight);
+	padding: 0;
+	transition: border-radius 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.time-dial-value {
+	display: grid;
+	grid-template-columns: var(--time-dial-column-width) var(--time-dial-separator-width) var(--time-dial-column-width);
+	width: 100%;
+	align-items: center;
+	text-align: center;
+}
+
+.time-dial-value span {
+	display: grid;
+	place-items: center;
+	line-height: 1;
+}
+
+.time-dial-trigger[aria-expanded="true"] {
+	border-radius: 999px;
+	box-shadow: none;
+}
+
+.time-dial-trigger:disabled {
+	cursor: not-allowed;
+	opacity: 0.62;
+}
+
+.time-dial-trigger:focus-visible {
+	outline: 3px solid rgba(52, 211, 153, 0.18);
+	outline-offset: 2px;
+}
+
+.time-dial-panel {
+	position: absolute;
+	top: 50%;
+	right: 0;
+	z-index: 2;
+	display: grid;
+	grid-template-columns: var(--time-dial-column-width) var(--time-dial-separator-width) var(--time-dial-column-width);
+	align-items: center;
+	gap: 0;
+	width: var(--time-dial-width);
+	height: 96px;
+	border: 0;
+	border-radius: 0;
+	background: var(--accent-soft);
+	box-shadow:
+		inset 1px 0 0 var(--time-dial-border),
+		inset -1px 0 0 var(--time-dial-border),
+		0 18px 34px rgba(20, 83, 45, 0.14);
+	overflow: hidden;
+	transform: translateY(-50%);
+	transform-origin: center right;
+	animation: timeDialOpen 0.18s ease;
+}
+
+.time-dial-panel[hidden] {
+	display: none;
+}
+
+.time-dial-panel.is-closing {
+	animation: timeDialClose 0.16s ease forwards;
+}
+
+.time-dial-window {
+	position: relative;
+	display: grid;
+	justify-items: center;
+	height: 96px;
+	overflow-y: auto;
+	scrollbar-width: none;
+	padding: 32px 0;
+	-webkit-mask-image: linear-gradient(
+		to bottom,
+		transparent 0%,
+		#000 28%,
+		#000 72%,
+		transparent 100%
+	);
+	mask-image: linear-gradient(
+		to bottom,
+		transparent 0%,
+		#000 28%,
+		#000 72%,
+		transparent 100%
+	);
+}
+
+.time-dial-window::-webkit-scrollbar {
+	display: none;
+}
+
+.time-dial-option {
+	display: grid;
+	place-items: center;
+	width: 100%;
+	height: 32px;
+	border: 0;
+	background: transparent;
+	color: rgba(14, 116, 86, 0.48);
+	cursor: pointer;
+	font: inherit;
+	font-size: var(--time-dial-font-size);
+	font-weight: var(--time-dial-font-weight);
+	line-height: 1;
+	padding: 0;
+	text-align: center;
+	transition: color 0.16s ease, transform 0.16s ease;
+	position: relative;
+}
+
+.time-dial-option.is-selected {
+	color: var(--accent-strong);
+	transform: scale(1.08);
+}
+
+.time-dial-separator {
+	display: grid;
+	place-items: center;
+	color: var(--accent-strong);
+	font-size: var(--time-dial-font-size);
+	font-weight: var(--time-dial-font-weight);
+	height: 32px;
+	line-height: 1;
+	text-align: center;
+}
+
+@keyframes timeDialOpen {
+	from {
+		opacity: 0;
+		transform: translateY(-50%) scaleY(0.72);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(-50%) scaleY(1);
+	}
+}
+
+@keyframes timeDialClose {
+	from {
+		opacity: 1;
+		transform: translateY(-50%) scaleY(1);
+	}
+	to {
+		opacity: 0;
+		transform: translateY(-50%) scaleY(0.72);
+	}
+}
+
 .setting-row:last-child {
 	border-bottom: 0;
+}
+
+.notification-heading-actions {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 10px;
+}
+
+.notification-heading-actions[data-kakao-linked="false"] {
+	filter: blur(3px);
+	opacity: 0.48;
+	pointer-events: none;
+	user-select: none;
+}
+
+body.is-notification-history-open {
+	overflow: hidden;
+}
+
+.notification-history-toggle {
+	display: grid;
+	place-items: center;
+	width: 42px;
+	height: 42px;
+	border: 1px solid rgba(52, 211, 153, 0.32);
+	border-radius: 8px;
+	background: var(--accent-soft);
+	color: var(--accent-strong);
+	cursor: pointer;
+	padding: 0;
+}
+
+.notification-history-toggle svg {
+	width: 20px;
+	height: 20px;
+	fill: none;
+	stroke: currentColor;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-width: 2;
+}
+
+.notification-history-toggle:hover,
+.notification-history-toggle:focus-visible {
+	border-color: var(--accent);
+	outline: none;
+}
+
+.notification-history-toggle:disabled {
+	cursor: not-allowed;
+}
+
+.notification-history-modal {
+	position: fixed;
+	inset: 0;
+	z-index: 30;
+	display: grid;
+	place-items: center;
+	padding: 24px;
+}
+
+.notification-history-modal[hidden] {
+	display: none;
+}
+
+.notification-history-backdrop {
+	position: absolute;
+	inset: 0;
+	background: rgba(15, 23, 42, 0.42);
+}
+
+.notification-history-dialog {
+	position: relative;
+	z-index: 1;
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr);
+	gap: 16px;
+	width: min(680px, 100%);
+	max-height: min(680px, calc(100vh - 48px));
+	border: 1px solid rgba(148, 163, 184, 0.28);
+	border-radius: 8px;
+	background: #ffffff;
+	box-shadow: 0 28px 70px rgba(15, 23, 42, 0.28);
+	padding: 20px;
+}
+
+.notification-history-heading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.notification-history-heading h3 {
+	margin: 0;
+	color: var(--ink);
+	font-size: 1.18rem;
+	line-height: 1.2;
+}
+
+.notification-history-dialog-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.notification-history-close,
+.notification-history-refresh {
+	display: grid;
+	place-items: center;
+	width: 34px;
+	height: 34px;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	background: #ffffff;
+	color: var(--muted);
+	cursor: pointer;
+}
+
+.notification-history-close svg,
+.notification-history-refresh svg {
+	width: 16px;
+	height: 16px;
+	fill: none;
+	stroke: currentColor;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-width: 2;
+}
+
+.notification-history-close:hover,
+.notification-history-close:focus-visible,
+.notification-history-refresh:hover,
+.notification-history-refresh:focus-visible {
+	border-color: rgba(52, 211, 153, 0.42);
+	color: var(--accent-strong);
+	outline: none;
+}
+
+.notification-history-list {
+	display: grid;
+	gap: 8px;
+	min-height: 0;
+	overflow-y: auto;
+	padding-right: 2px;
+}
+
+.notification-history-date {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 8px 0 2px;
+	color: var(--muted);
+	font-size: 0.78rem;
+	font-weight: 900;
+	white-space: nowrap;
+}
+
+.notification-history-date::after {
+	content: "";
+	flex: 1 1 auto;
+	height: 1px;
+	background: var(--line);
+}
+
+.notification-history-item {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto auto;
+	align-items: center;
+	gap: 10px;
+	min-height: 58px;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	padding: 10px 12px;
+}
+
+.notification-history-item strong,
+.notification-history-item small {
+	display: block;
+}
+
+.notification-history-item strong {
+	color: var(--ink);
+	font-size: 0.9rem;
+}
+
+.notification-history-item small {
+	margin-top: 4px;
+	color: var(--muted);
+	font-size: 0.78rem;
+}
+
+.notification-history-status {
+	border: 1px solid transparent;
+	border-radius: 999px;
+	font-size: 0.78rem;
+	font-weight: 900;
+	line-height: 1;
+	padding: 6px 9px;
+	white-space: nowrap;
+}
+
+.notification-history-status-success {
+	border-color: rgba(52, 211, 153, 0.28);
+	background: var(--accent-soft);
+	color: var(--accent-strong);
+}
+
+.notification-history-status-failure {
+	border-color: rgba(248, 113, 113, 0.26);
+	background: #fef2f2;
+	color: #b91c1c;
+}
+
+.notification-history-info {
+	display: grid;
+	place-items: center;
+	width: 28px;
+	height: 28px;
+	border: 1px solid rgba(248, 113, 113, 0.34);
+	border-radius: 50%;
+	background: #ffffff;
+	color: #b91c1c;
+	cursor: pointer;
+	font: inherit;
+	font-size: 0.82rem;
+	font-weight: 900;
+	line-height: 1;
+}
+
+.notification-history-info svg {
+	width: 16px;
+	height: 16px;
+	fill: none;
+	stroke: currentColor;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-width: 2;
+}
+
+.notification-history-info:hover,
+.notification-history-info:focus-visible {
+	background: #fef2f2;
+	outline: none;
+}
+
+.notification-history-empty {
+	display: grid;
+	place-items: center;
+	min-height: 72px;
+	border: 1px dashed var(--line);
+	border-radius: 8px;
+	color: var(--muted);
+	font-size: 0.86rem;
+	font-weight: 800;
+	text-align: center;
 }
 
 .setting-row span,
 .setting-row strong,
 .setting-row small {
 	display: block;
+}
+
+.setting-row .time-dial-value {
+	display: grid;
+}
+
+.setting-row .time-dial-value span {
+	display: grid;
+	place-items: center;
+	line-height: 1;
+}
+
+.setting-row .time-dial-separator {
+	display: grid;
+	place-items: center;
+	height: 32px;
+	line-height: 1;
 }
 
 .setting-row strong {
@@ -762,10 +1282,47 @@
 	font-size: 0.82rem;
 }
 
-.setting-row input {
-	width: 18px;
-	height: 18px;
-	accent-color: var(--accent);
+.notification-toggle {
+	position: relative;
+	flex: 0 0 auto;
+	width: 48px;
+	height: 28px;
+	border: 1px solid #cbd5e1;
+	border-radius: 999px;
+	background: #e2e8f0;
+	cursor: pointer;
+	transition: background 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
+}
+
+.notification-toggle span {
+	position: absolute;
+	top: 3px;
+	left: 3px;
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	background: #ffffff;
+	box-shadow: 0 2px 6px rgba(23, 32, 51, 0.18);
+	transition: transform 0.18s ease;
+}
+
+.notification-toggle[aria-pressed="true"] {
+	border-color: var(--accent);
+	background: var(--accent);
+}
+
+.notification-toggle[aria-pressed="true"] span {
+	transform: translateX(20px);
+}
+
+.notification-toggle:disabled {
+	cursor: not-allowed;
+	opacity: 0.58;
+}
+
+.notification-toggle:focus-visible {
+	outline: 3px solid rgba(52, 211, 153, 0.22);
+	outline-offset: 2px;
 }
 
 .job-preference-form {
@@ -1140,13 +1697,30 @@
 	}
 
 	.mypage-topbar {
+		align-items: flex-start;
+		flex-direction: column;
 		position: static;
-		padding: 0 16px;
+		padding: 16px;
 	}
 
 	.mypage-topnav {
 		flex: 1;
 		justify-content: space-between;
+		width: 100%;
+	}
+
+	.kakao-linked-banner {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+
+	.notification-heading-actions {
+		width: 100%;
+	}
+
+	.notification-history-dialog {
+		max-height: calc(100vh - 32px);
+		padding: 18px;
 	}
 
 	.mypage-menu {

@@ -8,6 +8,9 @@ const profileInitial = document.querySelector("#profileInitial");
 const profileEmailText = document.querySelector("#profileEmailText");
 const profileNicknameText = document.querySelector("#profileNicknameText");
 const profileCreatedAtText = document.querySelector("#profileCreatedAtText");
+const kakaoLinkedBanner = document.querySelector("#kakaoLinkedBanner");
+const kakaoLinkedAtText = document.querySelector("#kakaoLinkedAtText");
+const notificationHeadingActions = document.querySelector("#notificationHeadingActions");
 const message = document.querySelector("#mypageMessage");
 const passwordChangeForm = document.querySelector("#passwordChangeForm");
 const currentPasswordInput = document.querySelector("#currentPassword");
@@ -33,13 +36,33 @@ const favoritesToolbar = document.querySelector("#favoritesToolbar");
 const favoriteSelectAll = document.querySelector("#favoriteSelectAll");
 const favoriteDeleteSelectedButton = document.querySelector("#favoriteDeleteSelectedButton");
 const favoritesList = document.querySelector("#favoritesList");
+const notificationSettingsShell = document.querySelector(".notification-settings-shell");
 const kakaoConnectButton = document.querySelector("#kakaoConnectButton");
+const favoriteReminderToggle = document.querySelector("#favoriteReminderToggle");
+const favoriteReminderTimeSetting = document.querySelector("#favoriteReminderTimeSetting");
+const favoriteReminderTime = document.querySelector("#favoriteReminderTime");
+const favoriteReminderTimeDial = document.querySelector("#favoriteReminderTimeDial");
+const favoriteReminderTimePanel = document.querySelector("#favoriteReminderTimePanel");
+const favoriteReminderTimeText = document.querySelector("#favoriteReminderTimeText");
+const favoriteReminderTimeHourText = document.querySelector("[data-time-display='hour']");
+const favoriteReminderTimeMinuteText = document.querySelector("[data-time-display='minute']");
+const notificationHistoryButton = document.querySelector("#notificationHistoryButton");
+const notificationHistoryPanel = document.querySelector("#notificationHistoryPanel");
+const notificationHistoryRefreshButton = document.querySelector("#notificationHistoryRefreshButton");
+const notificationHistoryList = document.querySelector("#notificationHistoryList");
+const notificationHistoryCloseButtons = document.querySelectorAll("[data-notification-history-close]");
 const sectionButtons = document.querySelectorAll("[data-section-target]");
 const sections = document.querySelectorAll("[data-section]");
 const preferenceInputClearButtons = document.querySelectorAll("[data-preference-clear]");
 
 let currentMember = null;
 let currentFavorites = [];
+let favoriteReminderHour = "09";
+let favoriteReminderMinute = "00";
+let favoriteReminderLastSavedTime = null;
+let favoriteReminderCloseTimer = null;
+let notificationHistoriesLoaded = false;
+const favoriteReminderScrollTimers = {};
 
 const preferenceOptions = {
 	companies: [],
@@ -186,6 +209,65 @@ function formatDate(value) {
 	}).format(date);
 }
 
+function formatIsoDate(value) {
+	if (!value) {
+		return "-";
+	}
+
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) {
+		return String(value).slice(0, 10);
+	}
+
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, "0");
+	const day = String(date.getDate()).padStart(2, "0");
+	return `${year}.${month}.${day}`;
+}
+
+function formatDateTime(value) {
+	if (!value) {
+		return "-";
+	}
+
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) {
+		return String(value).replace("T", " ").slice(0, 16);
+	}
+
+	return new Intl.DateTimeFormat("ko-KR", {
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+		hour: "2-digit",
+		minute: "2-digit",
+		hour12: false
+	}).format(date);
+}
+
+function formatDateGroup(value) {
+	if (!value) {
+		return "날짜 정보 없음";
+	}
+
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) {
+		return String(value).slice(0, 10).replaceAll("-", ".");
+	}
+
+	return new Intl.DateTimeFormat("ko-KR", {
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+		weekday: "short"
+	}).format(date);
+}
+
+function notificationHistoryTimestamp(value) {
+	const timestamp = new Date(value).getTime();
+	return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
 function escapeHtml(value) {
 	return String(value ?? "")
 		.replaceAll("&", "&amp;")
@@ -297,6 +379,98 @@ async function loadFavoriteRecruitments() {
 	renderFavoriteRecruitments(await response.json());
 }
 
+function renderNotificationHistories(histories) {
+	if (!notificationHistoryList) {
+		return;
+	}
+
+	if (!histories.length) {
+		notificationHistoryList.innerHTML = `<div class="notification-history-empty">아직 발송된 알림이 없습니다.</div>`;
+		return;
+	}
+
+	const sortedHistories = [...histories].sort((first, second) => {
+		return notificationHistoryTimestamp(second.sentAt) - notificationHistoryTimestamp(first.sentAt);
+	});
+	let currentGroup = null;
+	notificationHistoryList.innerHTML = sortedHistories.map((history) => {
+		const dateGroup = formatDateGroup(history.sentAt);
+		const status = history.status === "SUCCESS" ? "success" : "failure";
+		const reason = escapeHtml(history.failureReason || "실패 원인을 확인할 수 없습니다.");
+		const failureButton = status === "failure"
+			? `<button type="button" class="notification-history-info" data-failure-reason="${reason}" aria-label="알림 실패 원인 보기" title="실패 원인 보기">
+				<svg viewBox="0 0 24 24" aria-hidden="true">
+					<circle cx="12" cy="12" r="10"></circle>
+					<path d="M12 16v-4"></path>
+					<path d="M12 8h.01"></path>
+				</svg>
+			</button>`
+			: "";
+		const groupDivider = currentGroup === dateGroup
+			? ""
+			: `<div class="notification-history-date">${escapeHtml(dateGroup)}</div>`;
+		currentGroup = dateGroup;
+
+		return `
+			${groupDivider}
+			<article class="notification-history-item">
+				<div>
+					<strong>${escapeHtml(history.typeLabel || history.type || "-")}</strong>
+					<small>${escapeHtml(formatDateTime(history.sentAt))}</small>
+				</div>
+				<span class="notification-history-status notification-history-status-${status}">
+					${escapeHtml(history.statusLabel || history.status || "-")}
+				</span>
+				${failureButton}
+			</article>
+		`;
+	}).join("");
+}
+
+async function loadNotificationHistories({ force = false } = {}) {
+	if (!notificationHistoryList || (!force && notificationHistoriesLoaded)) {
+		return;
+	}
+
+	notificationHistoryList.innerHTML = `<div class="notification-history-empty">이력을 불러오는 중입니다.</div>`;
+	const response = await fetch("/api/members/me/notifications/histories", {
+		headers: {
+			Accept: "application/json"
+		}
+	});
+
+	if (!response.ok) {
+		const problem = await response.json().catch(() => null);
+		throw new Error(problem?.detail || "알림 발송이력을 불러오지 못했습니다.");
+	}
+
+	renderNotificationHistories(await response.json());
+	notificationHistoriesLoaded = true;
+}
+
+function openNotificationHistoryModal() {
+	if (!notificationHistoryPanel || !notificationHistoryButton) {
+		return;
+	}
+
+	notificationHistoryButton.setAttribute("aria-expanded", "true");
+	notificationHistoryPanel.hidden = false;
+	document.body.classList.add("is-notification-history-open");
+	loadNotificationHistories().catch((error) => {
+		showMessage(error.message);
+	});
+}
+
+function closeNotificationHistoryModal() {
+	if (!notificationHistoryPanel || !notificationHistoryButton) {
+		return;
+	}
+
+	notificationHistoryButton.setAttribute("aria-expanded", "false");
+	notificationHistoryPanel.hidden = true;
+	document.body.classList.remove("is-notification-history-open");
+}
+
 async function deleteFavoriteRecruitment(sourceRecruitmentId, source = "ALIO") {
 	const response = await fetch(
 		`/api/members/me/favorite-recruitments/${encodeURIComponent(sourceRecruitmentId)}?source=${encodeURIComponent(source)}`,
@@ -366,6 +540,53 @@ function updateProfileView(member) {
 	profileEmailText.textContent = email;
 	profileNicknameText.textContent = nickname;
 	profileCreatedAtText.textContent = formatDate(member.createdAt);
+	updateNotificationSettingsState(Boolean(member.kakaoLinked));
+	updateFavoriteReminderView(member);
+	updateKakaoLinkedBanner(member);
+}
+
+function updateNotificationSettingsState(isKakaoLinked) {
+	if (!notificationSettingsShell) {
+		return;
+	}
+
+	notificationSettingsShell.dataset.kakaoLinked = String(isKakaoLinked);
+	if (notificationHeadingActions) {
+		notificationHeadingActions.dataset.kakaoLinked = String(isKakaoLinked);
+	}
+	notificationSettingsShell.querySelectorAll(".notification-toggle").forEach((button) => {
+		button.disabled = !isKakaoLinked;
+	});
+	if (notificationHistoryButton) {
+		notificationHistoryButton.disabled = !isKakaoLinked;
+	}
+	updateFavoriteReminderTimeSetting();
+}
+
+function updateKakaoLinkedBanner(member) {
+	if (!kakaoLinkedBanner || !kakaoLinkedAtText) {
+		return;
+	}
+
+	kakaoLinkedBanner.hidden = !member.kakaoLinked;
+	kakaoLinkedAtText.textContent = member.kakaoLinkedAt
+		? formatIsoDate(member.kakaoLinkedAt)
+		: "연동일 확인 불가";
+}
+
+function updateFavoriteReminderView(member) {
+	if (!favoriteReminderToggle) {
+		return;
+	}
+
+	const reminderTime = member.favoriteReminderTime || "09:00";
+	const [hour = "09", minute = "00"] = reminderTime.split(":");
+	favoriteReminderHour = hour.padStart(2, "0");
+	favoriteReminderMinute = minute.padStart(2, "0");
+	favoriteReminderLastSavedTime = `${favoriteReminderHour}:${favoriteReminderMinute}`;
+	favoriteReminderToggle.setAttribute("aria-pressed", String(Boolean(member.favoriteReminderEnabled)));
+	updateFavoriteReminderTimeDial();
+	updateFavoriteReminderTimeSetting();
 }
 
 function validateNickname() {
@@ -737,6 +958,23 @@ sectionButtons.forEach((button) => {
 	});
 });
 
+function activateInitialSection() {
+	const params = new URLSearchParams(window.location.search);
+	const requestedSection = params.get("section");
+	const sectionExists = Array.from(sections).some((section) => section.dataset.section === requestedSection);
+	const initialSection = sectionExists ? requestedSection : "profile";
+
+	activateSection(initialSection);
+	if (initialSection === "favorites") {
+		loadFavoriteRecruitments().catch((error) => {
+			showMessage(error.message);
+		});
+	}
+	if (params.get("kakao") === "linked") {
+		showMessage("카카오 계정 연동이 완료되었습니다.", "success");
+	}
+}
+
 document.addEventListener("click", (event) => {
 	const link = event.target.closest("a[href]");
 	if (!link || !isJobPreferenceEditing()) {
@@ -871,8 +1109,288 @@ if (favoriteDeleteSelectedButton) {
 
 if (kakaoConnectButton) {
 	kakaoConnectButton.addEventListener("click", () => {
-		showMessage("카카오톡 계정 연동 기능은 준비 중입니다.");
+		window.location.href = "/api/kakao/authorize";
 	});
+}
+
+if (notificationHistoryButton) {
+	notificationHistoryButton.addEventListener("click", () => {
+		if (notificationHistoryButton.disabled) {
+			return;
+		}
+		openNotificationHistoryModal();
+	});
+}
+
+if (notificationHistoryRefreshButton) {
+	notificationHistoryRefreshButton.addEventListener("click", () => {
+		loadNotificationHistories({ force: true }).catch((error) => {
+			showMessage(error.message);
+		});
+	});
+}
+
+if (notificationHistoryList) {
+	notificationHistoryList.addEventListener("click", (event) => {
+		const button = event.target.closest(".notification-history-info");
+		if (!button) {
+			return;
+		}
+
+		window.alert(button.dataset.failureReason || "실패 원인을 확인할 수 없습니다.");
+	});
+}
+
+notificationHistoryCloseButtons.forEach((button) => {
+	button.addEventListener("click", closeNotificationHistoryModal);
+});
+
+document.addEventListener("keydown", (event) => {
+	if (event.key === "Escape" && notificationHistoryPanel && !notificationHistoryPanel.hidden) {
+		closeNotificationHistoryModal();
+	}
+});
+
+document.querySelectorAll(".notification-toggle").forEach((button) => {
+	button.addEventListener("click", async () => {
+		const isActive = button.getAttribute("aria-pressed") === "true";
+		const nextActive = !isActive;
+		button.setAttribute("aria-pressed", String(nextActive));
+		if (button === favoriteReminderToggle) {
+			updateFavoriteReminderTimeSetting();
+			try {
+				await saveFavoriteReminderSetting(nextActive, { showAlert: true });
+			} catch (error) {
+				button.setAttribute("aria-pressed", String(isActive));
+				updateFavoriteReminderTimeSetting();
+				showMessage(error.message);
+			}
+		}
+	});
+});
+
+if (favoriteReminderTime) {
+	favoriteReminderTime.addEventListener("click", toggleFavoriteReminderTimeDial);
+}
+
+if (favoriteReminderTimePanel) {
+	favoriteReminderTimePanel.addEventListener("click", (event) => {
+		const option = event.target.closest(".time-dial-option");
+		if (!option) {
+			return;
+		}
+
+		if (option.dataset.timeType === "hour") {
+			favoriteReminderHour = option.dataset.timeValue;
+		}
+		if (option.dataset.timeType === "minute") {
+			favoriteReminderMinute = option.dataset.timeValue;
+		}
+		updateFavoriteReminderTimeDial();
+		scrollTimeOptionToCenter(option, "smooth");
+	});
+}
+
+document.addEventListener("click", (event) => {
+	if (!favoriteReminderTimeDial || favoriteReminderTimeDial.contains(event.target)) {
+		return;
+	}
+	closeFavoriteReminderTimeDial({ save: true });
+});
+
+function updateFavoriteReminderTimeSetting() {
+	if (!favoriteReminderToggle || !favoriteReminderTimeSetting || !favoriteReminderTime) {
+		return;
+	}
+
+	const isActive = favoriteReminderToggle.getAttribute("aria-pressed") === "true";
+	const isDisabled = favoriteReminderToggle.disabled;
+	favoriteReminderTimeSetting.hidden = !isActive;
+	favoriteReminderTime.disabled = !isActive || isDisabled;
+	if (!isActive || isDisabled) {
+		closeFavoriteReminderTimeDial();
+	}
+}
+
+function initializeFavoriteReminderTimeDial() {
+	if (!favoriteReminderTimeDial || !favoriteReminderTimePanel || !favoriteReminderTimeText) {
+		return;
+	}
+
+	renderTimeWheel("hour", 24);
+	renderTimeWheel("minute", 60);
+	favoriteReminderTimePanel.querySelectorAll(".time-dial-window").forEach((wheel) => {
+		wheel.addEventListener("scroll", () => handleTimeWheelScroll(wheel));
+	});
+	updateFavoriteReminderTimeDial();
+}
+
+function renderTimeWheel(type, count) {
+	const wheel = favoriteReminderTimePanel.querySelector(`[data-time-wheel="${type}"]`);
+	if (!wheel) {
+		return;
+	}
+
+	wheel.replaceChildren();
+	Array.from({ length: count }, (_, index) => String(index).padStart(2, "0")).forEach((value) => {
+		const option = document.createElement("button");
+		option.type = "button";
+		option.className = "time-dial-option";
+		option.dataset.timeValue = value;
+		option.dataset.timeType = type;
+		option.textContent = value;
+		wheel.append(option);
+	});
+}
+
+function updateFavoriteReminderTimeDial() {
+	if (!favoriteReminderTimePanel || !favoriteReminderTimeText) {
+		return;
+	}
+
+	if (favoriteReminderTimeHourText && favoriteReminderTimeMinuteText) {
+		favoriteReminderTimeHourText.textContent = favoriteReminderHour;
+		favoriteReminderTimeMinuteText.textContent = favoriteReminderMinute;
+	}
+	favoriteReminderTimePanel.querySelectorAll(".time-dial-option").forEach((option) => {
+		const isSelected = (
+			(option.dataset.timeType === "hour" && option.dataset.timeValue === favoriteReminderHour)
+				|| (option.dataset.timeType === "minute" && option.dataset.timeValue === favoriteReminderMinute)
+		);
+		option.classList.toggle("is-selected", isSelected);
+		option.setAttribute("aria-pressed", String(isSelected));
+	});
+}
+
+function handleTimeWheelScroll(wheel) {
+	const option = findCenteredTimeOption(wheel);
+	if (!option) {
+		return;
+	}
+
+	if (option.dataset.timeType === "hour" && option.dataset.timeValue !== favoriteReminderHour) {
+		favoriteReminderHour = option.dataset.timeValue;
+		updateFavoriteReminderTimeDial();
+	}
+	if (option.dataset.timeType === "minute" && option.dataset.timeValue !== favoriteReminderMinute) {
+		favoriteReminderMinute = option.dataset.timeValue;
+		updateFavoriteReminderTimeDial();
+	}
+
+	clearTimeout(favoriteReminderScrollTimers[option.dataset.timeType]);
+	favoriteReminderScrollTimers[option.dataset.timeType] = setTimeout(() => {
+		scrollTimeOptionToCenter(option, "smooth");
+	}, 120);
+}
+
+function findCenteredTimeOption(wheel) {
+	const wheelRect = wheel.getBoundingClientRect();
+	const wheelCenter = wheelRect.top + wheelRect.height / 2;
+	return Array.from(wheel.querySelectorAll(".time-dial-option"))
+		.reduce((closestOption, option) => {
+			const optionRect = option.getBoundingClientRect();
+			const distance = Math.abs(optionRect.top + optionRect.height / 2 - wheelCenter);
+			if (!closestOption || distance < closestOption.distance) {
+				return { option, distance };
+			}
+			return closestOption;
+		}, null)?.option;
+}
+
+function toggleFavoriteReminderTimeDial() {
+	if (!favoriteReminderTime || !favoriteReminderTimePanel || favoriteReminderTime.disabled) {
+		return;
+	}
+
+	const isOpen = favoriteReminderTime.getAttribute("aria-expanded") === "true";
+	if (isOpen) {
+		closeFavoriteReminderTimeDial({ save: true });
+		return;
+	}
+
+	clearTimeout(favoriteReminderCloseTimer);
+	favoriteReminderTimePanel.classList.remove("is-closing");
+	favoriteReminderTime.setAttribute("aria-expanded", String(!isOpen));
+	favoriteReminderTimePanel.hidden = false;
+	scrollSelectedTimeOptionsIntoView();
+}
+
+function closeFavoriteReminderTimeDial({ save = false } = {}) {
+	if (!favoriteReminderTime || !favoriteReminderTimePanel) {
+		return;
+	}
+
+	const wasOpen = favoriteReminderTime.getAttribute("aria-expanded") === "true";
+	if (!wasOpen) {
+		return;
+	}
+
+	favoriteReminderTime.setAttribute("aria-expanded", "false");
+	favoriteReminderTimePanel.classList.add("is-closing");
+	clearTimeout(favoriteReminderCloseTimer);
+	favoriteReminderCloseTimer = setTimeout(() => {
+		favoriteReminderTimePanel.hidden = true;
+		favoriteReminderTimePanel.classList.remove("is-closing");
+	}, 160);
+	if (save && wasOpen) {
+		saveFavoriteReminderTime();
+	}
+}
+
+async function saveFavoriteReminderTime() {
+	if (!favoriteReminderToggle || favoriteReminderToggle.getAttribute("aria-pressed") !== "true") {
+		return;
+	}
+
+	await saveFavoriteReminderSetting(true, { showAlert: true });
+}
+
+async function saveFavoriteReminderSetting(enabled, { showAlert = false } = {}) {
+	const reminderTime = `${favoriteReminderHour}:${favoriteReminderMinute}`;
+
+	const response = await fetch("/api/members/me/notifications/favorite-reminder", {
+		method: "PATCH",
+		headers: {
+			"Content-Type": "application/json"
+		},
+		body: JSON.stringify({
+			enabled,
+			reminderTime
+		})
+	});
+
+	if (!response.ok) {
+		const problem = await response.json().catch(() => null);
+		throw new Error(problem?.detail || "리마인드 알림 설정을 저장하지 못했습니다.");
+	}
+
+	updateProfileView(await response.json());
+	favoriteReminderLastSavedTime = reminderTime;
+	if (showAlert) {
+		window.alert(enabled
+			? `매일 ${reminderTime}분 리마인드 알림이 설정되었습니다.`
+			: "리마인드 알림이 해제되었습니다.");
+	}
+}
+
+function scrollSelectedTimeOptionsIntoView() {
+	if (!favoriteReminderTimePanel) {
+		return;
+	}
+
+	favoriteReminderTimePanel.querySelectorAll(".time-dial-option.is-selected").forEach((option) => {
+		scrollTimeOptionToCenter(option);
+	});
+}
+
+function scrollTimeOptionToCenter(option, behavior = "auto") {
+	const wheel = option.closest(".time-dial-window");
+	if (!wheel) {
+		return;
+	}
+
+	const targetTop = option.offsetTop - (wheel.clientHeight - option.offsetHeight) / 2;
+	wheel.scrollTo({ top: targetTop, behavior });
 }
 
 editNicknameButton.addEventListener("click", () => {
@@ -1022,6 +1540,9 @@ jobPreferenceForm.addEventListener("submit", async (event) => {
 		setJobPreferenceSaving(false);
 	}
 });
+
+initializeFavoriteReminderTimeDial();
+activateInitialSection();
 
 loadProfile().catch((error) => {
 	showMessage(error.message);

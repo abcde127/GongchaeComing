@@ -2,12 +2,17 @@ package com.gongchae.gongchae_coming.member.dto;
 
 import com.gongchae.gongchae_coming.member.domain.Member;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 public record MemberProfileResponse(
 	Long id,
 	String email,
 	String nickname,
-	LocalDateTime createdAt
+	LocalDateTime createdAt,
+	boolean kakaoLinked,
+	LocalDateTime kakaoLinkedAt,
+	boolean favoriteReminderEnabled,
+	LocalTime favoriteReminderTime
 ) {
 
 	public static MemberProfileResponse from(Member member) {
@@ -15,7 +20,11 @@ public record MemberProfileResponse(
 			member.getId(),
 			member.getEmail(),
 			member.getNickname(),
-			member.getCreatedAt()
+			member.getCreatedAt(),
+			member.isKakaoLinked(),
+			member.getKakaoLinkedAt(),
+			member.isFavoriteReminderEnabled(),
+			member.getFavoriteReminderTime()
 		);
 	}
 }
