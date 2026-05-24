@@ -96,7 +96,8 @@ class AlioRecruitmentServiceTest {
 			recruitmentRepository,
 			syncStateRepository,
 			new AlioRecruitmentSyncProgressStore(),
-			mock(NewRecruitmentNotificationService.class)
+			mock(NewRecruitmentNotificationService.class),
+			mock(AlioRecruitmentSeedExporter.class)
 		);
 		ObjectNode apiResponse = OBJECT_MAPPER.createObjectNode();
 		apiResponse.put("resultCode", 200);
@@ -174,11 +175,10 @@ class AlioRecruitmentServiceTest {
 	}
 
 	@Test
-	void getRecruitmentsKeepsAlioListItemColumnsInResponse() {
+	void getRecruitmentsKeepsServiceListItemColumnsInResponse() {
 		ObjectNode item = OBJECT_MAPPER.createObjectNode();
 		item.put("recrutPblntSn", 300658);
 		item.put("pblntInstCd", "C0661");
-		item.put("pbadmsStdInstCd", "B552995");
 		item.put("instNm", "식품안전정보원");
 		item.put("ncsCdLst", "R600001,R600002");
 		item.put("ncsCdNmLst", "사업관리,경영.회계.사무");
@@ -188,24 +188,14 @@ class AlioRecruitmentServiceTest {
 		item.put("workRgnNmLst", "서울");
 		item.put("recrutSe", "R2020");
 		item.put("recrutSeNm", "경력");
-		item.put("prefCondCn", "공통우대사항");
-		item.put("recrutNope", 2);
 		item.put("pbancBgngYmd", "20260515");
 		item.put("pbancEndYmd", "20260601");
 		item.put("recrutPbancTtl", "식품안전정보원 개방형 직위 공개 모집");
 		item.put("srcUrl", "https://www.foodinfo.or.kr");
 		item.put("replmprYn", "N");
-		item.put("aplyQlfcCn", "지원자격");
-		item.put("disqlfcRsn", "결격사유");
-		item.put("scrnprcdrMthdExpln", "서류전형");
-		item.put("prefCn", "우대내용");
 		item.put("acbgCondLst", "R7050,R7070");
 		item.put("acbgCondNmLst", "대졸(4년),박사");
-		item.putNull("nonatchRsn");
 		item.put("ongoingYn", "Y");
-		item.put("decimalDay", 16);
-		item.putArray("files");
-		item.putArray("steps");
 		AlioRecruitmentService service = serviceWithCachedItems(createResponse(item));
 
 		var result = service.getRecruitments(request("REGISTRATION_DATE", "DESC"));
@@ -213,14 +203,10 @@ class AlioRecruitmentServiceTest {
 
 		assertThat(result.path("lastFetchedAt").asText()).isNotBlank();
 		assertThat(resultItem.path("recrutPblntSn").asLong()).isEqualTo(300658);
-		assertThat(resultItem.path("pbadmsStdInstCd").asText()).isEqualTo("B552995");
-		assertThat(resultItem.path("prefCondCn").asText()).isEqualTo("공통우대사항");
-		assertThat(resultItem.path("recrutNope").asInt()).isEqualTo(2);
 		assertThat(resultItem.path("pbancBgngYmd").asText()).isEqualTo("20260515");
 		assertThat(resultItem.path("ongoingYn").asText()).isEqualTo("Y");
-		assertThat(resultItem.path("decimalDay").asInt()).isEqualTo(16);
-		assertThat(resultItem.path("files").isArray()).isTrue();
-		assertThat(resultItem.path("steps").isArray()).isTrue();
+		assertThat(resultItem.path("pbadmsStdInstCd").isMissingNode()).isTrue();
+		assertThat(resultItem.path("aplyQlfcCn").isMissingNode()).isTrue();
 	}
 
 	@Test
@@ -233,7 +219,8 @@ class AlioRecruitmentServiceTest {
 			recruitmentRepository,
 			syncStateRepository,
 			new AlioRecruitmentSyncProgressStore(),
-			mock(NewRecruitmentNotificationService.class)
+			mock(NewRecruitmentNotificationService.class),
+			mock(AlioRecruitmentSeedExporter.class)
 		);
 		ObjectNode apiResponse = OBJECT_MAPPER.createObjectNode();
 		apiResponse.put("resultCode", 200);
@@ -261,17 +248,19 @@ class AlioRecruitmentServiceTest {
 	}
 
 	@Test
-	void completedRefreshSendsNewRecruitmentNotifications() {
+	void completedRefreshSendsNewRecruitmentNotificationsAndExportsSeed() {
 		AlioRecruitmentClient client = mock(AlioRecruitmentClient.class);
 		AlioRecruitmentRepository recruitmentRepository = mock(AlioRecruitmentRepository.class);
 		AlioRecruitmentSyncStateRepository syncStateRepository = mock(AlioRecruitmentSyncStateRepository.class);
 		NewRecruitmentNotificationService notificationService = mock(NewRecruitmentNotificationService.class);
+		AlioRecruitmentSeedExporter seedExporter = mock(AlioRecruitmentSeedExporter.class);
 		AlioRecruitmentService service = new AlioRecruitmentService(
 			client,
 			recruitmentRepository,
 			syncStateRepository,
 			new AlioRecruitmentSyncProgressStore(),
-			notificationService
+			notificationService,
+			seedExporter
 		);
 		ObjectNode apiResponse = OBJECT_MAPPER.createObjectNode();
 		apiResponse.put("resultCode", 200);
@@ -296,6 +285,7 @@ class AlioRecruitmentServiceTest {
 			.sendNewRecruitmentNotifications(argThat(recruitments ->
 				recruitments.size() == 1 && titleOf(recruitments.get(0)).equals("신규 공고")
 			));
+		verify(seedExporter, org.mockito.Mockito.timeout(1000)).exportSeedRecruitments();
 	}
 
 	@Test
@@ -309,7 +299,8 @@ class AlioRecruitmentServiceTest {
 			recruitmentRepository,
 			syncStateRepository,
 			progressStore,
-			mock(NewRecruitmentNotificationService.class)
+			mock(NewRecruitmentNotificationService.class),
+			mock(AlioRecruitmentSeedExporter.class)
 		);
 		ObjectNode apiResponse = OBJECT_MAPPER.createObjectNode();
 		apiResponse.put("resultCode", 200);
@@ -346,7 +337,8 @@ class AlioRecruitmentServiceTest {
 			recruitmentRepository,
 			syncStateRepository,
 			progressStore,
-			mock(NewRecruitmentNotificationService.class)
+			mock(NewRecruitmentNotificationService.class),
+			mock(AlioRecruitmentSeedExporter.class)
 		);
 		ObjectNode apiResponse = OBJECT_MAPPER.createObjectNode();
 		apiResponse.put("resultCode", 200);
@@ -383,7 +375,8 @@ class AlioRecruitmentServiceTest {
 			recruitmentRepository,
 			syncStateRepository,
 			progressStore,
-			mock(NewRecruitmentNotificationService.class)
+			mock(NewRecruitmentNotificationService.class),
+			mock(AlioRecruitmentSeedExporter.class)
 		);
 		ObjectNode apiResponse = OBJECT_MAPPER.createObjectNode();
 		apiResponse.put("resultCode", 200);
@@ -414,7 +407,8 @@ class AlioRecruitmentServiceTest {
 			recruitmentRepository,
 			syncStateRepository,
 			progressStore,
-			mock(NewRecruitmentNotificationService.class)
+			mock(NewRecruitmentNotificationService.class),
+			mock(AlioRecruitmentSeedExporter.class)
 		);
 		ObjectNode errorResponse = OBJECT_MAPPER.createObjectNode();
 		errorResponse.put("resultCode", "500");
@@ -459,7 +453,8 @@ class AlioRecruitmentServiceTest {
 			recruitmentRepository,
 			syncStateRepository,
 			new AlioRecruitmentSyncProgressStore(),
-			mock(NewRecruitmentNotificationService.class)
+			mock(NewRecruitmentNotificationService.class),
+			mock(AlioRecruitmentSeedExporter.class)
 		);
 	}
 

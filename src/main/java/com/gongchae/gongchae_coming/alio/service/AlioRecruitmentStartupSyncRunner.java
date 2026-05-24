@@ -13,10 +13,16 @@ import org.springframework.stereotype.Component;
 public class AlioRecruitmentStartupSyncRunner {
 
 	private final AlioRecruitmentService alioRecruitmentService;
+	private final AlioRecruitmentSeedImporter alioRecruitmentSeedImporter;
 	private final PublicInstitutionService publicInstitutionService;
 
 	@EventListener(ApplicationReadyEvent.class)
 	public void startInitialSync() {
+		try {
+			alioRecruitmentSeedImporter.importSeedRecruitments();
+		} catch (Exception exception) {
+			log.warn("Failed to import ALIO recruitment seed data on startup.", exception);
+		}
 		try {
 			publicInstitutionService.synchronizePublicInstitutions();
 		} catch (Exception exception) {

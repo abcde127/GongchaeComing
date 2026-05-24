@@ -14,6 +14,7 @@ import com.gongchae.gongchae_coming.alio.repository.AlioRecruitmentRepository;
 import com.gongchae.gongchae_coming.alio.repository.AlioRecruitmentSyncStateRepository;
 import com.gongchae.gongchae_coming.notification.service.NewRecruitmentNotificationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +36,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class AlioRecruitmentService {
 
@@ -130,6 +132,7 @@ public class AlioRecruitmentService {
 	private final AlioRecruitmentSyncStateRepository syncStateRepository;
 	private final AlioRecruitmentSyncProgressStore syncProgressStore;
 	private final NewRecruitmentNotificationService newRecruitmentNotificationService;
+	private final AlioRecruitmentSeedExporter alioRecruitmentSeedExporter;
 	private final AtomicBoolean syncInProgress = new AtomicBoolean(false);
 	private final ExecutorService syncExecutor = Executors.newSingleThreadExecutor();
 
@@ -140,6 +143,11 @@ public class AlioRecruitmentService {
 		sortRecruitmentItems(response, request.resolvedSortBy(), request.resolvedSortDirection());
 		pageRecruitmentItems(response, request.resolvedPageNo(), request.resolvedNumOfRows());
 		return response;
+	}
+
+	@Transactional
+	public List<AlioRecruitment> importRecruitments(List<JsonNode> items, LocalDateTime fetchedAt) {
+		return upsertRecruitments(items, fetchedAt);
 	}
 
 	public boolean startBackgroundSynchronization(AlioRecruitmentListRequest request) {
@@ -239,7 +247,16 @@ public class AlioRecruitmentService {
 			totalCount == null ? newRecruitmentCount : Math.min(totalCount, saturatedInt(storedRecruitmentCount) + newRecruitmentCount),
 			totalCount == null ? newRecruitmentCount : totalCount
 		);
+		exportSeedRecruitments();
 		newRecruitmentNotificationService.sendNewRecruitmentNotifications(newRecruitments);
+	}
+
+	private void exportSeedRecruitments() {
+		try {
+			alioRecruitmentSeedExporter.exportSeedRecruitments();
+		} catch (Exception exception) {
+			log.warn("Failed to export ALIO recruitment seed data after synchronization.", exception);
+		}
 	}
 
 	private JsonNode fetchRecruitmentsOrFail(

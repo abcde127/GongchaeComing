@@ -1,7 +1,6 @@
 package com.gongchae.gongchae_coming.alio.domain;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -29,8 +28,6 @@ import org.springframework.util.StringUtils;
 )
 public class AlioRecruitment {
 
-	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
@@ -45,9 +42,6 @@ public class AlioRecruitment {
 
 	@Column(length = 100)
 	private String pblntInstCd;
-
-	@Column(length = 100)
-	private String pbadmsStdInstCd;
 
 	@Column(length = 255)
 	private String pblntInstNm;
@@ -77,11 +71,6 @@ public class AlioRecruitment {
 	private String recrutSeNm;
 
 	@Lob
-	private String prefCondCn;
-
-	private Integer recrutNope;
-
-	@Lob
 	private String hireTypeLst;
 
 	@Lob
@@ -108,9 +97,6 @@ public class AlioRecruitment {
 	@Column(length = 10)
 	private String replmprYn;
 
-	@Column(length = 100)
-	private String replmprYnNm;
-
 	@Column(length = 10)
 	private String ongoingYn;
 
@@ -131,29 +117,6 @@ public class AlioRecruitment {
 
 	@Column(length = 500)
 	private String srcUrl;
-
-	@Lob
-	private String aplyQlfcCn;
-
-	@Lob
-	private String disqlfcRsn;
-
-	@Lob
-	private String scrnprcdrMthdExpln;
-
-	@Lob
-	private String prefCn;
-
-	@Lob
-	private String nonatchRsn;
-
-	private Integer decimalDay;
-
-	@Lob
-	private String files;
-
-	@Lob
-	private String steps;
 
 	@Column(nullable = false)
 	private LocalDateTime fetchedAt;
@@ -181,7 +144,6 @@ public class AlioRecruitment {
 		this.recrutPblntSn = longValue(item, "recrutPblntSn");
 		this.recrutPbancSn = text(item, "recrutPbancSn");
 		this.pblntInstCd = text(item, "pblntInstCd");
-		this.pbadmsStdInstCd = text(item, "pbadmsStdInstCd");
 		this.pblntInstNm = text(item, "pblntInstNm");
 		this.instNm = text(item, "instNm");
 		this.instClsf = text(item, "instClsf");
@@ -191,8 +153,6 @@ public class AlioRecruitment {
 		this.recrutPbancTtl = text(item, "recrutPbancTtl");
 		this.recrutSe = text(item, "recrutSe");
 		this.recrutSeNm = text(item, "recrutSeNm");
-		this.prefCondCn = text(item, "prefCondCn");
-		this.recrutNope = integerValue(item, "recrutNope");
 		this.hireTypeLst = text(item, "hireTypeLst", "hireTypeCdLst", "hireTypeCd");
 		this.hireTypeNmLst = text(item, "hireTypeNmLst", "hireTypeNm", "hireType");
 		this.workRgnLst = text(item, "workRgnLst", "workRgnCdLst", "workRgnCd", "workRegionCode");
@@ -202,7 +162,6 @@ public class AlioRecruitment {
 		this.acbgCondLst = text(item, "acbgCondLst");
 		this.acbgCondNmLst = text(item, "acbgCondNmLst");
 		this.replmprYn = text(item, "replmprYn");
-		this.replmprYnNm = text(item, "replmprYnNm");
 		this.ongoingYn = text(item, "ongoingYn");
 		this.pbancBgngYmd = text(item, "pbancBgngYmd");
 		this.pbancEndYmd = text(item, "pbancEndYmd");
@@ -210,14 +169,6 @@ public class AlioRecruitment {
 		this.aplyEndYmd = text(item, "aplyEndYmd", "endDate");
 		this.recrutPbancUrl = text(item, "recrutPbancUrl", "url");
 		this.srcUrl = text(item, "srcUrl");
-		this.aplyQlfcCn = text(item, "aplyQlfcCn");
-		this.disqlfcRsn = text(item, "disqlfcRsn");
-		this.scrnprcdrMthdExpln = text(item, "scrnprcdrMthdExpln");
-		this.prefCn = text(item, "prefCn");
-		this.nonatchRsn = text(item, "nonatchRsn");
-		this.decimalDay = integerValue(item, "decimalDay");
-		this.files = jsonText(item, "files");
-		this.steps = jsonText(item, "steps");
 		this.fetchedAt = fetchedAt;
 	}
 
@@ -225,7 +176,6 @@ public class AlioRecruitment {
 		put(node, "recrutPblntSn", recrutPblntSn);
 		put(node, "recrutPbancSn", recrutPbancSn);
 		put(node, "pblntInstCd", pblntInstCd);
-		put(node, "pbadmsStdInstCd", pbadmsStdInstCd);
 		put(node, "pblntInstNm", pblntInstNm);
 		put(node, "instNm", instNm);
 		put(node, "instClsf", instClsf);
@@ -235,8 +185,6 @@ public class AlioRecruitment {
 		put(node, "recrutPbancTtl", recrutPbancTtl);
 		put(node, "recrutSe", recrutSe);
 		put(node, "recrutSeNm", recrutSeNm);
-		put(node, "prefCondCn", prefCondCn);
-		put(node, "recrutNope", recrutNope);
 		put(node, "hireTypeLst", hireTypeLst);
 		put(node, "hireTypeNmLst", hireTypeNmLst);
 		put(node, "workRgnLst", workRgnLst);
@@ -246,7 +194,6 @@ public class AlioRecruitment {
 		put(node, "acbgCondLst", acbgCondLst);
 		put(node, "acbgCondNmLst", acbgCondNmLst);
 		put(node, "replmprYn", replmprYn);
-		put(node, "replmprYnNm", replmprYnNm);
 		put(node, "ongoingYn", ongoingYn);
 		put(node, "pbancBgngYmd", pbancBgngYmd);
 		put(node, "pbancEndYmd", pbancEndYmd);
@@ -254,14 +201,6 @@ public class AlioRecruitment {
 		put(node, "aplyEndYmd", aplyEndYmd);
 		put(node, "recrutPbancUrl", recrutPbancUrl);
 		put(node, "srcUrl", srcUrl);
-		put(node, "aplyQlfcCn", aplyQlfcCn);
-		put(node, "disqlfcRsn", disqlfcRsn);
-		put(node, "scrnprcdrMthdExpln", scrnprcdrMthdExpln);
-		put(node, "prefCn", prefCn);
-		put(node, "nonatchRsn", nonatchRsn);
-		put(node, "decimalDay", decimalDay);
-		putJson(node, "files", files);
-		putJson(node, "steps", steps);
 	}
 
 	public String getSourceRecruitmentId() {
@@ -338,34 +277,9 @@ public class AlioRecruitment {
 		}
 	}
 
-	private static void putJson(ObjectNode node, String fieldName, String value) {
-		if (value == null) {
-			return;
-		}
-
-		try {
-			node.set(fieldName, OBJECT_MAPPER.readTree(value));
-		} catch (Exception ignored) {
-			node.put(fieldName, value);
-		}
-	}
-
 	private static Long longValue(JsonNode item, String fieldName) {
 		JsonNode value = item.path(fieldName);
 		return value.isNumber() || StringUtils.hasText(value.asText(null)) ? value.asLong() : null;
-	}
-
-	private static Integer integerValue(JsonNode item, String fieldName) {
-		JsonNode value = item.path(fieldName);
-		return value.isNumber() || StringUtils.hasText(value.asText(null)) ? value.asInt() : null;
-	}
-
-	private static String jsonText(JsonNode item, String fieldName) {
-		JsonNode value = item.path(fieldName);
-		if (value.isMissingNode() || value.isNull()) {
-			return null;
-		}
-		return value.toString();
 	}
 
 	private static String sha256(String value) {
