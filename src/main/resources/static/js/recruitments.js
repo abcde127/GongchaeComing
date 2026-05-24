@@ -817,7 +817,7 @@ function escapeAttribute(value) {
 }
 
 function getRecruitmentFavoriteId(item) {
-	return String(getValue(item, "sourceRecruitmentId", "recrutPblntSn", "recrutPbancSn", "pbancSn") || "");
+	return String(getValue(item, "sourceRecruitmentId", "recrutPblntSn", "pbancSn") || "");
 }
 
 function limitText(value, maxLength) {
@@ -831,12 +831,12 @@ function buildFavoriteRequest(item) {
 		source: "ALIO",
 		sourceRecruitmentId,
 		recruitmentTitle: limitText(getValue(item, "recrutPbancTtl") || "제목 정보 없음", 255),
-		institutionName: limitText(getValue(item, "pblntInstNm", "instNm") || "기관 정보 없음", 100),
+		institutionName: limitText(getValue(item, "instNm") || "기관 정보 없음", 100),
 		hireType: limitText(getHireTypeLabel(item), 100),
 		workRegion: limitText(summarizeListValue(getValue(item, "workRgnNmLst", "workRgnNm", "workRegionNm")), 100),
-		recruitmentStartDate: getValue(item, "pbancBgngYmd", "pbancRgtrYmd"),
-		recruitmentEndDate: getValue(item, "pbancEndYmd", "aplyEndYmd", "endDate"),
-		recruitmentUrl: limitText(getValue(item, "recrutPbancUrl", "srcUrl", "url"), 500)
+		recruitmentStartDate: getValue(item, "pbancBgngYmd"),
+		recruitmentEndDate: getValue(item, "pbancEndYmd"),
+		recruitmentUrl: limitText(getValue(item, "srcUrl", "url"), 500)
 	};
 }
 
@@ -844,12 +844,12 @@ function normalizeFavoriteRecruitment(favorite) {
 	return {
 		sourceRecruitmentId: String(favorite.sourceRecruitmentId || ""),
 		recrutPbancTtl: favorite.recruitmentTitle,
-		pblntInstNm: favorite.institutionName,
+		instNm: favorite.institutionName,
 		hireTypeNmLst: favorite.hireType,
 		workRgnNmLst: favorite.workRegion,
 		pbancBgngYmd: favorite.recruitmentStartDate,
 		pbancEndYmd: favorite.recruitmentEndDate,
-		recrutPbancUrl: favorite.recruitmentUrl
+		srcUrl: favorite.recruitmentUrl
 	};
 }
 
@@ -859,21 +859,21 @@ function isFavoriteListActive() {
 
 function createRecruitmentCard(item) {
 	const title = getValue(item, "recrutPbancTtl");
-	const institution = getValue(item, "pblntInstNm", "instNm");
-	const companyDivision = getValue(item, "instClsfNm", "instClsf", "instSeNm", "instSe", "orgSeNm", "orgSe");
-	const companyType = getValue(item, "instTypeNm", "instType", "instKndNm", "instKnd", "pblntInstTypeNm", "pblntInstType");
+	const institution = getValue(item, "instNm");
+	const companyDivision = getValue(item, "instSeNm", "instSe", "orgSeNm", "orgSe");
+	const companyType = getValue(item, "instKndNm", "instKnd", "pblntInstTypeNm", "pblntInstType");
 	const hireType = getHireTypeLabel(item);
 	const recruitmentCategory = getRecruitmentCategoryLabel(item);
 	const region = summarizeListValue(getValue(item, "workRgnNmLst", "workRgnNm", "workRegionNm"));
 	const ncs = summarizeListValue(getValue(item, "ncsCdNmLst", "ncsNmLst", "ncsNm", "ncsName"));
-	const rawStartDate = getValue(item, "pbancBgngYmd", "pbancRgtrYmd");
-	const rawEndDate = getValue(item, "pbancEndYmd", "aplyEndYmd", "endDate");
+	const rawStartDate = getValue(item, "pbancBgngYmd");
+	const rawEndDate = getValue(item, "pbancEndYmd");
 	const startDate = formatDate(rawStartDate);
 	const endDate = formatDate(rawEndDate);
 	const period = `${startDate} ~ ${endDate}`;
 	const status = getRecruitmentStatus(rawStartDate, rawEndDate);
 	const periodDdayBadge = getPeriodDdayBadge(status, rawStartDate, rawEndDate);
-	const detailUrl = getValue(item, "recrutPbancUrl", "srcUrl", "url");
+	const detailUrl = getValue(item, "srcUrl", "url");
 	const favoriteId = getRecruitmentFavoriteId(item);
 	const isFavorite = favoriteId && favoriteRecruitmentIds.has(favoriteId);
 	const favoriteActionLabel = isFavorite ? "관심공고 해제" : "관심공고 설정";

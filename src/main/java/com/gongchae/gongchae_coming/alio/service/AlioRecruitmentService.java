@@ -404,10 +404,7 @@ public class AlioRecruitmentService {
 			.map(recruitment -> {
 				ObjectNode item = OBJECT_MAPPER.createObjectNode();
 				recruitment.writeTo(item);
-				return firstNonBlank(
-					item.path("pblntInstNm").asText(""),
-					item.path("instNm").asText("")
-				);
+				return item.path("instNm").asText("");
 			})
 			.filter(StringUtils::hasText)
 			.collect(Collectors.toCollection(LinkedHashSet::new))
@@ -466,26 +463,19 @@ public class AlioRecruitmentService {
 			String normalizedKeyword = normalizeKeyword(searchKeyword);
 			predicates.add(item -> {
 				String title = normalizeKeyword(item.path("recrutPbancTtl").asText(""));
-				String institution = normalizeKeyword(firstNonBlank(
-					item.path("pblntInstNm").asText(""),
-					item.path("instNm").asText("")
-				));
+				String institution = normalizeKeyword(item.path("instNm").asText(""));
 				return title.contains(normalizedKeyword) || institution.contains(normalizedKeyword);
 			});
 		}
 
 		addContainsAnyPredicate(predicates, request.hireTypeLst(), "hireTypeLst", "hireTypeNmLst");
-		addContainsAnyPredicate(predicates, request.instType(), "instType", "instTypeNm");
 		addContainsAnyPredicate(predicates, request.ncsCdLst(), "ncsCdLst", "ncsCdNmLst");
 		addContainsAnyPredicate(predicates, request.workRgnLst(), "workRgnLst", "workRgnNmLst");
 		addContainsAnyPredicate(predicates, request.recrutSe(), "recrutSe", "recrutSeNm");
 		addContainsAnyPredicate(predicates, request.acbgCondLst(), "acbgCondLst", "acbgCondNmLst");
 		addRecruitmentStatusPredicate(predicates, request.recruitmentStatus());
 
-		if (StringUtils.hasText(request.instClsf())) {
-			predicates.add(item -> item.path("instClsf").asText("").contains(request.instClsf()));
-		}
-		addContainsAnyPredicate(predicates, request.pblntInstCd(), "pblntInstCd", "pblntInstNm", "instNm");
+		addContainsAnyPredicate(predicates, request.pblntInstCd(), "pblntInstCd", "instNm");
 		if (StringUtils.hasText(request.replmprYn())) {
 			predicates.add(item -> request.replmprYn().equals(item.path("replmprYn").asText("")));
 		}
@@ -497,14 +487,14 @@ public class AlioRecruitmentService {
 		if (StringUtils.hasText(request.pbancBgngYmd())) {
 			LocalDate startDate = LocalDate.parse(request.pbancBgngYmd());
 			predicates.add(item -> {
-				LocalDate itemStartDate = parseDate(item, "pbancBgngYmd", "pbancRgtrYmd");
+				LocalDate itemStartDate = parseDate(item, "pbancBgngYmd");
 				return itemStartDate != null && !itemStartDate.isBefore(startDate);
 			});
 		}
 		if (StringUtils.hasText(request.pbancEndYmd())) {
 			LocalDate endDate = LocalDate.parse(request.pbancEndYmd());
 			predicates.add(item -> {
-				LocalDate itemEndDate = parseDate(item, "pbancEndYmd", "aplyEndYmd");
+				LocalDate itemEndDate = parseDate(item, "pbancEndYmd");
 				return itemEndDate != null && !itemEndDate.isAfter(endDate);
 			});
 		}
@@ -528,8 +518,8 @@ public class AlioRecruitmentService {
 
 	private String resolveRecruitmentStatus(JsonNode item) {
 		LocalDate today = LocalDate.now();
-		LocalDate startDate = parseDate(item, "pbancBgngYmd", "pbancRgtrYmd");
-		LocalDate endDate = parseDate(item, "pbancEndYmd", "aplyEndYmd", "endDate");
+		LocalDate startDate = parseDate(item, "pbancBgngYmd");
+		LocalDate endDate = parseDate(item, "pbancEndYmd");
 		if (startDate == null || endDate == null) {
 			return null;
 		}
@@ -577,13 +567,6 @@ public class AlioRecruitmentService {
 		return StringUtils.hasText(value)
 			? value.replaceAll("\\s+", "").toLowerCase()
 			: "";
-	}
-
-	private String firstNonBlank(String first, String second) {
-		if (StringUtils.hasText(first)) {
-			return first;
-		}
-		return second;
 	}
 
 	private void updateTotalCount(JsonNode response, int totalCount) {
@@ -703,24 +686,14 @@ public class AlioRecruitmentService {
 
 	private LocalDate extractSortDate(JsonNode item, String sortBy) {
 		if ("DEADLINE_DATE".equals(sortBy)) {
-			LocalDate endDate = parseDate(item, "pbancEndYmd");
-			if (endDate != null) {
-				return endDate;
-			}
-
-			return parseDate(item, "aplyEndYmd", "endDate");
+			return parseDate(item, "pbancEndYmd");
 		}
 
-		LocalDate registrationDate = parseDate(item, "pbancBgngYmd");
-		if (registrationDate != null) {
-			return registrationDate;
-		}
-
-		return parseDate(item, "pbancRgtrYmd", "regDt", "frstRegDt", "registrationDate");
+		return parseDate(item, "pbancBgngYmd");
 	}
 
 	private boolean isClosedRecruitment(JsonNode item) {
-		LocalDate endDate = parseDate(item, "pbancEndYmd", "aplyEndYmd", "endDate");
+		LocalDate endDate = parseDate(item, "pbancEndYmd");
 		return endDate != null && LocalDate.now().isAfter(endDate);
 	}
 

@@ -49,8 +49,8 @@ class RecruitmentRedirectControllerTest {
 		ObjectNode item = OBJECT_MAPPER.createObjectNode();
 		item.put("recrutPblntSn", 300658);
 		item.put("recrutPbancTtl", "공고");
-		item.put("pblntInstNm", "기관");
-		item.put("recrutPbancUrl", "https://alio.example.com/recruitments/1");
+		item.put("instNm", "기관");
+		item.put("srcUrl", "https://alio.example.com/recruitments/1");
 		alioRecruitmentRepository.save(AlioRecruitment.from(item, LocalDateTime.now()));
 	}
 }

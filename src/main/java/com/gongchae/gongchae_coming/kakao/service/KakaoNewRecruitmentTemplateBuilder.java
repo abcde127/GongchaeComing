@@ -107,10 +107,7 @@ public class KakaoNewRecruitmentTemplateBuilder {
 
 	private LocalDate extractEndDate(AlioRecruitment recruitment) {
 		ObjectNode item = toObjectNode(recruitment);
-		return parseDate(
-			item.path("pbancEndYmd").asText(null),
-			item.path("aplyEndYmd").asText(null)
-		);
+		return parseDate(item.path("pbancEndYmd").asText(null));
 	}
 
 	private ObjectNode toObjectNode(AlioRecruitment recruitment) {

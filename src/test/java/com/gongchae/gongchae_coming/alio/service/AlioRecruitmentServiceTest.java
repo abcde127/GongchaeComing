@@ -550,7 +550,7 @@ class AlioRecruitmentServiceTest {
 		node.put("recrutPblntSn", recruitmentSequence(title, registrationDate));
 		node.put("recrutPbancTtl", title);
 		if (institution != null) {
-			node.put("pblntInstNm", institution);
+			node.put("instNm", institution);
 		}
 		node.put("pbancBgngYmd", registrationDate);
 		node.put("pbancEndYmd", deadlineDate);

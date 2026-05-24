@@ -20,28 +20,10 @@ public class AlioRecruitment {
 	private Long recrutPblntSn;
 
 	@Column(length = 100)
-	private String recrutPbancSn;
-
-	@Column(length = 100)
 	private String pblntInstCd;
-
-	@Column(length = 255)
-	private String pblntInstNm;
 
 	@Column(length = 100)
 	private String instNm;
-
-	@Column(length = 100)
-	private String instClsf;
-
-	@Column(length = 100)
-	private String instClsfNm;
-
-	@Column(length = 100)
-	private String instType;
-
-	@Column(length = 100)
-	private String instTypeNm;
 
 	@Column(length = 500)
 	private String recrutPbancTtl;
@@ -85,15 +67,6 @@ public class AlioRecruitment {
 	@Column(length = 30)
 	private String pbancEndYmd;
 
-	@Column(length = 30)
-	private String pbancRgtrYmd;
-
-	@Column(length = 30)
-	private String aplyEndYmd;
-
-	@Column(length = 500)
-	private String recrutPbancUrl;
-
 	@Column(length = 500)
 	private String srcUrl;
 
@@ -117,14 +90,8 @@ public class AlioRecruitment {
 
 	public void updateFrom(JsonNode item, LocalDateTime fetchedAt) {
 		this.recrutPblntSn = resolveRecruitmentSequence(item);
-		this.recrutPbancSn = text(item, "recrutPbancSn");
 		this.pblntInstCd = text(item, "pblntInstCd");
-		this.pblntInstNm = text(item, "pblntInstNm");
 		this.instNm = text(item, "instNm");
-		this.instClsf = text(item, "instClsf");
-		this.instClsfNm = text(item, "instClsfNm");
-		this.instType = text(item, "instType");
-		this.instTypeNm = text(item, "instTypeNm");
 		this.recrutPbancTtl = text(item, "recrutPbancTtl");
 		this.recrutSe = text(item, "recrutSe");
 		this.recrutSeNm = text(item, "recrutSeNm");
@@ -139,23 +106,14 @@ public class AlioRecruitment {
 		this.replmprYn = text(item, "replmprYn");
 		this.pbancBgngYmd = text(item, "pbancBgngYmd");
 		this.pbancEndYmd = text(item, "pbancEndYmd");
-		this.pbancRgtrYmd = text(item, "pbancRgtrYmd", "regDt", "frstRegDt", "registrationDate");
-		this.aplyEndYmd = text(item, "aplyEndYmd", "endDate");
-		this.recrutPbancUrl = text(item, "recrutPbancUrl", "url");
 		this.srcUrl = text(item, "srcUrl");
 		this.fetchedAt = fetchedAt;
 	}
 
 	public void writeTo(ObjectNode node) {
 		put(node, "recrutPblntSn", recrutPblntSn);
-		put(node, "recrutPbancSn", recrutPbancSn);
 		put(node, "pblntInstCd", pblntInstCd);
-		put(node, "pblntInstNm", pblntInstNm);
 		put(node, "instNm", instNm);
-		put(node, "instClsf", instClsf);
-		put(node, "instClsfNm", instClsfNm);
-		put(node, "instType", instType);
-		put(node, "instTypeNm", instTypeNm);
 		put(node, "recrutPbancTtl", recrutPbancTtl);
 		put(node, "recrutSe", recrutSe);
 		put(node, "recrutSeNm", recrutSeNm);
@@ -170,9 +128,6 @@ public class AlioRecruitment {
 		put(node, "replmprYn", replmprYn);
 		put(node, "pbancBgngYmd", pbancBgngYmd);
 		put(node, "pbancEndYmd", pbancEndYmd);
-		put(node, "pbancRgtrYmd", pbancRgtrYmd);
-		put(node, "aplyEndYmd", aplyEndYmd);
-		put(node, "recrutPbancUrl", recrutPbancUrl);
 		put(node, "srcUrl", srcUrl);
 	}
 
@@ -185,9 +140,6 @@ public class AlioRecruitment {
 	}
 
 	public String getRecruitmentUrl() {
-		if (StringUtils.hasText(recrutPbancUrl)) {
-			return recrutPbancUrl;
-		}
 		return srcUrl;
 	}
 

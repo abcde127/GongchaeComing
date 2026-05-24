@@ -126,15 +126,12 @@ public class NewRecruitmentNotificationService {
 			String normalizedKeyword = normalizeKeyword(member.getPreferredSearchKeyword());
 			predicates.add(item -> {
 				String title = normalizeKeyword(item.path("recrutPbancTtl").asText(""));
-				String institution = normalizeKeyword(firstNonBlank(
-					item.path("pblntInstNm").asText(""),
-					item.path("instNm").asText("")
-				));
+				String institution = normalizeKeyword(item.path("instNm").asText(""));
 				return title.contains(normalizedKeyword) || institution.contains(normalizedKeyword);
 			});
 		}
 
-		addContainsAnyPredicate(predicates, member.splitPreferredCompanies(), "pblntInstCd", "pblntInstNm", "instNm");
+		addContainsAnyPredicate(predicates, member.splitPreferredCompanies(), "pblntInstCd", "instNm");
 		addContainsAnyPredicate(predicates, member.splitPreferredRegions(), "workRgnLst", "workRgnNmLst");
 		addContainsAnyPredicate(predicates, member.splitPreferredCategories(), "recrutSe", "recrutSeNm");
 		addContainsAnyPredicate(predicates, member.splitPreferredHireTypes(), "hireTypeLst", "hireTypeNmLst");
@@ -177,11 +174,8 @@ public class NewRecruitmentNotificationService {
 
 	private String resolveRecruitmentStatus(ObjectNode item) {
 		LocalDate today = LocalDate.now();
-		LocalDate startDate = parseDate(item.path("pbancBgngYmd").asText(null), item.path("pbancRgtrYmd").asText(null));
-		LocalDate endDate = parseDate(
-			item.path("pbancEndYmd").asText(null),
-			item.path("aplyEndYmd").asText(null)
-		);
+		LocalDate startDate = parseDate(item.path("pbancBgngYmd").asText(null));
+		LocalDate endDate = parseDate(item.path("pbancEndYmd").asText(null));
 		if (startDate == null || endDate == null) {
 			return null;
 		}
@@ -222,13 +216,6 @@ public class NewRecruitmentNotificationService {
 		return StringUtils.hasText(value)
 			? value.replaceAll("\\s+", "").toLowerCase()
 			: "";
-	}
-
-	private String firstNonBlank(String first, String second) {
-		if (StringUtils.hasText(first)) {
-			return first;
-		}
-		return second;
 	}
 
 	private void recordSuccessHistory(Member member) {
