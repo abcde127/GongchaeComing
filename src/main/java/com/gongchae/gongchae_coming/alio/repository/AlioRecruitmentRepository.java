@@ -10,9 +10,9 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface AlioRecruitmentRepository extends JpaRepository<AlioRecruitment, Long> {
 
-	List<AlioRecruitment> findBySourceRecruitmentIdIn(Collection<String> sourceRecruitmentIds);
+	List<AlioRecruitment> findByRecrutPblntSnIn(Collection<Long> recruitmentSequences);
 
-	Optional<AlioRecruitment> findBySourceRecruitmentId(String sourceRecruitmentId);
+	Optional<AlioRecruitment> findByRecrutPblntSn(Long recruitmentSequence);
 
 	@Query("select max(recruitment.recrutPblntSn) from AlioRecruitment recruitment")
 	Optional<Long> findMaxRecrutPblntSn();

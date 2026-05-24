@@ -4,37 +4,19 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
-import java.util.HexFormat;
 import org.springframework.util.StringUtils;
 
 @Entity
-@Table(
-	name = "alio_recruitments",
-	uniqueConstraints = {
-		@UniqueConstraint(name = "uk_alio_recruitment_source_id", columnNames = "source_recruitment_id")
-	}
-)
+@Table(name = "alio_recruitments")
 public class AlioRecruitment {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
-
-	@Column(name = "source_recruitment_id", nullable = false, length = 100)
-	private String sourceRecruitmentId;
-
 	private Long recrutPblntSn;
 
 	@Column(length = 100)
@@ -130,18 +112,14 @@ public class AlioRecruitment {
 	protected AlioRecruitment() {
 	}
 
-	private AlioRecruitment(String sourceRecruitmentId) {
-		this.sourceRecruitmentId = sourceRecruitmentId;
-	}
-
 	public static AlioRecruitment from(JsonNode item, LocalDateTime fetchedAt) {
-		AlioRecruitment recruitment = new AlioRecruitment(resolveSourceRecruitmentId(item));
+		AlioRecruitment recruitment = new AlioRecruitment();
 		recruitment.updateFrom(item, fetchedAt);
 		return recruitment;
 	}
 
 	public void updateFrom(JsonNode item, LocalDateTime fetchedAt) {
-		this.recrutPblntSn = longValue(item, "recrutPblntSn");
+		this.recrutPblntSn = resolveRecruitmentSequence(item);
 		this.recrutPbancSn = text(item, "recrutPbancSn");
 		this.pblntInstCd = text(item, "pblntInstCd");
 		this.pblntInstNm = text(item, "pblntInstNm");
@@ -204,7 +182,7 @@ public class AlioRecruitment {
 	}
 
 	public String getSourceRecruitmentId() {
-		return sourceRecruitmentId;
+		return recrutPblntSn == null ? null : String.valueOf(recrutPblntSn);
 	}
 
 	public Long getRecrutPblntSn() {
@@ -234,19 +212,8 @@ public class AlioRecruitment {
 		updatedAt = LocalDateTime.now();
 	}
 
-	public static String resolveSourceRecruitmentId(JsonNode item) {
-		String sourceId = text(item, "recrutPblntSn", "recrutPbancSn", "pbancSn");
-		if (StringUtils.hasText(sourceId)) {
-			return sourceId;
-		}
-
-		String fallback = String.join("|",
-			text(item, "pblntInstCd", "pblntInstNm", "instNm"),
-			text(item, "recrutPbancTtl"),
-			text(item, "pbancBgngYmd", "pbancRgtrYmd"),
-			text(item, "pbancEndYmd", "aplyEndYmd")
-		);
-		return "generated-" + sha256(fallback);
+	public static Long resolveRecruitmentSequence(JsonNode item) {
+		return longValue(item, "recrutPblntSn");
 	}
 
 	private static String text(JsonNode item, String... fieldNames) {
@@ -282,13 +249,4 @@ public class AlioRecruitment {
 		return value.isNumber() || StringUtils.hasText(value.asText(null)) ? value.asLong() : null;
 	}
 
-	private static String sha256(String value) {
-		try {
-			MessageDigest digest = MessageDigest.getInstance("SHA-256");
-			byte[] hashed = digest.digest(value.getBytes(StandardCharsets.UTF_8));
-			return HexFormat.of().formatHex(hashed).substring(0, 32);
-		} catch (NoSuchAlgorithmException exception) {
-			throw new IllegalStateException("SHA-256 digest is not available.", exception);
-		}
-	}
 }

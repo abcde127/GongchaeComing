@@ -333,22 +333,24 @@ public class AlioRecruitmentService {
 	}
 
 	private List<AlioRecruitment> upsertRecruitments(List<JsonNode> items, LocalDateTime fetchedAt) {
-		Set<String> sourceIds = items.stream()
-			.map(AlioRecruitment::resolveSourceRecruitmentId)
+		Set<Long> recruitmentSequences = items.stream()
+			.map(AlioRecruitment::resolveRecruitmentSequence)
+			.filter(sequence -> sequence != null)
 			.collect(Collectors.toSet());
-		if (sourceIds.isEmpty()) {
+		if (recruitmentSequences.isEmpty()) {
 			return List.of();
 		}
-		Map<String, AlioRecruitment> existingRecruitments = alioRecruitmentRepository
-			.findBySourceRecruitmentIdIn(sourceIds)
+		Map<Long, AlioRecruitment> existingRecruitments = alioRecruitmentRepository
+			.findByRecrutPblntSnIn(recruitmentSequences)
 			.stream()
-			.collect(Collectors.toMap(AlioRecruitment::getSourceRecruitmentId, recruitment -> recruitment));
+			.collect(Collectors.toMap(AlioRecruitment::getRecrutPblntSn, recruitment -> recruitment));
 		List<AlioRecruitment> newRecruitments = new ArrayList<>();
 
 		List<AlioRecruitment> recruitments = items.stream()
+			.filter(item -> AlioRecruitment.resolveRecruitmentSequence(item) != null)
 			.map(item -> {
-				String sourceId = AlioRecruitment.resolveSourceRecruitmentId(item);
-				AlioRecruitment recruitment = existingRecruitments.get(sourceId);
+				Long recruitmentSequence = AlioRecruitment.resolveRecruitmentSequence(item);
+				AlioRecruitment recruitment = existingRecruitments.get(recruitmentSequence);
 				if (recruitment == null) {
 					AlioRecruitment newRecruitment = AlioRecruitment.from(item, fetchedAt);
 					newRecruitments.add(newRecruitment);

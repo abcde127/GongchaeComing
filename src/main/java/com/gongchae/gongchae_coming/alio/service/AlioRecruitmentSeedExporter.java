@@ -42,7 +42,7 @@ public class AlioRecruitmentSeedExporter {
 			.stream()
 			.sorted(Comparator
 				.comparing(AlioRecruitment::getRecrutPblntSn, Comparator.nullsLast(Comparator.reverseOrder()))
-				.thenComparing(AlioRecruitment::getSourceRecruitmentId))
+				.thenComparing(AlioRecruitment::getRecruitmentUrl, Comparator.nullsLast(Comparator.naturalOrder())))
 			.toList();
 		writeSeedFile(recruitments);
 		log.info("Exported {} ALIO recruitment seed items.", recruitments.size());

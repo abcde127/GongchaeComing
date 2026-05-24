@@ -43,6 +43,7 @@ class KakaoNewRecruitmentTemplateBuilderTest {
 
 	private AlioRecruitment recruitment(String title, String deadlineDate) {
 		ObjectNode item = OBJECT_MAPPER.createObjectNode();
+		item.put("recrutPblntSn", Math.abs(title.hashCode()));
 		item.put("recrutPbancTtl", title);
 		item.put("pbancBgngYmd", "20260501");
 		item.put("pbancEndYmd", deadlineDate);

@@ -83,6 +83,7 @@ class NewRecruitmentNotificationServiceTest {
 		String ncsCode
 	) {
 		ObjectNode item = OBJECT_MAPPER.createObjectNode();
+		item.put("recrutPblntSn", Math.abs(title.hashCode()));
 		item.put("recrutPbancTtl", title);
 		item.put("pblntInstCd", companyCode);
 		item.put("workRgnLst", region);

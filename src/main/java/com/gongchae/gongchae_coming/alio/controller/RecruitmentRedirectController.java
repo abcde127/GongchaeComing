@@ -36,10 +36,19 @@ public class RecruitmentRedirectController {
 	}
 
 	private URI findRecruitmentRedirectUri(String recruitmentId) {
-		return alioRecruitmentRepository.findBySourceRecruitmentId(recruitmentId)
+		Long recruitmentSequence = parseRecruitmentSequence(recruitmentId);
+		return alioRecruitmentRepository.findByRecrutPblntSn(recruitmentSequence)
 			.map(AlioRecruitment::getRecruitmentUrl)
 			.map(this::resolveRedirectUri)
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "recruitment link not found"));
+	}
+
+	private Long parseRecruitmentSequence(String recruitmentId) {
+		try {
+			return Long.parseLong(recruitmentId);
+		} catch (NumberFormatException exception) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "recruitment link not found");
+		}
 	}
 
 	private URI resolveRedirectUri(String recruitmentUrl) {

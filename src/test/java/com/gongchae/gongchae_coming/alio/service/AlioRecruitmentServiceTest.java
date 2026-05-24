@@ -108,7 +108,7 @@ class AlioRecruitmentServiceTest {
 			recruitment("cached", "2026-04-01", "2026-04-10")
 		)));
 		when(recruitmentRepository.findMaxRecrutPblntSn()).thenReturn(Optional.empty());
-		when(recruitmentRepository.findBySourceRecruitmentIdIn(any())).thenReturn(List.of());
+		when(recruitmentRepository.findByRecrutPblntSnIn(any())).thenReturn(List.of());
 		when(syncStateRepository.findById(any())).thenReturn(Optional.empty());
 
 		service.startBackgroundSynchronization(request("REGISTRATION_DATE", null));
@@ -257,7 +257,7 @@ class AlioRecruitmentServiceTest {
 
 		when(client.fetchRecruitments(any(AlioRecruitmentListRequest.class))).thenReturn(apiResponse);
 		when(recruitmentRepository.findMaxRecrutPblntSn()).thenReturn(Optional.empty());
-		when(recruitmentRepository.findBySourceRecruitmentIdIn(any())).thenReturn(List.of());
+		when(recruitmentRepository.findByRecrutPblntSnIn(any())).thenReturn(List.of());
 		when(recruitmentRepository.findAll()).thenReturn(toRecruitments(createResponse(
 			recruitment("식품안전정보원 개방형 직위 공개 모집", "20260515", "20260601")
 		)));
@@ -301,7 +301,7 @@ class AlioRecruitmentServiceTest {
 
 		when(client.fetchRecruitments(any(AlioRecruitmentListRequest.class))).thenReturn(apiResponse);
 		when(recruitmentRepository.findMaxRecrutPblntSn()).thenReturn(Optional.empty());
-		when(recruitmentRepository.findBySourceRecruitmentIdIn(any())).thenReturn(List.of(existingRecruitment));
+		when(recruitmentRepository.findByRecrutPblntSnIn(any())).thenReturn(List.of(existingRecruitment));
 		when(recruitmentRepository.findAll()).thenReturn(List.of());
 		when(syncStateRepository.findById(any())).thenReturn(Optional.empty());
 
@@ -338,7 +338,7 @@ class AlioRecruitmentServiceTest {
 
 		when(client.fetchRecruitments(any(AlioRecruitmentListRequest.class))).thenReturn(apiResponse);
 		when(recruitmentRepository.findMaxRecrutPblntSn()).thenReturn(Optional.of(102L));
-		when(recruitmentRepository.findBySourceRecruitmentIdIn(any())).thenReturn(List.of());
+		when(recruitmentRepository.findByRecrutPblntSnIn(any())).thenReturn(List.of());
 
 		service.startBackgroundSynchronization(request("RECRUITMENT_SEQUENCE", "DESC"));
 
@@ -376,7 +376,7 @@ class AlioRecruitmentServiceTest {
 
 		when(client.fetchRecruitments(any(AlioRecruitmentListRequest.class))).thenReturn(apiResponse);
 		when(recruitmentRepository.findMaxRecrutPblntSn()).thenReturn(Optional.empty());
-		when(recruitmentRepository.findBySourceRecruitmentIdIn(any())).thenReturn(List.of());
+		when(recruitmentRepository.findByRecrutPblntSnIn(any())).thenReturn(List.of());
 
 		service.startBackgroundSynchronization(request("RECRUITMENT_SEQUENCE", "DESC"));
 
@@ -414,7 +414,7 @@ class AlioRecruitmentServiceTest {
 		when(client.fetchRecruitments(any(AlioRecruitmentListRequest.class))).thenReturn(apiResponse);
 		when(recruitmentRepository.findMaxRecrutPblntSn()).thenReturn(Optional.of(1002L));
 		when(recruitmentRepository.count()).thenReturn(1002L);
-		when(recruitmentRepository.findBySourceRecruitmentIdIn(any())).thenReturn(List.of());
+		when(recruitmentRepository.findByRecrutPblntSnIn(any())).thenReturn(List.of());
 
 		service.startBackgroundSynchronization(request("RECRUITMENT_SEQUENCE", "DESC"));
 
@@ -548,6 +548,7 @@ class AlioRecruitmentServiceTest {
 
 	private ObjectNode recruitment(String title, String institution, String registrationDate, String deadlineDate) {
 		ObjectNode node = OBJECT_MAPPER.createObjectNode();
+		node.put("recrutPblntSn", recruitmentSequence(title, registrationDate));
 		node.put("recrutPbancTtl", title);
 		if (institution != null) {
 			node.put("pblntInstNm", institution);
@@ -561,6 +562,12 @@ class AlioRecruitmentServiceTest {
 		ObjectNode node = recruitment(title, registrationDate, deadlineDate);
 		node.put("recrutPblntSn", recruitmentSequence);
 		return node;
+	}
+
+	private long recruitmentSequence(String title, String registrationDate) {
+		String datePart = registrationDate == null ? "" : registrationDate.replaceAll("\\D", "");
+		long baseSequence = datePart.isBlank() ? 0 : Long.parseLong(datePart);
+		return baseSequence * 1000 + Math.abs(title.hashCode() % 1000);
 	}
 
 	private String titleOf(AlioRecruitment recruitment) {
