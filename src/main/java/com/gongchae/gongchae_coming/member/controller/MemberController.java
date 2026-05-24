@@ -3,6 +3,7 @@ package com.gongchae.gongchae_coming.member.controller;
 import com.gongchae.gongchae_coming.member.dto.MemberEmailAvailabilityResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberFindIdRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberFindIdResponse;
+import com.gongchae.gongchae_coming.member.dto.MemberFavoriteReminderRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberJobPreferenceCompanyResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberJobPreferenceRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberJobPreferenceResponse;
@@ -104,5 +105,13 @@ public class MemberController {
 		@Valid @RequestBody MemberJobPreferenceRequest request
 	) {
 		return memberService.updateJobPreference(authentication.getName(), request);
+	}
+
+	@PatchMapping("/me/notifications/favorite-reminder")
+	public MemberProfileResponse updateFavoriteReminder(
+		Authentication authentication,
+		@Valid @RequestBody MemberFavoriteReminderRequest request
+	) {
+		return memberService.updateFavoriteReminder(authentication.getName(), request);
 	}
 }

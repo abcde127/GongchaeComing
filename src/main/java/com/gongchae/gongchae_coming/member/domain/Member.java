@@ -9,6 +9,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.List;
 import lombok.AccessLevel;
@@ -65,6 +66,22 @@ public class Member {
 	@Column(length = 500)
 	private String preferredNcsCodes;
 
+	@Column(length = 2000)
+	private String kakaoAccessToken;
+
+	private Integer kakaoAccessTokenExpiresIn;
+
+	@Column(length = 2000)
+	private String kakaoRefreshToken;
+
+	private Integer kakaoRefreshTokenExpiresIn;
+
+	private LocalDateTime kakaoLinkedAt;
+
+	private Boolean favoriteReminderEnabled = false;
+
+	private LocalTime favoriteReminderTime;
+
 	private Member(String email, String nickname, String password) {
 		this.email = email;
 		this.nickname = nickname;
@@ -99,6 +116,45 @@ public class Member {
 		this.preferredCategories = categories;
 		this.preferredHireTypes = hireTypes;
 		this.preferredNcsCodes = ncsCodes;
+	}
+
+	public void updateKakaoToken(
+		String accessToken,
+		Integer accessTokenExpiresIn,
+		String refreshToken,
+		Integer refreshTokenExpiresIn
+	) {
+		this.kakaoAccessToken = accessToken;
+		this.kakaoAccessTokenExpiresIn = accessTokenExpiresIn;
+		this.kakaoRefreshToken = refreshToken;
+		this.kakaoRefreshTokenExpiresIn = refreshTokenExpiresIn;
+		this.kakaoLinkedAt = LocalDateTime.now();
+	}
+
+	public void updateKakaoAccessToken(String accessToken, Integer accessTokenExpiresIn) {
+		this.kakaoAccessToken = accessToken;
+		this.kakaoAccessTokenExpiresIn = accessTokenExpiresIn;
+	}
+
+	public void updateKakaoRefreshToken(String refreshToken, Integer refreshTokenExpiresIn) {
+		this.kakaoRefreshToken = refreshToken;
+		this.kakaoRefreshTokenExpiresIn = refreshTokenExpiresIn;
+	}
+
+	public boolean isKakaoLinked() {
+		return StringUtils.hasText(kakaoAccessToken)
+			&& kakaoAccessTokenExpiresIn != null
+			&& StringUtils.hasText(kakaoRefreshToken)
+			&& kakaoRefreshTokenExpiresIn != null;
+	}
+
+	public boolean isFavoriteReminderEnabled() {
+		return Boolean.TRUE.equals(favoriteReminderEnabled);
+	}
+
+	public void updateFavoriteReminder(boolean enabled, LocalTime reminderTime) {
+		this.favoriteReminderEnabled = enabled;
+		this.favoriteReminderTime = reminderTime;
 	}
 
 	public List<String> splitPreferredCompanies() {
