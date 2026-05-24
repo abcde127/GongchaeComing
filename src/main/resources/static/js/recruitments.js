@@ -39,6 +39,7 @@ let isClearingKeyword = false;
 let syncEventSource = null;
 let lastSyncStatus = "IDLE";
 let syncCompletionHideTimer = null;
+let syncStatusPollTimer = null;
 let refreshButtonStateTimer = null;
 let refreshButtonContentTimer = null;
 let jobPreferenceCache = null;
@@ -411,6 +412,8 @@ function updateSyncStatus(progress) {
 		return;
 	}
 
+	stopSyncStatusPolling();
+
 	if (status === "FAILED") {
 		window.clearTimeout(syncCompletionHideTimer);
 		renderRefreshButtonFailed();
@@ -452,6 +455,11 @@ function updateSyncStatus(progress) {
 	syncFailurePanel.hidden = true;
 }
 
+function stopSyncStatusPolling() {
+	window.clearTimeout(syncStatusPollTimer);
+	syncStatusPollTimer = null;
+}
+
 function connectSyncEvents() {
 	if (!window.EventSource || syncEventSource) {
 		return;
@@ -471,6 +479,31 @@ function connectSyncEvents() {
 	};
 }
 
+async function pollSyncStatus() {
+	try {
+		const response = await fetch("/api/recruitments/alio/sync-status", {
+			headers: {
+				Accept: "application/json"
+			}
+		});
+		const progress = await response.json();
+		if (!response.ok) {
+			throw new Error(progress?.detail || "갱신 상태를 확인하지 못했습니다.");
+		}
+		updateSyncStatus(progress);
+		if (progress?.inProgress) {
+			syncStatusPollTimer = window.setTimeout(pollSyncStatus, 1500);
+		}
+	} catch (error) {
+		syncStatusPollTimer = window.setTimeout(pollSyncStatus, 3000);
+	}
+}
+
+function startSyncStatusPolling() {
+	stopSyncStatusPolling();
+	syncStatusPollTimer = window.setTimeout(pollSyncStatus, 1200);
+}
+
 async function startRecruitmentSynchronization() {
 	if (!dataRefreshButton || dataRefreshButton.disabled || lastSyncStatus === "RUNNING") {
 		return;
@@ -481,6 +514,7 @@ async function startRecruitmentSynchronization() {
 		dataRefreshText.hidden = true;
 		syncFailurePanel.hidden = true;
 		renderRefreshButtonProgress("갱신 준비 중", 0, true);
+		startSyncStatusPolling();
 		const response = await fetch("/api/recruitments/alio/sync", {
 			method: "POST",
 			headers: {
@@ -494,7 +528,11 @@ async function startRecruitmentSynchronization() {
 		}
 
 		updateSyncStatus(progress);
+		if (progress?.inProgress) {
+			startSyncStatusPolling();
+		}
 	} catch (error) {
+		stopSyncStatusPolling();
 		setStatus(error.message || "공고 갱신 요청 중 오류가 발생했습니다.");
 		renderRefreshButtonIdle();
 		dataRefreshText.hidden = false;

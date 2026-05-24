@@ -33,6 +33,11 @@ public class AlioRecruitmentController {
 		return syncProgressStore.get();
 	}
 
+	@GetMapping("/sync-status")
+	public AlioRecruitmentSyncProgressResponse getSynchronizationStatus() {
+		return syncProgressStore.get();
+	}
+
 	@GetMapping(path = "/sync-events", produces = "text/event-stream")
 	public SseEmitter streamSyncProgress() {
 		return syncProgressStore.subscribe();
