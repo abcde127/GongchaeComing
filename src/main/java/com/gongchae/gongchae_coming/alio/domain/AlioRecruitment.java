@@ -79,9 +79,6 @@ public class AlioRecruitment {
 	@Column(length = 10)
 	private String replmprYn;
 
-	@Column(length = 10)
-	private String ongoingYn;
-
 	@Column(length = 30)
 	private String pbancBgngYmd;
 
@@ -140,7 +137,6 @@ public class AlioRecruitment {
 		this.acbgCondLst = text(item, "acbgCondLst");
 		this.acbgCondNmLst = text(item, "acbgCondNmLst");
 		this.replmprYn = text(item, "replmprYn");
-		this.ongoingYn = text(item, "ongoingYn");
 		this.pbancBgngYmd = text(item, "pbancBgngYmd");
 		this.pbancEndYmd = text(item, "pbancEndYmd");
 		this.pbancRgtrYmd = text(item, "pbancRgtrYmd", "regDt", "frstRegDt", "registrationDate");
@@ -172,7 +168,6 @@ public class AlioRecruitment {
 		put(node, "acbgCondLst", acbgCondLst);
 		put(node, "acbgCondNmLst", acbgCondNmLst);
 		put(node, "replmprYn", replmprYn);
-		put(node, "ongoingYn", ongoingYn);
 		put(node, "pbancBgngYmd", pbancBgngYmd);
 		put(node, "pbancEndYmd", pbancEndYmd);
 		put(node, "pbancRgtrYmd", pbancRgtrYmd);

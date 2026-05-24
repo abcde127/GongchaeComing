@@ -195,7 +195,6 @@ class AlioRecruitmentServiceTest {
 		item.put("replmprYn", "N");
 		item.put("acbgCondLst", "R7050,R7070");
 		item.put("acbgCondNmLst", "대졸(4년),박사");
-		item.put("ongoingYn", "Y");
 		AlioRecruitmentService service = serviceWithCachedItems(createResponse(item));
 
 		var result = service.getRecruitments(request("REGISTRATION_DATE", "DESC"));

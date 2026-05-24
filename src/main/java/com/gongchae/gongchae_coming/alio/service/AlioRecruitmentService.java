@@ -383,6 +383,7 @@ public class AlioRecruitmentService {
 		recruitments.forEach(recruitment -> {
 			ObjectNode item = OBJECT_MAPPER.createObjectNode();
 			recruitment.writeTo(item);
+			item.put("ongoingYn", isOngoingRecruitment(item) ? "Y" : "N");
 			itemArray.add(item);
 		});
 		LocalDateTime lastFetchedAt = syncStateRepository.findById(AlioRecruitmentSyncState.GLOBAL_ID)
@@ -489,9 +490,9 @@ public class AlioRecruitmentService {
 			predicates.add(item -> request.replmprYn().equals(item.path("replmprYn").asText("")));
 		}
 		if ("Y".equals(request.ongoingYn())) {
-			predicates.add(item -> "Y".equals(item.path("ongoingYn").asText(null)) || isOngoingRecruitment(item));
+			predicates.add(this::isOngoingRecruitment);
 		} else if ("N".equals(request.ongoingYn())) {
-			predicates.add(item -> "N".equals(item.path("ongoingYn").asText(null)) || !isOngoingRecruitment(item));
+			predicates.add(item -> !isOngoingRecruitment(item));
 		}
 		if (StringUtils.hasText(request.pbancBgngYmd())) {
 			LocalDate startDate = LocalDate.parse(request.pbancBgngYmd());
@@ -568,11 +569,8 @@ public class AlioRecruitmentService {
 
 	private boolean isOngoingRecruitment(JsonNode item) {
 		LocalDate today = LocalDate.now();
-		LocalDate startDate = parseDate(item, "pbancBgngYmd", "pbancRgtrYmd");
-		LocalDate endDate = parseDate(item, "pbancEndYmd", "aplyEndYmd");
-		return startDate != null && endDate != null
-			&& !today.isBefore(startDate)
-			&& !today.isAfter(endDate);
+		LocalDate endDate = parseDate(item, "pbancEndYmd");
+		return endDate != null && !today.isAfter(endDate);
 	}
 
 	private String normalizeKeyword(String value) {
