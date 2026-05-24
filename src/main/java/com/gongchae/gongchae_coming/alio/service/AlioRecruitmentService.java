@@ -12,27 +12,35 @@ import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentListRequest;
 import com.gongchae.gongchae_coming.alio.exception.AlioApiException;
 import com.gongchae.gongchae_coming.alio.repository.AlioRecruitmentRepository;
 import com.gongchae.gongchae_coming.alio.repository.AlioRecruitmentSyncStateRepository;
+import com.gongchae.gongchae_coming.alio.repository.PublicInstitutionRepository;
 import com.gongchae.gongchae_coming.notification.service.NewRecruitmentNotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import jakarta.annotation.PreDestroy;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @Service
@@ -42,6 +50,7 @@ public class AlioRecruitmentService {
 
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 	private static final int SYNC_PAGE_SIZE = 1000;
+	private static final DateTimeFormatter BASIC_DATE_FORMATTER = DateTimeFormatter.BASIC_ISO_DATE;
 
 	private static final List<AlioFilterOptionResponse> NCS_FILTER_OPTIONS = List.of(
 		new AlioFilterOptionResponse("R600001", "사업관리"),
@@ -130,6 +139,7 @@ public class AlioRecruitmentService {
 	private final AlioRecruitmentClient alioRecruitmentClient;
 	private final AlioRecruitmentRepository alioRecruitmentRepository;
 	private final AlioRecruitmentSyncStateRepository syncStateRepository;
+	private final PublicInstitutionRepository publicInstitutionRepository;
 	private final AlioRecruitmentSyncProgressStore syncProgressStore;
 	private final NewRecruitmentNotificationService newRecruitmentNotificationService;
 	private final AlioRecruitmentSeedExporter alioRecruitmentSeedExporter;
@@ -138,11 +148,7 @@ public class AlioRecruitmentService {
 
 	@Transactional
 	public JsonNode getRecruitments(AlioRecruitmentListRequest request) {
-		ObjectNode response = buildResponseFromCachedRecruitments(request);
-		filterRecruitmentItems(response, request);
-		sortRecruitmentItems(response, request.resolvedSortBy(), request.resolvedSortDirection());
-		pageRecruitmentItems(response, request.resolvedPageNo(), request.resolvedNumOfRows());
-		return response;
+		return buildResponseFromCachedRecruitments(request);
 	}
 
 	@Transactional
@@ -375,10 +381,14 @@ public class AlioRecruitmentService {
 		body.put("numOfRows", request.resolvedNumOfRows());
 		ObjectNode items = body.putObject("items");
 		ArrayNode itemArray = items.putArray("item");
-		List<AlioRecruitment> recruitments = alioRecruitmentRepository.findAll();
-		root.put("overallTotalCount", recruitments.size());
-		body.put("overallTotalCount", recruitments.size());
-		addFilterOptions(root, recruitments);
+		long overallTotalCount = alioRecruitmentRepository.count();
+		Page<AlioRecruitment> recruitments = alioRecruitmentRepository.findAll(
+			recruitmentSpecification(request),
+			pageable(request)
+		);
+		root.put("overallTotalCount", overallTotalCount);
+		body.put("overallTotalCount", overallTotalCount);
+		addFilterOptions(root);
 
 		recruitments.forEach(recruitment -> {
 			ObjectNode item = OBJECT_MAPPER.createObjectNode();
@@ -394,23 +404,245 @@ public class AlioRecruitmentService {
 			root.put("lastFetchedAt", lastFetchedAt.toString());
 			body.put("lastFetchedAt", lastFetchedAt.toString());
 		}
-		updateTotalCount(root, itemArray.size());
+		updateTotalCount(root, saturatedInt(recruitments.getTotalElements()));
 		return root;
 	}
 
-	private void addFilterOptions(ObjectNode root, List<AlioRecruitment> recruitments) {
+	private Pageable pageable(AlioRecruitmentListRequest request) {
+		return PageRequest.of(request.resolvedPageNo() - 1, request.resolvedNumOfRows());
+	}
+
+	private void addFilterOptions(ObjectNode root) {
 		ArrayNode companies = root.putObject("filterOptions").putArray("companies");
-		recruitments.stream()
-			.map(recruitment -> {
-				ObjectNode item = OBJECT_MAPPER.createObjectNode();
-				recruitment.writeTo(item);
-				return item.path("instNm").asText("");
-			})
-			.filter(StringUtils::hasText)
-			.collect(Collectors.toCollection(LinkedHashSet::new))
+		publicInstitutionRepository.findAllByOrderByInstNmAsc()
 			.stream()
-			.sorted()
+			.map(publicInstitution -> publicInstitution.getInstNm())
+			.filter(StringUtils::hasText)
+			.distinct()
 			.forEach(companies::add);
+	}
+
+	private Specification<AlioRecruitment> recruitmentSpecification(AlioRecruitmentListRequest request) {
+		return (root, query, criteriaBuilder) -> {
+			List<Predicate> predicates = new ArrayList<>();
+
+			String searchKeyword = request.resolvedRecruitmentTitleKeyword();
+			if (StringUtils.hasText(searchKeyword)) {
+				String normalizedKeyword = "%" + normalizeKeyword(searchKeyword) + "%";
+				predicates.add(criteriaBuilder.or(
+					criteriaBuilder.like(normalizedText(criteriaBuilder, root.get("recrutPbancTtl")), normalizedKeyword),
+					criteriaBuilder.like(normalizedText(criteriaBuilder, root.get("instNm")), normalizedKeyword)
+				));
+			}
+
+			addContainsAnyPredicate(
+				predicates,
+				criteriaBuilder,
+				request.hireTypeLst(),
+				root.get("hireTypeLst"),
+				root.get("hireTypeNmLst")
+			);
+			addContainsAnyPredicate(
+				predicates,
+				criteriaBuilder,
+				request.ncsCdLst(),
+				root.get("ncsCdLst"),
+				root.get("ncsCdNmLst")
+			);
+			addContainsAnyPredicate(
+				predicates,
+				criteriaBuilder,
+				request.workRgnLst(),
+				root.get("workRgnLst"),
+				root.get("workRgnNmLst")
+			);
+			addContainsAnyPredicate(
+				predicates,
+				criteriaBuilder,
+				request.recrutSe(),
+				root.get("recrutSe"),
+				root.get("recrutSeNm")
+			);
+			addContainsAnyPredicate(
+				predicates,
+				criteriaBuilder,
+				request.acbgCondLst(),
+				root.get("acbgCondLst"),
+				root.get("acbgCondNmLst")
+			);
+			addRecruitmentStatusPredicate(
+				predicates,
+				criteriaBuilder,
+				request.recruitmentStatus(),
+				root.get("pbancBgngYmd"),
+				root.get("pbancEndYmd")
+			);
+			addContainsAnyPredicate(
+				predicates,
+				criteriaBuilder,
+				request.pblntInstCd(),
+				root.get("pblntInstCd"),
+				root.get("instNm")
+			);
+
+			if (StringUtils.hasText(request.replmprYn())) {
+				predicates.add(criteriaBuilder.equal(root.get("replmprYn"), request.replmprYn()));
+			}
+			if ("Y".equals(request.ongoingYn())) {
+				predicates.add(criteriaBuilder.greaterThanOrEqualTo(
+					normalizedDate(criteriaBuilder, root.get("pbancEndYmd")),
+					todayBasicDate()
+				));
+			} else if ("N".equals(request.ongoingYn())) {
+				predicates.add(criteriaBuilder.lessThan(normalizedDate(criteriaBuilder, root.get("pbancEndYmd")), todayBasicDate()));
+			}
+			if (StringUtils.hasText(request.pbancBgngYmd())) {
+				predicates.add(criteriaBuilder.greaterThanOrEqualTo(
+					normalizedDate(criteriaBuilder, root.get("pbancBgngYmd")),
+					toBasicDate(request.pbancBgngYmd())
+				));
+			}
+			if (StringUtils.hasText(request.pbancEndYmd())) {
+				predicates.add(criteriaBuilder.lessThanOrEqualTo(
+					normalizedDate(criteriaBuilder, root.get("pbancEndYmd")),
+					toBasicDate(request.pbancEndYmd())
+				));
+			}
+			if ("DEADLINE_DATE".equals(request.resolvedSortBy())) {
+				predicates.add(criteriaBuilder.greaterThanOrEqualTo(
+					normalizedDate(criteriaBuilder, root.get("pbancEndYmd")),
+					todayBasicDate()
+				));
+			}
+
+			if (!Long.class.equals(query.getResultType()) && !long.class.equals(query.getResultType())) {
+				applyOrder(request, query, criteriaBuilder, root);
+			}
+
+			return criteriaBuilder.and(predicates.toArray(Predicate[]::new));
+		};
+	}
+
+	@SafeVarargs
+	private void addContainsAnyPredicate(
+		List<Predicate> predicates,
+		CriteriaBuilder criteriaBuilder,
+		String csvValues,
+		Expression<String>... fields
+	) {
+		if (!StringUtils.hasText(csvValues)) {
+			return;
+		}
+
+		List<String> values = List.of(csvValues.split(","))
+			.stream()
+			.map(String::trim)
+			.filter(StringUtils::hasText)
+			.toList();
+		if (values.isEmpty()) {
+			return;
+		}
+
+		List<Predicate> valuePredicates = new ArrayList<>();
+		for (String value : values) {
+			String pattern = "%" + value + "%";
+			for (Expression<String> field : fields) {
+				valuePredicates.add(criteriaBuilder.like(criteriaBuilder.coalesce(field, ""), pattern));
+			}
+		}
+		predicates.add(criteriaBuilder.or(valuePredicates.toArray(Predicate[]::new)));
+	}
+
+	private void addRecruitmentStatusPredicate(
+		List<Predicate> predicates,
+		CriteriaBuilder criteriaBuilder,
+		String csvValues,
+		Expression<String> startDateField,
+		Expression<String> endDateField
+	) {
+		if (!StringUtils.hasText(csvValues)) {
+			return;
+		}
+
+		String today = todayBasicDate();
+		List<Predicate> statusPredicates = List.of(csvValues.split(","))
+			.stream()
+			.map(String::trim)
+			.filter(StringUtils::hasText)
+			.map(status -> switch (status) {
+				case "scheduled" -> criteriaBuilder.greaterThan(normalizedDate(criteriaBuilder, startDateField), today);
+				case "active" -> criteriaBuilder.and(
+					criteriaBuilder.lessThanOrEqualTo(normalizedDate(criteriaBuilder, startDateField), today),
+					criteriaBuilder.greaterThanOrEqualTo(normalizedDate(criteriaBuilder, endDateField), today)
+				);
+				case "closed" -> criteriaBuilder.lessThan(normalizedDate(criteriaBuilder, endDateField), today);
+				default -> null;
+			})
+			.filter(predicate -> predicate != null)
+			.toList();
+		if (!statusPredicates.isEmpty()) {
+			predicates.add(criteriaBuilder.or(statusPredicates.toArray(Predicate[]::new)));
+		}
+	}
+
+	private Expression<String> normalizedText(
+		CriteriaBuilder criteriaBuilder,
+		Expression<String> field
+	) {
+		return criteriaBuilder.lower(criteriaBuilder.function(
+			"replace",
+			String.class,
+			criteriaBuilder.coalesce(field, ""),
+			criteriaBuilder.literal(" "),
+			criteriaBuilder.literal("")
+		));
+	}
+
+	private Expression<String> normalizedDate(
+		CriteriaBuilder criteriaBuilder,
+		Expression<String> field
+	) {
+		return criteriaBuilder.function(
+			"replace",
+			String.class,
+			criteriaBuilder.coalesce(field, ""),
+			criteriaBuilder.literal("-"),
+			criteriaBuilder.literal("")
+		);
+	}
+
+	private void applyOrder(
+		AlioRecruitmentListRequest request,
+		CriteriaQuery<?> query,
+		CriteriaBuilder criteriaBuilder,
+		Root<AlioRecruitment> root
+	) {
+		boolean ascending = "ASC".equals(request.resolvedSortDirection());
+		if ("DEADLINE_DATE".equals(request.resolvedSortBy())) {
+			query.orderBy(
+				ascending
+					? criteriaBuilder.asc(normalizedDate(criteriaBuilder, root.get("pbancEndYmd")))
+					: criteriaBuilder.desc(normalizedDate(criteriaBuilder, root.get("pbancEndYmd"))),
+				criteriaBuilder.desc(root.get("recrutPblntSn")),
+				criteriaBuilder.asc(root.get("recrutPbancTtl"))
+			);
+			return;
+		}
+
+		if (ascending && "RECRUITMENT_SEQUENCE".equals(request.resolvedSortBy())) {
+			query.orderBy(criteriaBuilder.asc(root.get("recrutPblntSn")), criteriaBuilder.asc(root.get("recrutPbancTtl")));
+			return;
+		}
+
+		query.orderBy(criteriaBuilder.desc(root.get("recrutPblntSn")), criteriaBuilder.asc(root.get("recrutPbancTtl")));
+	}
+
+	private String todayBasicDate() {
+		return LocalDate.now().format(BASIC_DATE_FORMATTER);
+	}
+
+	private String toBasicDate(String value) {
+		return LocalDate.parse(value).format(BASIC_DATE_FORMATTER);
 	}
 
 	private void attachDebugInfoWhenAlioReturnsError(AlioRecruitmentListRequest request, JsonNode response) {
@@ -433,128 +665,6 @@ public class AlioRecruitmentService {
 
 	private String safeText(String value) {
 		return value == null ? "" : value;
-	}
-
-	private void filterRecruitmentItems(JsonNode response, AlioRecruitmentListRequest request) {
-		ArrayNode items = findRecruitmentItems(response);
-		if (items == null) {
-			return;
-		}
-
-		List<Predicate<JsonNode>> predicates = buildPredicates(request);
-		List<JsonNode> filteredItems = new ArrayList<>();
-
-		items.forEach(item -> {
-			if (predicates.stream().allMatch(predicate -> predicate.test(item))) {
-				filteredItems.add(item);
-			}
-		});
-
-		items.removeAll();
-		items.addAll(filteredItems);
-		updateTotalCount(response, filteredItems.size());
-	}
-
-	private List<Predicate<JsonNode>> buildPredicates(AlioRecruitmentListRequest request) {
-		List<Predicate<JsonNode>> predicates = new ArrayList<>();
-		String searchKeyword = request.resolvedRecruitmentTitleKeyword();
-
-		if (StringUtils.hasText(searchKeyword)) {
-			String normalizedKeyword = normalizeKeyword(searchKeyword);
-			predicates.add(item -> {
-				String title = normalizeKeyword(item.path("recrutPbancTtl").asText(""));
-				String institution = normalizeKeyword(item.path("instNm").asText(""));
-				return title.contains(normalizedKeyword) || institution.contains(normalizedKeyword);
-			});
-		}
-
-		addContainsAnyPredicate(predicates, request.hireTypeLst(), "hireTypeLst", "hireTypeNmLst");
-		addContainsAnyPredicate(predicates, request.ncsCdLst(), "ncsCdLst", "ncsCdNmLst");
-		addContainsAnyPredicate(predicates, request.workRgnLst(), "workRgnLst", "workRgnNmLst");
-		addContainsAnyPredicate(predicates, request.recrutSe(), "recrutSe", "recrutSeNm");
-		addContainsAnyPredicate(predicates, request.acbgCondLst(), "acbgCondLst", "acbgCondNmLst");
-		addRecruitmentStatusPredicate(predicates, request.recruitmentStatus());
-
-		addContainsAnyPredicate(predicates, request.pblntInstCd(), "pblntInstCd", "instNm");
-		if (StringUtils.hasText(request.replmprYn())) {
-			predicates.add(item -> request.replmprYn().equals(item.path("replmprYn").asText("")));
-		}
-		if ("Y".equals(request.ongoingYn())) {
-			predicates.add(this::isOngoingRecruitment);
-		} else if ("N".equals(request.ongoingYn())) {
-			predicates.add(item -> !isOngoingRecruitment(item));
-		}
-		if (StringUtils.hasText(request.pbancBgngYmd())) {
-			LocalDate startDate = LocalDate.parse(request.pbancBgngYmd());
-			predicates.add(item -> {
-				LocalDate itemStartDate = parseDate(item, "pbancBgngYmd");
-				return itemStartDate != null && !itemStartDate.isBefore(startDate);
-			});
-		}
-		if (StringUtils.hasText(request.pbancEndYmd())) {
-			LocalDate endDate = LocalDate.parse(request.pbancEndYmd());
-			predicates.add(item -> {
-				LocalDate itemEndDate = parseDate(item, "pbancEndYmd");
-				return itemEndDate != null && !itemEndDate.isAfter(endDate);
-			});
-		}
-
-		return predicates;
-	}
-
-	private void addRecruitmentStatusPredicate(List<Predicate<JsonNode>> predicates, String csvValues) {
-		if (!StringUtils.hasText(csvValues)) {
-			return;
-		}
-
-		Set<String> statuses = List.of(csvValues.split(","))
-			.stream()
-			.map(String::trim)
-			.filter(StringUtils::hasText)
-			.collect(Collectors.toSet());
-
-		predicates.add(item -> statuses.contains(resolveRecruitmentStatus(item)));
-	}
-
-	private String resolveRecruitmentStatus(JsonNode item) {
-		LocalDate today = LocalDate.now();
-		LocalDate startDate = parseDate(item, "pbancBgngYmd");
-		LocalDate endDate = parseDate(item, "pbancEndYmd");
-		if (startDate == null || endDate == null) {
-			return null;
-		}
-		if (today.isBefore(startDate)) {
-			return "scheduled";
-		}
-		if (today.isAfter(endDate)) {
-			return "closed";
-		}
-		return "active";
-	}
-
-	private void addContainsAnyPredicate(
-		List<Predicate<JsonNode>> predicates,
-		String csvValues,
-		String... fieldNames
-	) {
-		if (!StringUtils.hasText(csvValues)) {
-			return;
-		}
-
-		List<String> values = List.of(csvValues.split(","))
-			.stream()
-			.map(String::trim)
-			.filter(StringUtils::hasText)
-			.toList();
-
-		predicates.add(item -> values.stream().anyMatch(value -> {
-			for (String fieldName : fieldNames) {
-				if (item.path(fieldName).asText("").contains(value)) {
-					return true;
-				}
-			}
-			return false;
-		}));
 	}
 
 	private boolean isOngoingRecruitment(JsonNode item) {
@@ -593,54 +703,6 @@ public class AlioRecruitmentService {
 		return null;
 	}
 
-	private void sortRecruitmentItems(JsonNode response, String sortBy, String sortDirection) {
-		ArrayNode items = findRecruitmentItems(response);
-		if (items == null) {
-			return;
-		}
-
-		List<JsonNode> sortedItems = new ArrayList<>();
-		items.forEach(sortedItems::add);
-
-		if ("DEADLINE_DATE".equals(sortBy)) {
-			sortedItems = new ArrayList<>(sortedItems.stream()
-				.filter(item -> !isClosedRecruitment(item))
-				.toList());
-			items.removeAll();
-			items.addAll(sortedItems);
-			updateTotalCount(response, sortedItems.size());
-		}
-
-		if (sortedItems.size() < 2) {
-			return;
-		}
-
-		if ("RECRUITMENT_SEQUENCE".equals(sortBy) || "REGISTRATION_DATE".equals(sortBy)) {
-			Comparator<Long> sequenceComparator = "ASC".equals(sortDirection) && "RECRUITMENT_SEQUENCE".equals(sortBy)
-				? Comparator.naturalOrder()
-				: Comparator.reverseOrder();
-			sortedItems.sort(Comparator
-				.comparing((JsonNode item) -> extractRecruitmentSequence(item), Comparator.nullsLast(sequenceComparator))
-				.thenComparing(item -> item.path("recrutPbancTtl").asText("")));
-			items.removeAll();
-			items.addAll(sortedItems);
-			return;
-		}
-
-		Comparator<LocalDate> dateComparator = "ASC".equals(sortDirection)
-			? Comparator.naturalOrder()
-			: Comparator.reverseOrder();
-
-		Comparator<JsonNode> comparator = Comparator
-			.comparing((JsonNode item) -> extractSortDate(item, sortBy), Comparator.nullsLast(dateComparator))
-			.thenComparing(item -> extractSortDate(item, "REGISTRATION_DATE"), Comparator.nullsLast(dateComparator))
-			.thenComparing(item -> item.path("recrutPbancTtl").asText(""));
-
-		sortedItems.sort(comparator);
-		items.removeAll();
-		items.addAll(sortedItems);
-	}
-
 	private ArrayNode findRecruitmentItems(JsonNode response) {
 		JsonNode resultNode = response.path("result");
 		if (resultNode.isArray()) {
@@ -666,34 +728,6 @@ public class AlioRecruitmentService {
 		}
 
 		return null;
-	}
-
-	private void pageRecruitmentItems(JsonNode response, int pageNo, int numOfRows) {
-		ArrayNode items = findRecruitmentItems(response);
-		if (items == null) {
-			return;
-		}
-
-		List<JsonNode> allItems = new ArrayList<>();
-		items.forEach(allItems::add);
-		int fromIndex = Math.min((pageNo - 1) * numOfRows, allItems.size());
-		int toIndex = Math.min(fromIndex + numOfRows, allItems.size());
-
-		items.removeAll();
-		items.addAll(allItems.subList(fromIndex, toIndex));
-	}
-
-	private LocalDate extractSortDate(JsonNode item, String sortBy) {
-		if ("DEADLINE_DATE".equals(sortBy)) {
-			return parseDate(item, "pbancEndYmd");
-		}
-
-		return parseDate(item, "pbancBgngYmd");
-	}
-
-	private boolean isClosedRecruitment(JsonNode item) {
-		LocalDate endDate = parseDate(item, "pbancEndYmd");
-		return endDate != null && LocalDate.now().isAfter(endDate);
 	}
 
 	private Long extractRecruitmentSequence(JsonNode item) {

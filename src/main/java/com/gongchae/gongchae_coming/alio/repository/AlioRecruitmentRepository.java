@@ -6,9 +6,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 
-public interface AlioRecruitmentRepository extends JpaRepository<AlioRecruitment, Long> {
+public interface AlioRecruitmentRepository extends JpaRepository<AlioRecruitment, Long>, JpaSpecificationExecutor<AlioRecruitment> {
 
 	List<AlioRecruitment> findByRecrutPblntSnIn(Collection<Long> recruitmentSequences);
 
@@ -19,4 +20,5 @@ public interface AlioRecruitmentRepository extends JpaRepository<AlioRecruitment
 
 	@Query("select max(recruitment.createdAt) from AlioRecruitment recruitment")
 	Optional<LocalDateTime> findLatestCreatedAt();
+
 }

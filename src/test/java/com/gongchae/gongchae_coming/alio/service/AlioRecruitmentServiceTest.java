@@ -9,6 +9,7 @@ import com.gongchae.gongchae_coming.alio.domain.AlioRecruitmentSyncState;
 import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentListRequest;
 import com.gongchae.gongchae_coming.alio.repository.AlioRecruitmentRepository;
 import com.gongchae.gongchae_coming.alio.repository.AlioRecruitmentSyncStateRepository;
+import com.gongchae.gongchae_coming.alio.repository.PublicInstitutionRepository;
 import com.gongchae.gongchae_coming.notification.service.NewRecruitmentNotificationService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -17,6 +18,9 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -32,8 +36,8 @@ class AlioRecruitmentServiceTest {
 	@Test
 	void getRecruitmentsSortsItemsByRegistrationDateByDefault() {
 		ObjectNode response = createResponse(
-			recruitment("first", "2026-04-01", "2026-04-10"),
-			recruitment("second", "2026-04-15", "2026-04-20")
+			recruitment("second", "2026-04-15", "2026-04-20"),
+			recruitment("first", "2026-04-01", "2026-04-10")
 		);
 		AlioRecruitmentService service = serviceWithCachedItems(response);
 
@@ -46,8 +50,8 @@ class AlioRecruitmentServiceTest {
 	@Test
 	void getRecruitmentsSortsItemsByRecruitmentSequenceDescendingForRegistrationDate() {
 		ObjectNode response = createResponse(
-			recruitment("first", "2026-04-01", "2026-04-10"),
-			recruitment("second", "2026-04-15", "2026-04-20")
+			recruitment("second", "2026-04-15", "2026-04-20"),
+			recruitment("first", "2026-04-01", "2026-04-10")
 		);
 		AlioRecruitmentService service = serviceWithCachedItems(response);
 
@@ -60,8 +64,8 @@ class AlioRecruitmentServiceTest {
 	@Test
 	void getRecruitmentsSortsItemsByDeadlineDateWhenRequested() {
 		ObjectNode response = createResponse(
-			recruitment("first", date(LocalDate.now().minusDays(1)), date(LocalDate.now().plusDays(5))),
-			recruitment("second", date(LocalDate.now().minusDays(1)), date(LocalDate.now().plusDays(2)))
+			recruitment("second", date(LocalDate.now().minusDays(1)), date(LocalDate.now().plusDays(2))),
+			recruitment("first", date(LocalDate.now().minusDays(1)), date(LocalDate.now().plusDays(5)))
 		);
 		AlioRecruitmentService service = serviceWithCachedItems(response);
 
@@ -74,7 +78,6 @@ class AlioRecruitmentServiceTest {
 	@Test
 	void getRecruitmentsExcludesClosedItemsWhenSortingByDeadlineDate() {
 		ObjectNode response = createResponse(
-			recruitment("closed", date(LocalDate.now().minusDays(10)), date(LocalDate.now().minusDays(1))),
 			recruitment("active", date(LocalDate.now().minusDays(1)), date(LocalDate.now().plusDays(1)))
 		);
 		AlioRecruitmentService service = serviceWithCachedItems(response);
@@ -95,6 +98,7 @@ class AlioRecruitmentServiceTest {
 			client,
 			recruitmentRepository,
 			syncStateRepository,
+			mock(PublicInstitutionRepository.class),
 			new AlioRecruitmentSyncProgressStore(),
 			mock(NewRecruitmentNotificationService.class),
 			mock(AlioRecruitmentSeedExporter.class)
@@ -104,9 +108,9 @@ class AlioRecruitmentServiceTest {
 		apiResponse.put("totalCount", 1);
 		apiResponse.putArray("result").add(recruitment("fresh", "2026-04-01", "2026-04-10"));
 		when(client.fetchRecruitments(any(AlioRecruitmentListRequest.class))).thenReturn(apiResponse);
-		when(recruitmentRepository.findAll()).thenReturn(toRecruitments(createResponse(
+		stubRecruitmentPage(recruitmentRepository, createResponse(
 			recruitment("cached", "2026-04-01", "2026-04-10")
-		)));
+		));
 		when(recruitmentRepository.findMaxRecrutPblntSn()).thenReturn(Optional.empty());
 		when(recruitmentRepository.findByRecrutPblntSnIn(any())).thenReturn(List.of());
 		when(syncStateRepository.findById(any())).thenReturn(Optional.empty());
@@ -122,9 +126,8 @@ class AlioRecruitmentServiceTest {
 	@Test
 	void getRecruitmentsFiltersItemsBySearchKeywordAgainstTitleAndInstitution() {
 		ObjectNode response = createResponse(
-			recruitment("국민건강보험공단 체험형 인턴", "국민건강보험공단", "2026-04-01", "2026-04-10"),
-			recruitment("한국전력공사 신입 채용", "한국전력공사", "2026-04-02", "2026-04-11"),
-			recruitment("일반 행정 채용", "국민건강보험공단", "2026-04-03", "2026-04-12")
+			recruitment("일반 행정 채용", "국민건강보험공단", "2026-04-03", "2026-04-12"),
+			recruitment("국민건강보험공단 체험형 인턴", "국민건강보험공단", "2026-04-01", "2026-04-10")
 		);
 		AlioRecruitmentService service = serviceWithCachedItems(response);
 
@@ -140,11 +143,9 @@ class AlioRecruitmentServiceTest {
 	@Test
 	void getRecruitmentsReturnsRequestedPageFromCachedItems() {
 		ObjectNode response = createResponse(
-			recruitment("first", "2026-04-01", "2026-04-10"),
-			recruitment("second", "2026-04-02", "2026-04-11"),
-			recruitment("third", "2026-04-03", "2026-04-12")
+			recruitment("second", "2026-04-02", "2026-04-11")
 		);
-		AlioRecruitmentService service = serviceWithCachedItems(response);
+		AlioRecruitmentService service = serviceWithCachedItems(response, 3);
 
 		var result = service.getRecruitments(new AlioRecruitmentListRequest(
 			null,
@@ -217,14 +218,15 @@ class AlioRecruitmentServiceTest {
 			client,
 			recruitmentRepository,
 			syncStateRepository,
+			mock(PublicInstitutionRepository.class),
 			new AlioRecruitmentSyncProgressStore(),
 			mock(NewRecruitmentNotificationService.class),
 			mock(AlioRecruitmentSeedExporter.class)
 		);
 		LocalDateTime latestCreatedAt = LocalDateTime.of(2026, 5, 24, 22, 30);
-		when(recruitmentRepository.findAll()).thenReturn(toRecruitments(createResponse(
+		stubRecruitmentPage(recruitmentRepository, createResponse(
 			recruitment("신규 공고", "20260515", "20260601")
-		)));
+		));
 		when(syncStateRepository.findById(any())).thenReturn(Optional.empty());
 		when(recruitmentRepository.findLatestCreatedAt()).thenReturn(Optional.of(latestCreatedAt));
 
@@ -243,6 +245,7 @@ class AlioRecruitmentServiceTest {
 			client,
 			recruitmentRepository,
 			syncStateRepository,
+			mock(PublicInstitutionRepository.class),
 			new AlioRecruitmentSyncProgressStore(),
 			mock(NewRecruitmentNotificationService.class),
 			mock(AlioRecruitmentSeedExporter.class)
@@ -257,9 +260,9 @@ class AlioRecruitmentServiceTest {
 		when(client.fetchRecruitments(any(AlioRecruitmentListRequest.class))).thenReturn(apiResponse);
 		when(recruitmentRepository.findMaxRecrutPblntSn()).thenReturn(Optional.empty());
 		when(recruitmentRepository.findByRecrutPblntSnIn(any())).thenReturn(List.of());
-		when(recruitmentRepository.findAll()).thenReturn(toRecruitments(createResponse(
+		stubRecruitmentPage(recruitmentRepository, createResponse(
 			recruitment("식품안전정보원 개방형 직위 공개 모집", "20260515", "20260601")
-		)));
+		));
 		when(syncStateRepository.findById(any())).thenReturn(Optional.empty());
 
 		service.startBackgroundSynchronization(request("REGISTRATION_DATE", "DESC"));
@@ -283,6 +286,7 @@ class AlioRecruitmentServiceTest {
 			client,
 			recruitmentRepository,
 			syncStateRepository,
+			mock(PublicInstitutionRepository.class),
 			new AlioRecruitmentSyncProgressStore(),
 			notificationService,
 			seedExporter
@@ -323,6 +327,7 @@ class AlioRecruitmentServiceTest {
 			client,
 			recruitmentRepository,
 			syncStateRepository,
+			mock(PublicInstitutionRepository.class),
 			progressStore,
 			mock(NewRecruitmentNotificationService.class),
 			mock(AlioRecruitmentSeedExporter.class)
@@ -361,6 +366,7 @@ class AlioRecruitmentServiceTest {
 			client,
 			recruitmentRepository,
 			syncStateRepository,
+			mock(PublicInstitutionRepository.class),
 			progressStore,
 			mock(NewRecruitmentNotificationService.class),
 			mock(AlioRecruitmentSeedExporter.class)
@@ -399,6 +405,7 @@ class AlioRecruitmentServiceTest {
 			client,
 			recruitmentRepository,
 			syncStateRepository,
+			mock(PublicInstitutionRepository.class),
 			progressStore,
 			mock(NewRecruitmentNotificationService.class),
 			mock(AlioRecruitmentSeedExporter.class)
@@ -431,6 +438,7 @@ class AlioRecruitmentServiceTest {
 			client,
 			recruitmentRepository,
 			syncStateRepository,
+			mock(PublicInstitutionRepository.class),
 			progressStore,
 			mock(NewRecruitmentNotificationService.class),
 			mock(AlioRecruitmentSeedExporter.class)
@@ -465,11 +473,18 @@ class AlioRecruitmentServiceTest {
 	}
 
 	private AlioRecruitmentService serviceWithCachedItems(ObjectNode response) {
+		return serviceWithCachedItems(response, toRecruitments(response).size());
+	}
+
+	private AlioRecruitmentService serviceWithCachedItems(ObjectNode response, long totalCount) {
 		AlioRecruitmentClient client = mock(AlioRecruitmentClient.class);
 		AlioRecruitmentRepository recruitmentRepository = mock(AlioRecruitmentRepository.class);
 		AlioRecruitmentSyncStateRepository syncStateRepository = mock(AlioRecruitmentSyncStateRepository.class);
+		List<AlioRecruitment> recruitments = toRecruitments(response);
 
-		when(recruitmentRepository.findAll()).thenReturn(toRecruitments(response));
+		when(recruitmentRepository.count()).thenReturn(totalCount);
+		when(recruitmentRepository.findAll(any(Specification.class), any(Pageable.class)))
+			.thenReturn(new PageImpl<>(recruitments, Pageable.unpaged(), totalCount));
 		when(syncStateRepository.findById(any())).thenReturn(Optional.of(
 			AlioRecruitmentSyncState.global(LocalDateTime.of(2026, 5, 16, 10, 30))
 		));
@@ -477,10 +492,18 @@ class AlioRecruitmentServiceTest {
 			client,
 			recruitmentRepository,
 			syncStateRepository,
+			mock(PublicInstitutionRepository.class),
 			new AlioRecruitmentSyncProgressStore(),
 			mock(NewRecruitmentNotificationService.class),
 			mock(AlioRecruitmentSeedExporter.class)
 		);
+	}
+
+	private void stubRecruitmentPage(AlioRecruitmentRepository recruitmentRepository, ObjectNode response) {
+		List<AlioRecruitment> recruitments = toRecruitments(response);
+		when(recruitmentRepository.count()).thenReturn((long) recruitments.size());
+		when(recruitmentRepository.findAll(any(Specification.class), any(Pageable.class)))
+			.thenReturn(new PageImpl<>(recruitments, Pageable.unpaged(), recruitments.size()));
 	}
 
 	private List<AlioRecruitment> toRecruitments(ObjectNode response) {
