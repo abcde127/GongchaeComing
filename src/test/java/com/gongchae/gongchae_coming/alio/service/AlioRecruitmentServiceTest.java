@@ -9,6 +9,7 @@ import com.gongchae.gongchae_coming.alio.domain.AlioRecruitmentSyncState;
 import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentListRequest;
 import com.gongchae.gongchae_coming.alio.repository.AlioRecruitmentRepository;
 import com.gongchae.gongchae_coming.alio.repository.AlioRecruitmentSyncStateRepository;
+import com.gongchae.gongchae_coming.notification.service.NewRecruitmentNotificationService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -93,7 +94,8 @@ class AlioRecruitmentServiceTest {
 			client,
 			recruitmentRepository,
 			syncStateRepository,
-			new AlioRecruitmentSyncProgressStore()
+			new AlioRecruitmentSyncProgressStore(),
+			mock(NewRecruitmentNotificationService.class)
 		);
 		ObjectNode apiResponse = OBJECT_MAPPER.createObjectNode();
 		apiResponse.put("resultCode", 200);
@@ -227,7 +229,8 @@ class AlioRecruitmentServiceTest {
 			client,
 			recruitmentRepository,
 			syncStateRepository,
-			new AlioRecruitmentSyncProgressStore()
+			new AlioRecruitmentSyncProgressStore(),
+			mock(NewRecruitmentNotificationService.class)
 		);
 		ObjectNode apiResponse = OBJECT_MAPPER.createObjectNode();
 		apiResponse.put("resultCode", 200);
@@ -253,6 +256,43 @@ class AlioRecruitmentServiceTest {
 	}
 
 	@Test
+	void completedRefreshSendsNewRecruitmentNotifications() {
+		AlioRecruitmentClient client = mock(AlioRecruitmentClient.class);
+		AlioRecruitmentRepository recruitmentRepository = mock(AlioRecruitmentRepository.class);
+		AlioRecruitmentSyncStateRepository syncStateRepository = mock(AlioRecruitmentSyncStateRepository.class);
+		NewRecruitmentNotificationService notificationService = mock(NewRecruitmentNotificationService.class);
+		AlioRecruitmentService service = new AlioRecruitmentService(
+			client,
+			recruitmentRepository,
+			syncStateRepository,
+			new AlioRecruitmentSyncProgressStore(),
+			notificationService
+		);
+		ObjectNode apiResponse = OBJECT_MAPPER.createObjectNode();
+		apiResponse.put("resultCode", 200);
+		apiResponse.put("totalCount", 2);
+		apiResponse.putArray("result")
+			.add(recruitment("신규 공고", "20260515", "20260601"))
+			.add(recruitment("기존 공고", "20260515", "20260601"));
+		AlioRecruitment existingRecruitment = AlioRecruitment.from(
+			recruitment("기존 공고", "20260515", "20260601"),
+			LocalDateTime.now()
+		);
+
+		when(client.fetchRecruitments(any(AlioRecruitmentListRequest.class))).thenReturn(apiResponse);
+		when(recruitmentRepository.findBySourceRecruitmentIdIn(any())).thenReturn(List.of(existingRecruitment));
+		when(recruitmentRepository.findAll()).thenReturn(List.of());
+		when(syncStateRepository.findById(any())).thenReturn(Optional.empty());
+
+		service.getRecruitments(request("REGISTRATION_DATE", "DESC"), true);
+
+		verify(notificationService, org.mockito.Mockito.timeout(1000))
+			.sendNewRecruitmentNotifications(argThat(recruitments ->
+				recruitments.size() == 1 && titleOf(recruitments.get(0)).equals("신규 공고")
+			));
+	}
+
+	@Test
 	void failedRefreshStoresFailureResponseWithoutAutomaticRetry() {
 		AlioRecruitmentClient client = mock(AlioRecruitmentClient.class);
 		AlioRecruitmentRepository recruitmentRepository = mock(AlioRecruitmentRepository.class);
@@ -262,7 +302,8 @@ class AlioRecruitmentServiceTest {
 			client,
 			recruitmentRepository,
 			syncStateRepository,
-			progressStore
+			progressStore,
+			mock(NewRecruitmentNotificationService.class)
 		);
 		ObjectNode errorResponse = OBJECT_MAPPER.createObjectNode();
 		errorResponse.put("resultCode", "500");
@@ -305,7 +346,8 @@ class AlioRecruitmentServiceTest {
 			client,
 			recruitmentRepository,
 			syncStateRepository,
-			new AlioRecruitmentSyncProgressStore()
+			new AlioRecruitmentSyncProgressStore(),
+			mock(NewRecruitmentNotificationService.class)
 		);
 	}
 
@@ -380,5 +422,11 @@ class AlioRecruitmentServiceTest {
 		node.put("pbancBgngYmd", registrationDate);
 		node.put("pbancEndYmd", deadlineDate);
 		return node;
+	}
+
+	private String titleOf(AlioRecruitment recruitment) {
+		ObjectNode item = OBJECT_MAPPER.createObjectNode();
+		recruitment.writeTo(item);
+		return item.path("recrutPbancTtl").asText();
 	}
 }

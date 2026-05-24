@@ -28,4 +28,11 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 			and member.kakaoRefreshToken is not null
 		""")
 	List<Member> findFavoriteReminderTargets(@Param("reminderTime") LocalTime reminderTime);
+
+	@Query("""
+		select member from Member member
+		where member.kakaoAccessToken is not null
+			and member.kakaoRefreshToken is not null
+		""")
+	List<Member> findNewRecruitmentNotificationTargets();
 }

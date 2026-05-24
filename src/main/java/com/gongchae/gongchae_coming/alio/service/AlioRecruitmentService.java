@@ -13,6 +13,7 @@ import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentSyncProgressResponse
 import com.gongchae.gongchae_coming.alio.exception.AlioApiException;
 import com.gongchae.gongchae_coming.alio.repository.AlioRecruitmentRepository;
 import com.gongchae.gongchae_coming.alio.repository.AlioRecruitmentSyncStateRepository;
+import com.gongchae.gongchae_coming.notification.service.NewRecruitmentNotificationService;
 import lombok.RequiredArgsConstructor;
 import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Service;
@@ -129,6 +130,7 @@ public class AlioRecruitmentService {
 	private final AlioRecruitmentRepository alioRecruitmentRepository;
 	private final AlioRecruitmentSyncStateRepository syncStateRepository;
 	private final AlioRecruitmentSyncProgressStore syncProgressStore;
+	private final NewRecruitmentNotificationService newRecruitmentNotificationService;
 	private final AtomicBoolean syncInProgress = new AtomicBoolean(false);
 	private final AtomicBoolean syncCancelRequested = new AtomicBoolean(false);
 	private final AtomicBoolean syncPauseRequested = new AtomicBoolean(false);
@@ -251,6 +253,7 @@ public class AlioRecruitmentService {
 			totalCount = previousProgress.totalCount();
 		}
 		int totalPages = resume ? previousProgress.totalPages() : 0;
+		List<AlioRecruitment> newRecruitments = new ArrayList<>();
 
 		while (totalCount == null || fetchedCount < totalCount) {
 			waitWhileSynchronizationPaused();
@@ -269,7 +272,7 @@ public class AlioRecruitmentService {
 			totalCount = extractTotalCount(response);
 			List<JsonNode> pageItems = new ArrayList<>();
 			items.forEach(pageItems::add);
-			upsertRecruitments(pageItems, now);
+			newRecruitments.addAll(upsertRecruitments(pageItems, now));
 			fetchedCount += pageItems.size();
 			totalPages = totalCount == null
 				? Math.max(totalPages, pageNo + (items.size() == SYNC_PAGE_SIZE ? 1 : 0))
@@ -314,6 +317,7 @@ public class AlioRecruitmentService {
 			fetchedCount,
 			totalCount == null ? fetchedCount : totalCount
 		);
+		newRecruitmentNotificationService.sendNewRecruitmentNotifications(newRecruitments);
 	}
 
 	private void waitWhileSynchronizationPaused() {
@@ -393,24 +397,27 @@ public class AlioRecruitmentService {
 		syncExecutor.shutdownNow();
 	}
 
-	private void upsertRecruitments(List<JsonNode> items, LocalDateTime fetchedAt) {
+	private List<AlioRecruitment> upsertRecruitments(List<JsonNode> items, LocalDateTime fetchedAt) {
 		Set<String> sourceIds = items.stream()
 			.map(AlioRecruitment::resolveSourceRecruitmentId)
 			.collect(Collectors.toSet());
 		if (sourceIds.isEmpty()) {
-			return;
+			return List.of();
 		}
 		Map<String, AlioRecruitment> existingRecruitments = alioRecruitmentRepository
 			.findBySourceRecruitmentIdIn(sourceIds)
 			.stream()
 			.collect(Collectors.toMap(AlioRecruitment::getSourceRecruitmentId, recruitment -> recruitment));
+		List<AlioRecruitment> newRecruitments = new ArrayList<>();
 
 		List<AlioRecruitment> recruitments = items.stream()
 			.map(item -> {
 				String sourceId = AlioRecruitment.resolveSourceRecruitmentId(item);
 				AlioRecruitment recruitment = existingRecruitments.get(sourceId);
 				if (recruitment == null) {
-					return AlioRecruitment.from(item, fetchedAt);
+					AlioRecruitment newRecruitment = AlioRecruitment.from(item, fetchedAt);
+					newRecruitments.add(newRecruitment);
+					return newRecruitment;
 				}
 				recruitment.updateFrom(item, fetchedAt);
 				return recruitment;
@@ -418,6 +425,7 @@ public class AlioRecruitmentService {
 			.toList();
 
 		alioRecruitmentRepository.saveAll(recruitments);
+		return newRecruitments;
 	}
 
 	private ObjectNode buildResponseFromCachedRecruitments(AlioRecruitmentListRequest request) {
