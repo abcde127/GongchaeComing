@@ -189,7 +189,6 @@ public class AlioRecruitmentService {
 		List<AlioRecruitment> newRecruitments = new ArrayList<>();
 		Long latestStoredRecruitmentSequence = alioRecruitmentRepository.findMaxRecrutPblntSn().orElse(null);
 		long storedRecruitmentCount = alioRecruitmentRepository.count();
-		LocalDate synchronizationDate = now.toLocalDate();
 		boolean stopSynchronization = false;
 
 		while (!stopSynchronization && (totalCount == null || pageNo <= totalPages)) {
@@ -210,7 +209,7 @@ public class AlioRecruitmentService {
 			items.forEach(pageItems::add);
 			List<JsonNode> newPageItems = new ArrayList<>();
 			for (JsonNode item : pageItems) {
-				if (shouldStopSynchronization(item, latestStoredRecruitmentSequence, synchronizationDate)) {
+				if (shouldStopSynchronization(item, latestStoredRecruitmentSequence)) {
 					stopSynchronization = true;
 					break;
 				}
@@ -317,20 +316,11 @@ public class AlioRecruitmentService {
 		return response;
 	}
 
-	private boolean shouldStopSynchronization(
-		JsonNode item,
-		Long latestStoredRecruitmentSequence,
-		LocalDate synchronizationDate
-	) {
+	private boolean shouldStopSynchronization(JsonNode item, Long latestStoredRecruitmentSequence) {
 		Long recruitmentSequence = extractRecruitmentSequence(item);
-		if (latestStoredRecruitmentSequence != null
+		return latestStoredRecruitmentSequence != null
 			&& recruitmentSequence != null
-			&& recruitmentSequence <= latestStoredRecruitmentSequence) {
-			return true;
-		}
-
-		LocalDate deadlineDate = parseDate(item, "pbancEndYmd", "aplyEndYmd", "endDate");
-		return deadlineDate != null && deadlineDate.isBefore(synchronizationDate);
+			&& recruitmentSequence <= latestStoredRecruitmentSequence;
 	}
 
 	private int saturatedInt(long value) {

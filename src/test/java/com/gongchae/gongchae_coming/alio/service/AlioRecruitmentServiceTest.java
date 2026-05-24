@@ -327,7 +327,7 @@ class AlioRecruitmentServiceTest {
 	}
 
 	@Test
-	void refreshStopsWhenDeadlineIsBeforeSynchronizationDate() {
+	void refreshDoesNotStopWhenDeadlineIsBeforeSynchronizationDate() {
 		AlioRecruitmentClient client = mock(AlioRecruitmentClient.class);
 		AlioRecruitmentRepository recruitmentRepository = mock(AlioRecruitmentRepository.class);
 		AlioRecruitmentSyncStateRepository syncStateRepository = mock(AlioRecruitmentSyncStateRepository.class);
@@ -359,7 +359,7 @@ class AlioRecruitmentServiceTest {
 		verify(recruitmentRepository, org.mockito.Mockito.timeout(1000)).saveAll(captor.capture());
 		assertThat(captor.getValue())
 			.extracting(this::titleOf)
-			.containsExactly("마감 전 공고");
+			.containsExactly("마감 전 공고", "마감 지난 공고", "중단 이후 공고");
 		waitUntilStatus(progressStore, "COMPLETED");
 		assertThat(progressStore.get().status()).isEqualTo("COMPLETED");
 	}
