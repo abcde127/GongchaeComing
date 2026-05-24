@@ -27,17 +27,24 @@ const resultStage = document.querySelector("#resultStage");
 const statusBanner = document.querySelector("#statusBanner");
 const debugPanel = document.querySelector("#debugPanel");
 const debugContent = document.querySelector("#debugContent");
+const jobPreferenceToggle = document.querySelector("#jobPreferenceToggle");
+const favoriteToggle = document.querySelector("#favoriteToggle");
+const FAVORITE_API_PATH = "/api/members/me/favorite-recruitments";
 const PAGE_SIZE = 10;
 
 let currentPage = 1;
 let currentItems = [];
 let currentSummaryContext = { keyword: "", totalCount: 0 };
+let latestOverallTotalCount = 0;
 let isClearingKeyword = false;
 let syncProgressTimer = null;
 let lastSyncStatus = "IDLE";
 let syncCompletionHideTimer = null;
 let refreshButtonStateTimer = null;
 let refreshButtonContentTimer = null;
+let jobPreferenceCache = null;
+let jobPreferenceCompanyOptionsCache = null;
+const favoriteRecruitmentIds = new Set();
 const MIN_LOADING_MS = 350;
 const refreshButtonIcon = `
 	<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -225,15 +232,66 @@ function syncCompanyFilterOptions(companyOptions = []) {
 	const selectedValues = new Set(getCheckedFilterValues(listCompanyFilter));
 	const companyNames = Array.from(new Set(companyOptions.filter(Boolean)))
 		.sort((first, second) => first.localeCompare(second, "ko"));
+	const companyLabelByValue = new Map(
+		(jobPreferenceCompanyOptionsCache || []).map((company) => [company.detailCode, company.detailName])
+	);
 
 	listCompanyFilter.innerHTML = "";
+	selectedValues.forEach((value) => {
+		if (!companyNames.includes(value)) {
+			companyNames.push(value);
+		}
+	});
+
 	companyNames.forEach((companyName) => {
-		const option = createListFilterCheckbox(companyName, companyName);
+		const option = createListFilterCheckbox(companyName, companyLabelByValue.get(companyName) || companyName);
 		const checkbox = option.querySelector("input");
 		checkbox.checked = selectedValues.has(companyName);
 		listCompanyFilter.appendChild(option);
 	});
 	updateListFilterIndicators();
+}
+
+async function fetchJobPreferenceCompanyOptions() {
+	if (jobPreferenceCompanyOptionsCache) {
+		return jobPreferenceCompanyOptionsCache;
+	}
+
+	const response = await fetch("/api/members/me/job-preference/companies", {
+		headers: {
+			Accept: "application/json"
+		}
+	});
+
+	if (!response.ok) {
+		throw new Error("기업 목록을 불러오지 못했습니다.");
+	}
+
+	jobPreferenceCompanyOptionsCache = await response.json();
+	return jobPreferenceCompanyOptionsCache;
+}
+
+async function ensureCompanyFilterOptions(values = []) {
+	if (!values.length) {
+		return;
+	}
+
+	const existingValues = new Set(getCheckedFilterValues(listCompanyFilter));
+	listCompanyFilter.querySelectorAll("input").forEach((input) => {
+		existingValues.add(input.value);
+	});
+
+	const missingValues = values.filter((value) => !existingValues.has(value));
+	if (!missingValues.length) {
+		return;
+	}
+
+	const companyOptions = await fetchJobPreferenceCompanyOptions();
+	const labelByValue = new Map(companyOptions.map((company) => [company.detailCode, company.detailName]));
+
+	missingValues.forEach((value) => {
+		listCompanyFilter.appendChild(createListFilterCheckbox(value, labelByValue.get(value) || value));
+	});
 }
 
 function setLoading(isLoading) {
@@ -786,6 +844,55 @@ function getPeriodDdayBadge(status, startDateValue, endDateValue) {
 	return `<span class="period-dday-wrap"><span class="period-dday-label">${label}</span><span class="period-dday">${dayText}</span></span>`;
 }
 
+function escapeAttribute(value) {
+	return String(value ?? "")
+		.replaceAll("&", "&amp;")
+		.replaceAll('"', "&quot;")
+		.replaceAll("<", "&lt;")
+		.replaceAll(">", "&gt;");
+}
+
+function getRecruitmentFavoriteId(item) {
+	return String(getValue(item, "sourceRecruitmentId", "recrutPblntSn", "recrutPbancSn", "pbancSn") || "");
+}
+
+function limitText(value, maxLength) {
+	const text = String(value || "").trim();
+	return text.length > maxLength ? text.slice(0, maxLength) : text;
+}
+
+function buildFavoriteRequest(item) {
+	const sourceRecruitmentId = getRecruitmentFavoriteId(item);
+	return {
+		source: "ALIO",
+		sourceRecruitmentId,
+		recruitmentTitle: limitText(getValue(item, "recrutPbancTtl") || "제목 정보 없음", 255),
+		institutionName: limitText(getValue(item, "pblntInstNm", "instNm") || "기관 정보 없음", 100),
+		hireType: limitText(getHireTypeLabel(item), 100),
+		workRegion: limitText(summarizeListValue(getValue(item, "workRgnNmLst", "workRgnNm", "workRegionNm")), 100),
+		recruitmentStartDate: getValue(item, "pbancBgngYmd", "pbancRgtrYmd"),
+		recruitmentEndDate: getValue(item, "pbancEndYmd", "aplyEndYmd", "endDate"),
+		recruitmentUrl: limitText(getValue(item, "recrutPbancUrl", "srcUrl", "url"), 500)
+	};
+}
+
+function normalizeFavoriteRecruitment(favorite) {
+	return {
+		sourceRecruitmentId: String(favorite.sourceRecruitmentId || ""),
+		recrutPbancTtl: favorite.recruitmentTitle,
+		pblntInstNm: favorite.institutionName,
+		hireTypeNmLst: favorite.hireType,
+		workRgnNmLst: favorite.workRegion,
+		pbancBgngYmd: favorite.recruitmentStartDate,
+		pbancEndYmd: favorite.recruitmentEndDate,
+		recrutPbancUrl: favorite.recruitmentUrl
+	};
+}
+
+function isFavoriteListActive() {
+	return Boolean(favoriteToggle?.checked);
+}
+
 function createRecruitmentCard(item) {
 	const title = getValue(item, "recrutPbancTtl");
 	const institution = getValue(item, "pblntInstNm", "instNm");
@@ -803,27 +910,42 @@ function createRecruitmentCard(item) {
 	const status = getRecruitmentStatus(rawStartDate, rawEndDate);
 	const periodDdayBadge = getPeriodDdayBadge(status, rawStartDate, rawEndDate);
 	const detailUrl = getValue(item, "recrutPbancUrl", "srcUrl", "url");
+	const favoriteId = getRecruitmentFavoriteId(item);
+	const isFavorite = favoriteId && favoriteRecruitmentIds.has(favoriteId);
+	const favoriteActionLabel = isFavorite ? "관심공고 해제" : "관심공고 설정";
+	const favoriteActionButton = favoriteToggle
+		? `
+			<button type="button" class="favorite-reveal-button" data-favorite-action aria-label="${favoriteActionLabel}" title="${favoriteActionLabel}">
+				<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+					<path d="M19 21l-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+				</svg>
+			</button>
+		`
+		: "";
 
 	return `
-		<article class="recruitment-card">
-			<div class="card-top">
-				${createStatusBadge(status)}
-				<div class="card-main">
-					<h3 class="card-title">${title || "제목 정보 없음"}</h3>
+		<article class="recruitment-card-shell ${isFavorite ? "is-favorite" : ""}" data-recruitment-id="${escapeAttribute(favoriteId)}">
+			${favoriteActionButton}
+			<div class="recruitment-card">
+				<div class="card-top">
+					${createStatusBadge(status)}
+					<div class="card-main">
+						<h3 class="card-title">${title || "제목 정보 없음"}</h3>
+					</div>
 				</div>
-			</div>
 
-			<div class="meta-list">
-				${createMetaRow(`${period}${periodDdayBadge}`, "meta-row-period")}
-				${createCompanyMeta(institution, companyDivision, companyType)}
-				${createMetaRow(region)}
-				${createMetaRow(recruitmentCategory)}
-				${createMetaRow(hireType)}
-				${createMetaRow(ncs)}
-			</div>
+				<div class="meta-list">
+					${createMetaRow(`${period}${periodDdayBadge}`, "meta-row-period")}
+					${createCompanyMeta(institution, companyDivision, companyType)}
+					${createMetaRow(region)}
+					${createMetaRow(recruitmentCategory)}
+					${createMetaRow(hireType)}
+					${createMetaRow(ncs)}
+				</div>
 
-			<div class="card-actions">
-				${detailUrl ? `<a class="card-link card-link-icon" href="${detailUrl}" target="_blank" rel="noopener noreferrer" aria-label="원문보기" title="원문보기">↗</a>` : `<span class="card-footnote">상세 링크 정보 없음</span>`}
+				<div class="card-actions">
+					${detailUrl ? `<a class="card-link card-link-icon" href="${detailUrl}" target="_blank" rel="noopener noreferrer" aria-label="원문보기" title="원문보기">↗</a>` : `<span class="card-footnote">상세 링크 정보 없음</span>`}
+				</div>
 			</div>
 		</article>
 	`;
@@ -840,6 +962,31 @@ function hasListHeaderFilter() {
 
 function getCheckedFilterValues(filter) {
 	return Array.from(filter.querySelectorAll("input:checked"), (input) => input.value);
+}
+
+function setCheckedFilterValues(filter, values = []) {
+	const selectedValues = new Set(values);
+	filter.querySelectorAll("input").forEach((input) => {
+		input.checked = selectedValues.has(input.value);
+	});
+}
+
+function setPeriodSort(value = "recent") {
+	const periodSortInput = listPeriodSortFilter.querySelector(`input[value="${value}"]`);
+	if (periodSortInput) {
+		periodSortInput.checked = true;
+	}
+}
+
+function hasJobPreferenceValues(preference) {
+	return Boolean(
+		preference?.searchKeyword
+			|| preference?.recruitmentStatuses?.length
+			|| preference?.regions?.length
+			|| preference?.categories?.length
+			|| preference?.hireTypes?.length
+			|| preference?.ncsCodes?.length
+	);
 }
 
 function buildSummary(items) {
@@ -884,10 +1031,10 @@ function renderItems(items, summary, options = {}) {
 		const emptyDescription = emptyState.querySelector("p");
 
 		if (emptyTitle) {
-			emptyTitle.textContent = "해당 조건을 만족하는 공고가 없습니다.";
+			emptyTitle.textContent = options.emptyTitle || "해당 조건을 만족하는 공고가 없습니다.";
 		}
 		if (emptyDescription) {
-			emptyDescription.textContent = "";
+			emptyDescription.textContent = options.emptyDescription || "";
 		}
 		return;
 	}
@@ -1001,6 +1148,11 @@ function buildQueryString(page = currentPage, refresh = false, resume = false) {
 }
 
 async function loadRecruitments(page = currentPage, refresh = false, showLoading = true, resume = false) {
+	if (isFavoriteListActive() && !refresh && !resume) {
+		await renderFavoriteRecruitments();
+		return;
+	}
+
 	currentPage = page;
 	const loadingStartedAt = Date.now();
 	if (showLoading) {
@@ -1045,6 +1197,7 @@ async function loadRecruitments(page = currentPage, refresh = false, showLoading
 		const keyword = searchKeyword.value.trim();
 		currentItems = items;
 		currentSummaryContext = { keyword, totalCount };
+		latestOverallTotalCount = overallTotalCount;
 		updateDataRefreshText(payload?.lastFetchedAt ?? payload?.response?.body?.lastFetchedAt);
 		updateResultCountSummary(overallTotalCount, totalCount);
 		syncCompanyFilterOptions(payload?.filterOptions?.companies || []);
@@ -1078,12 +1231,64 @@ async function loadRecruitments(page = currentPage, refresh = false, showLoading
 function resetForm() {
 	searchKeyword.value = "";
 	keywordSearchControl.classList.remove("is-expanded");
+	if (jobPreferenceToggle) {
+		jobPreferenceToggle.checked = false;
+	}
 	updateKeywordSearchState();
 	currentPage = 1;
 	clearListHeaderFilters();
+	setPeriodSort("recent");
 	setStatus("");
 	setDebug(null);
 	loadRecruitments(1);
+}
+
+async function fetchJobPreference() {
+	if (jobPreferenceCache) {
+		return jobPreferenceCache;
+	}
+
+	const response = await fetch("/api/members/me/job-preference", {
+		headers: {
+			Accept: "application/json"
+		}
+	});
+
+	if (!response.ok) {
+		const problem = await response.json().catch(() => null);
+		throw new Error(problem?.detail || "맞춤공고 설정을 불러오지 못했습니다.");
+	}
+
+	jobPreferenceCache = await response.json();
+	return jobPreferenceCache;
+}
+
+async function getResponseErrorMessage(response, fallbackMessage) {
+	const problem = await response.json().catch(() => null);
+	return problem?.detail || fallbackMessage;
+}
+
+async function applyJobPreference(preference) {
+	searchKeyword.value = preference.searchKeyword || "";
+	keywordSearchControl.classList.toggle("is-expanded", Boolean(searchKeyword.value.trim()));
+	updateKeywordSearchState();
+	clearListHeaderFilters();
+	await ensureCompanyFilterOptions(preference.companies || []);
+	setCheckedFilterValues(listCompanyFilter, preference.companies);
+	setCheckedFilterValues(listStatusFilter, preference.recruitmentStatuses);
+	setCheckedFilterValues(listRegionFilter, preference.regions);
+	setCheckedFilterValues(listCategoryFilter, preference.categories);
+	setCheckedFilterValues(listHireTypeFilter, preference.hireTypes);
+	setCheckedFilterValues(listNcsFilter, preference.ncsCodes);
+	updateListFilterIndicators();
+}
+
+function clearJobPreferenceApplication() {
+	searchKeyword.value = "";
+	keywordSearchControl.classList.remove("is-expanded");
+	updateKeywordSearchState();
+	clearListHeaderFilters();
+	updateListFilterIndicators();
 }
 
 form.addEventListener("submit", (event) => {
@@ -1246,6 +1451,235 @@ listPeriodSortFilter.addEventListener("change", () => {
 	loadRecruitments(1);
 });
 
+if (jobPreferenceToggle) {
+	jobPreferenceToggle.addEventListener("change", async () => {
+		if (favoriteToggle?.checked) {
+			favoriteToggle.checked = false;
+		}
+		jobPreferenceToggle.disabled = true;
+		setStatus("");
+
+		try {
+			if (jobPreferenceToggle.checked) {
+				const preference = await fetchJobPreference();
+				await applyJobPreference(preference);
+				if (!hasJobPreferenceValues(preference)) {
+					setStatus("저장된 맞춤공고 조건이 없습니다. 마이페이지에서 조건을 저장해주세요.", "success");
+				}
+				loadRecruitments(1);
+				return;
+			}
+
+			clearJobPreferenceApplication();
+			loadRecruitments(1);
+		} catch (error) {
+			jobPreferenceToggle.checked = false;
+			setStatus(error.message);
+		} finally {
+			jobPreferenceToggle.disabled = false;
+		}
+	});
+}
+
+if (favoriteToggle) {
+	favoriteToggle.addEventListener("change", async () => {
+		favoriteToggle.disabled = true;
+		setStatus("");
+
+		try {
+			if (favoriteToggle.checked) {
+				if (jobPreferenceToggle) {
+					jobPreferenceToggle.checked = false;
+				}
+				clearJobPreferenceApplication();
+				await renderFavoriteRecruitments();
+				return;
+			}
+
+			currentPage = 1;
+			await loadRecruitments(1);
+		} catch (error) {
+			favoriteToggle.checked = false;
+			setStatus(error.message);
+			setDebug({ message: error.message });
+		} finally {
+			favoriteToggle.disabled = false;
+		}
+	});
+}
+
+async function loadFavoriteRecruitments() {
+	if (!favoriteToggle) {
+		return [];
+	}
+
+	const response = await fetch(FAVORITE_API_PATH, {
+		headers: {
+			Accept: "application/json"
+		}
+	});
+	if (!response.ok) {
+		throw new Error(await getResponseErrorMessage(response, "관심공고 목록을 불러오지 못했습니다."));
+	}
+
+	const favorites = await response.json();
+	favoriteRecruitmentIds.clear();
+	favorites.forEach((favorite) => {
+		if (favorite.sourceRecruitmentId) {
+			favoriteRecruitmentIds.add(String(favorite.sourceRecruitmentId));
+		}
+	});
+	resultList.querySelectorAll(".recruitment-card-shell").forEach((card) => {
+		card.classList.toggle("is-favorite", favoriteRecruitmentIds.has(card.dataset.recruitmentId));
+	});
+	return favorites;
+}
+
+async function renderFavoriteRecruitments() {
+	setLoading(true);
+	setStatus("");
+	setDebug(null);
+
+	try {
+		const favorites = await loadFavoriteRecruitments();
+		const favoriteItems = favorites.map(normalizeFavoriteRecruitment);
+		currentItems = favoriteItems;
+		currentSummaryContext = { keyword: "", totalCount: favoriteItems.length };
+		updateResultCountSummary(latestOverallTotalCount, favoriteItems.length);
+		renderItems(favoriteItems, "관심공고 목록입니다.", {
+			emptyTitle: "저장된 관심공고가 없습니다.",
+			emptyDescription: "목록에서 책갈피 버튼을 눌러 관심공고를 추가할 수 있습니다."
+		});
+		pagination.hidden = true;
+		pagination.innerHTML = "";
+	} finally {
+		setLoading(false);
+	}
+}
+
+async function createFavoriteRecruitment(item, card) {
+	if (!favoriteToggle) {
+		window.alert("로그인 후 관심공고를 설정할 수 있습니다.");
+		return;
+	}
+
+	const request = buildFavoriteRequest(item);
+	if (!request.sourceRecruitmentId) {
+		window.alert("공고 식별 정보가 없어 관심공고로 설정할 수 없습니다.");
+		return;
+	}
+
+	if (favoriteRecruitmentIds.has(request.sourceRecruitmentId)) {
+		window.alert("이미 관심공고로 설정된 공고입니다.");
+		return;
+	}
+
+	if (!window.confirm("이 공고를 관심공고로 설정할까요?")) {
+		return;
+	}
+
+	try {
+		const response = await fetch(FAVORITE_API_PATH, {
+			method: "POST",
+			headers: {
+				Accept: "application/json",
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify(request)
+		});
+		const payload = await response.json().catch(() => null);
+		if (!response.ok) {
+			throw new Error(payload?.detail || "관심공고 설정 중 오류가 발생했습니다.");
+		}
+
+		favoriteRecruitmentIds.add(request.sourceRecruitmentId);
+		card.classList.add("is-favorite");
+		const button = card.querySelector("[data-favorite-action]");
+		if (button) {
+			button.setAttribute("aria-label", "관심공고 해제");
+			button.setAttribute("title", "관심공고 해제");
+		}
+		window.alert(payload?.created === false ? "이미 관심공고로 설정된 공고입니다." : "관심공고로 설정되었습니다.");
+	} catch (error) {
+		window.alert(error.message);
+	}
+}
+
+async function deleteFavoriteRecruitment(item, card) {
+	if (!favoriteToggle) {
+		window.alert("로그인 후 관심공고를 해제할 수 있습니다.");
+		return;
+	}
+
+	const sourceRecruitmentId = getRecruitmentFavoriteId(item);
+	if (!sourceRecruitmentId) {
+		window.alert("공고 식별 정보가 없어 관심공고를 해제할 수 없습니다.");
+		return;
+	}
+
+	if (!window.confirm("이 공고를 관심공고에서 해제할까요?")) {
+		return;
+	}
+
+	try {
+		const response = await fetch(
+			`${FAVORITE_API_PATH}/${encodeURIComponent(sourceRecruitmentId)}?source=ALIO`,
+			{
+				method: "DELETE",
+				headers: {
+					Accept: "application/json"
+				}
+			}
+		);
+		if (!response.ok) {
+			const payload = await response.json().catch(() => null);
+			throw new Error(payload?.detail || "관심공고 해제 중 오류가 발생했습니다.");
+		}
+
+		favoriteRecruitmentIds.delete(sourceRecruitmentId);
+		card.classList.remove("is-favorite");
+		const button = card.querySelector("[data-favorite-action]");
+		if (button) {
+			button.setAttribute("aria-label", "관심공고 설정");
+			button.setAttribute("title", "관심공고 설정");
+		}
+		if (isFavoriteListActive()) {
+			currentItems = currentItems.filter((favorite) => getRecruitmentFavoriteId(favorite) !== sourceRecruitmentId);
+			renderItems(currentItems, "관심공고 목록입니다.", {
+				emptyTitle: "저장된 관심공고가 없습니다.",
+				emptyDescription: "목록에서 책갈피 버튼을 눌러 관심공고를 추가할 수 있습니다."
+			});
+			updateResultCountSummary(latestOverallTotalCount, currentItems.length);
+		}
+		window.alert("관심공고에서 해제되었습니다.");
+	} catch (error) {
+		window.alert(error.message);
+	}
+}
+
+resultList.addEventListener("click", (event) => {
+	const button = event.target.closest("[data-favorite-action]");
+	if (!button) {
+		return;
+	}
+	button.blur();
+
+	const card = button.closest(".recruitment-card-shell");
+	const recruitmentId = card?.dataset.recruitmentId;
+	const item = currentItems.find((candidate) => getRecruitmentFavoriteId(candidate) === recruitmentId);
+	if (!card || !item) {
+		window.alert("공고 정보를 찾을 수 없습니다.");
+		return;
+	}
+
+	if (favoriteRecruitmentIds.has(recruitmentId)) {
+		deleteFavoriteRecruitment(item, card);
+		return;
+	}
+
+	createFavoriteRecruitment(item, card);
+});
+
 function clearListHeaderFilters() {
 	[listStatusFilter, listCompanyFilter, listCategoryFilter, listHireTypeFilter, listNcsFilter, listRegionFilter].forEach((filter) => {
 		filter.querySelectorAll("input:checked").forEach((input) => {
@@ -1312,4 +1746,9 @@ initializeListFilterOptions();
 updateListFilterIndicators();
 updateKeywordSearchState();
 checkSyncProgress();
+if (favoriteToggle) {
+	loadFavoriteRecruitments().catch((error) => {
+		setDebug({ message: error.message });
+	});
+}
 loadRecruitments(1);

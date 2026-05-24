@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record AlioApiProperties(
 	String baseUrl,
 	String recruitListPath,
+	String publicInstListUrl,
 	String serviceKey,
 	String resultType
 ) {

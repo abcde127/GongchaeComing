@@ -268,6 +268,13 @@ public class AlioRecruitment {
 		return sourceRecruitmentId;
 	}
 
+	public String getRecruitmentUrl() {
+		if (StringUtils.hasText(recrutPbancUrl)) {
+			return recrutPbancUrl;
+		}
+		return srcUrl;
+	}
+
 	public LocalDateTime getFetchedAt() {
 		return fetchedAt;
 	}

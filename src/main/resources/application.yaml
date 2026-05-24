@@ -31,9 +31,11 @@ logging:
     org.hibernate.SQL: debug
 
 app:
+  web-base-url: ${APP_WEB_BASE_URL:http://localhost:8080}
   alio:
     base-url: https://apis.data.go.kr/1051000/recruitment
     recruit-list-path: /list
+    public-inst-list-url: https://apis.data.go.kr/1051000/public_inst/list
     service-key: ${API_KEY:}
     result-type: json
   recruitment:
