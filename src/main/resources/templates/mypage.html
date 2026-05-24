@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>마이페이지 | Gongchae Coming</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
+	<link rel="stylesheet" th:href="@{/css/auth.css}">
+	<link rel="stylesheet" th:href="@{/css/mypage.css(v=8)}">
+</head>
+<body>
+<div class="mypage-shell">
+	<header class="mypage-topbar">
+		<a class="mypage-brand" href="/recruitments">
+			<span class="brand-mark">G</span>
+			<span>Gongchae Coming</span>
+		</a>
+		<nav class="mypage-topnav" aria-label="마이페이지 상단 메뉴">
+			<a href="/recruitments">채용 목록</a>
+			<form method="post" action="/logout">
+				<button type="submit">로그아웃</button>
+			</form>
+		</nav>
+	</header>
+
+	<main class="mypage-layout">
+		<aside class="mypage-sidebar" aria-label="마이페이지 메뉴">
+			<section class="sidebar-heading" aria-labelledby="mypage-title">
+				<p class="eyebrow">My page</p>
+				<h1 id="mypage-title">마이페이지</h1>
+			</section>
+			<div class="sidebar-divider" aria-hidden="true"></div>
+
+			<nav class="mypage-menu" aria-label="마이페이지 섹션">
+				<button type="button" class="mypage-menu-item is-active" data-section-target="profile" aria-current="page">
+					<span class="menu-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0"></path><circle cx="12" cy="7" r="4"></circle></svg>
+					</span>
+					<span>회원정보</span>
+				</button>
+				<button type="button" class="mypage-menu-item" data-section-target="password">
+					<span class="menu-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+					</span>
+					<span>비밀번호 변경</span>
+				</button>
+				<button type="button" class="mypage-menu-item" data-section-target="job-preference">
+					<span class="menu-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M4 21v-7"></path><path d="M4 10V3"></path><path d="M12 21v-9"></path><path d="M12 8V3"></path><path d="M20 21v-5"></path><path d="M20 12V3"></path><path d="M2 14h4"></path><path d="M10 8h4"></path><path d="M18 16h4"></path></svg>
+					</span>
+					<span>맞춤공고 설정</span>
+				</button>
+				<button type="button" class="mypage-menu-item" data-section-target="favorites">
+					<span class="menu-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M19 21l-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+					</span>
+					<span>관심공고</span>
+				</button>
+				<button type="button" class="mypage-menu-item" data-section-target="notifications">
+					<span class="menu-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg>
+					</span>
+					<span>알림설정</span>
+				</button>
+			</nav>
+		</aside>
+
+		<section class="mypage-content" aria-label="마이페이지 내용">
+			<section class="mypage-section is-active" id="section-profile" data-section="profile" aria-labelledby="profile-title">
+				<div class="section-heading">
+					<div>
+						<p class="eyebrow">Member profile</p>
+						<h2 id="profile-title">회원정보</h2>
+					</div>
+				</div>
+
+				<div class="alert" id="mypageMessage" role="alert" aria-live="polite" hidden></div>
+
+				<div class="profile-view" id="profileView">
+					<div class="profile-overview">
+						<div class="profile-side" aria-label="프로필 요약">
+							<div class="profile-initial" id="profileInitial">G</div>
+						</div>
+						<div class="profile-view-grid" aria-label="회원 프로필">
+							<div class="profile-field">
+								<span>이메일</span>
+								<strong id="profileEmailText">-</strong>
+							</div>
+							<div class="profile-field">
+								<span>닉네임</span>
+								<div class="nickname-display nickname-mode is-active" id="nicknameDisplay">
+									<strong id="profileNicknameText">-</strong>
+									<button type="button" class="icon-action-button" id="editNicknameButton" aria-label="닉네임 수정" title="닉네임 수정">
+										<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+											<path d="M12 20h9"></path>
+											<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+										</svg>
+									</button>
+								</div>
+								<form class="nickname-edit-form nickname-mode" id="nicknameEditForm" novalidate>
+									<input
+										type="text"
+										id="nicknameInput"
+										name="nickname"
+										autocomplete="nickname"
+										minlength="2"
+										maxlength="50"
+										required>
+									<button type="submit" class="nickname-save-button" id="saveNicknameButton" aria-label="닉네임 저장" title="저장">
+										<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+											<path d="M20 6 9 17l-5-5"></path>
+										</svg>
+									</button>
+									<button type="button" class="nickname-cancel-button" id="cancelNicknameButton" aria-label="닉네임 수정 취소" title="취소">
+										<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+											<path d="M18 6 6 18"></path>
+											<path d="m6 6 12 12"></path>
+										</svg>
+									</button>
+								</form>
+							</div>
+							<div class="profile-field">
+								<span>가입일</span>
+								<strong id="profileCreatedAtText">-</strong>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<section class="mypage-section" id="section-password" data-section="password" aria-labelledby="password-title" hidden>
+				<div class="section-heading">
+					<div>
+						<p class="eyebrow">Password</p>
+						<h2 id="password-title">비밀번호 변경</h2>
+					</div>
+				</div>
+
+				<div class="alert" id="passwordMessage" role="alert" aria-live="polite" hidden></div>
+
+				<form class="auth-form password-change-form" id="passwordChangeForm" novalidate>
+					<div class="field-group">
+						<label for="currentPassword">현재 비밀번호</label>
+						<div class="password-field">
+							<input
+								type="password"
+								id="currentPassword"
+								name="currentPassword"
+								autocomplete="current-password"
+								aria-describedby="currentPasswordError"
+								required>
+							<button
+								type="button"
+								class="text-button password-toggle"
+								data-password-toggle="currentPassword"
+								aria-label="현재 비밀번호 표시"
+								aria-pressed="false">
+								<span class="password-toggle-icon" data-visible="false" aria-hidden="true">
+									<svg viewBox="0 0 24 24" focusable="false">
+										<path d="m3 3 18 18"></path>
+										<path d="M10.7 5.2A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-3.2 4.1"></path>
+										<path d="M14.1 14.1A3 3 0 0 1 9.9 9.9"></path>
+										<path d="M6.6 6.6A18.2 18.2 0 0 0 2 12s3.5 7 10 7a10.8 10.8 0 0 0 4.4-.9"></path>
+									</svg>
+								</span>
+								<span class="password-toggle-icon" data-visible="true" aria-hidden="true" hidden>
+									<svg viewBox="0 0 24 24" focusable="false">
+										<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+										<circle cx="12" cy="12" r="3"></circle>
+									</svg>
+								</span>
+							</button>
+						</div>
+						<p class="field-error" id="currentPasswordError" hidden></p>
+					</div>
+
+					<div class="field-group">
+						<label for="newPassword">새 비밀번호</label>
+						<div class="password-field">
+							<input
+								type="password"
+								id="newPassword"
+								name="newPassword"
+								autocomplete="new-password"
+								placeholder="영문과 숫자 포함 8자 이상"
+								minlength="8"
+								maxlength="64"
+								aria-describedby="newPasswordError"
+								required>
+							<button
+								type="button"
+								class="text-button password-toggle"
+								data-password-toggle="newPassword"
+								aria-label="새 비밀번호 표시"
+								aria-pressed="false">
+								<span class="password-toggle-icon" data-visible="false" aria-hidden="true">
+									<svg viewBox="0 0 24 24" focusable="false">
+										<path d="m3 3 18 18"></path>
+										<path d="M10.7 5.2A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-3.2 4.1"></path>
+										<path d="M14.1 14.1A3 3 0 0 1 9.9 9.9"></path>
+										<path d="M6.6 6.6A18.2 18.2 0 0 0 2 12s3.5 7 10 7a10.8 10.8 0 0 0 4.4-.9"></path>
+									</svg>
+								</span>
+								<span class="password-toggle-icon" data-visible="true" aria-hidden="true" hidden>
+									<svg viewBox="0 0 24 24" focusable="false">
+										<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+										<circle cx="12" cy="12" r="3"></circle>
+									</svg>
+								</span>
+							</button>
+						</div>
+						<p class="field-error" id="newPasswordError" hidden></p>
+					</div>
+
+					<div class="field-group">
+						<label for="newPasswordConfirm">새 비밀번호 확인</label>
+						<div class="password-field">
+							<input
+								type="password"
+								id="newPasswordConfirm"
+								name="newPasswordConfirm"
+								autocomplete="new-password"
+								placeholder="영문과 숫자 포함 8자 이상"
+								aria-describedby="newPasswordConfirmError"
+								required>
+							<button
+								type="button"
+								class="text-button password-toggle"
+								data-password-toggle="newPasswordConfirm"
+								aria-label="새 비밀번호 확인 표시"
+								aria-pressed="false">
+								<span class="password-toggle-icon" data-visible="false" aria-hidden="true">
+									<svg viewBox="0 0 24 24" focusable="false">
+										<path d="m3 3 18 18"></path>
+										<path d="M10.7 5.2A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-3.2 4.1"></path>
+										<path d="M14.1 14.1A3 3 0 0 1 9.9 9.9"></path>
+										<path d="M6.6 6.6A18.2 18.2 0 0 0 2 12s3.5 7 10 7a10.8 10.8 0 0 0 4.4-.9"></path>
+									</svg>
+								</span>
+								<span class="password-toggle-icon" data-visible="true" aria-hidden="true" hidden>
+									<svg viewBox="0 0 24 24" focusable="false">
+										<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+										<circle cx="12" cy="12" r="3"></circle>
+									</svg>
+								</span>
+							</button>
+						</div>
+						<p class="field-error" id="newPasswordConfirmError" hidden></p>
+					</div>
+
+					<button type="submit" class="primary-button" id="passwordSaveButton">비밀번호 변경</button>
+				</form>
+			</section>
+
+			<section class="mypage-section" id="section-job-preference" data-section="job-preference" aria-labelledby="job-preference-title" hidden>
+				<div class="section-heading">
+					<div>
+						<p class="eyebrow">Job preference</p>
+						<h2 id="job-preference-title">맞춤공고 설정</h2>
+					</div>
+					<div class="job-preference-heading-actions" id="jobPreferenceHeadingActions">
+						<button type="button" class="secondary-action" id="jobPreferenceEditButton">수정</button>
+						<div class="job-preference-edit-actions" id="jobPreferenceEditActions">
+							<button type="button" class="secondary-action" id="jobPreferenceResetButton">초기화</button>
+							<button type="submit" class="primary-button" id="jobPreferenceSaveButton" form="jobPreferenceForm">저장</button>
+						</div>
+					</div>
+				</div>
+
+				<div class="alert" id="jobPreferenceMessage" role="alert" aria-live="polite" hidden></div>
+
+				<div class="job-preference-mode-frame">
+					<div class="job-preference-read-view job-preference-mode is-active" id="jobPreferenceReadView">
+						<div class="preference-read-card">
+							<strong>공고 키워드</strong>
+							<div class="preference-read-values" data-preference-read="searchKeyword"></div>
+						</div>
+						<div class="preference-read-card">
+							<strong>기업</strong>
+							<div class="preference-read-values" data-preference-read="companies"></div>
+						</div>
+						<div class="preference-read-card">
+							<strong>공고 상태</strong>
+							<div class="preference-read-values" data-preference-read="recruitmentStatuses"></div>
+						</div>
+						<div class="preference-read-card">
+							<strong>근무지</strong>
+							<div class="preference-read-values" data-preference-read="regions"></div>
+						</div>
+						<div class="preference-read-card">
+							<strong>채용 구분</strong>
+							<div class="preference-read-values" data-preference-read="categories"></div>
+						</div>
+						<div class="preference-read-card">
+							<strong>고용 형태</strong>
+							<div class="preference-read-values" data-preference-read="hireTypes"></div>
+						</div>
+						<div class="preference-read-card">
+							<strong>표준직무</strong>
+							<div class="preference-read-values" data-preference-read="ncsCodes"></div>
+						</div>
+					</div>
+
+					<form class="job-preference-form job-preference-mode" id="jobPreferenceForm" novalidate>
+						<div class="preference-card preference-card-keyword">
+							<label for="preferenceSearchKeyword">공고 키워드</label>
+							<div class="preference-input-control">
+								<input
+									type="text"
+									id="preferenceSearchKeyword"
+									name="searchKeyword"
+									maxlength="100"
+									placeholder="예: 행정, 전산, 연구">
+								<button type="button" class="preference-input-clear" data-preference-clear="preferenceSearchKeyword" aria-label="공고 키워드 지우기" hidden>x</button>
+							</div>
+						</div>
+
+					<div class="preference-card preference-card-companies">
+						<div class="preference-card-heading preference-card-heading-with-control">
+							<strong>기업</strong>
+							<div class="preference-input-control">
+								<input
+									type="text"
+									id="preferenceCompanySearch"
+									placeholder="기관명 검색"
+									autocomplete="off"
+									aria-label="기관명 검색">
+								<button type="button" class="preference-input-clear" data-preference-clear="preferenceCompanySearch" aria-label="기관명 검색어 지우기" hidden>x</button>
+							</div>
+						</div>
+						<div class="preference-selected-summary" id="selectedCompaniesSummary" aria-live="polite"></div>
+						<div class="preference-options preference-options-dense" data-preference-options="companies"></div>
+					</div>
+
+					<div class="preference-card">
+						<div class="preference-card-heading">
+							<strong>공고 상태</strong>
+						</div>
+						<div class="preference-options" data-preference-options="recruitmentStatuses"></div>
+					</div>
+
+					<div class="preference-card">
+						<div class="preference-card-heading">
+							<strong>근무지</strong>
+						</div>
+						<div class="preference-options preference-options-dense" data-preference-options="regions"></div>
+					</div>
+
+					<div class="preference-card">
+						<div class="preference-card-heading">
+							<strong>채용 구분</strong>
+						</div>
+						<div class="preference-options" data-preference-options="categories"></div>
+					</div>
+
+					<div class="preference-card">
+						<div class="preference-card-heading">
+							<strong>고용 형태</strong>
+						</div>
+						<div class="preference-options" data-preference-options="hireTypes"></div>
+					</div>
+
+					<div class="preference-card">
+						<div class="preference-card-heading">
+							<strong>표준직무</strong>
+						</div>
+						<div class="preference-options preference-options-dense" data-preference-options="ncsCodes"></div>
+					</div>
+
+					</form>
+				</div>
+			</section>
+
+			<section class="mypage-section" id="section-favorites" data-section="favorites" aria-labelledby="favorites-title" hidden>
+				<div class="section-heading">
+					<div>
+						<p class="eyebrow">Saved recruitments</p>
+						<h2 id="favorites-title">관심공고</h2>
+					</div>
+				</div>
+				<div class="favorites-panel">
+					<div class="favorites-toolbar" id="favoritesToolbar" hidden>
+						<label class="favorites-select-all" aria-label="전체 선택">
+							<input type="checkbox" id="favoriteSelectAll">
+						</label>
+						<button type="button" class="favorites-delete-button" id="favoriteDeleteSelectedButton" aria-label="선택 삭제" title="선택 삭제" disabled>
+							<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+								<path d="M3 6h18"></path>
+								<path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+								<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+								<path d="M10 11v6"></path>
+								<path d="M14 11v6"></path>
+							</svg>
+						</button>
+					</div>
+					<div class="favorites-list" id="favoritesList" hidden></div>
+				</div>
+			</section>
+
+			<section class="mypage-section" id="section-notifications" data-section="notifications" aria-labelledby="notifications-title" hidden>
+				<div class="section-heading">
+					<div>
+						<p class="eyebrow">Notifications</p>
+						<h2 id="notifications-title">알림설정</h2>
+					</div>
+					<div class="notification-heading-actions" id="notificationHeadingActions" data-kakao-linked="false">
+						<div class="kakao-linked-banner" id="kakaoLinkedBanner" hidden>
+							<img class="kakao-linked-mark" src="/images/kakao_logo.png" alt="" aria-hidden="true">
+							<span class="kakao-linked-text">
+								<strong>계정연동 완료</strong>
+								<small id="kakaoLinkedAtText">-</small>
+							</span>
+						</div>
+						<button type="button" class="notification-history-toggle" id="notificationHistoryButton" aria-label="알림 발송이력" aria-controls="notificationHistoryPanel" aria-expanded="false" title="알림 발송이력">
+							<svg viewBox="0 0 24 24" aria-hidden="true">
+								<path d="M3 12a9 9 0 1 0 3-6.7"></path>
+								<path d="M3 4v5h5"></path>
+								<path d="M12 7v5l3 2"></path>
+							</svg>
+						</button>
+					</div>
+				</div>
+				<div class="notification-settings-shell" data-kakao-linked="false">
+					<div class="setting-list">
+						<div class="setting-row">
+							<span>
+								<strong>관심공고 리마인드</strong>
+								<small>지정한 시간에 관심공고로 설정한 공고의 리마인드 알림을 전송합니다</small>
+							</span>
+							<button type="button" class="notification-toggle" id="favoriteReminderToggle" aria-label="관심공고 리마인드" aria-pressed="false" disabled>
+								<span aria-hidden="true"></span>
+							</button>
+							<div class="notification-time-setting" id="favoriteReminderTimeSetting" hidden>
+								<label for="favoriteReminderTime">매일</label>
+								<div class="time-dial" id="favoriteReminderTimeDial">
+									<button type="button" class="time-dial-trigger" id="favoriteReminderTime" aria-expanded="false" disabled>
+										<span class="time-dial-value" id="favoriteReminderTimeText">
+											<span data-time-display="hour">09</span>
+											<span aria-hidden="true">:</span>
+											<span data-time-display="minute">00</span>
+										</span>
+									</button>
+									<div class="time-dial-panel" id="favoriteReminderTimePanel" hidden>
+										<div class="time-dial-window" data-time-wheel="hour" aria-label="시"></div>
+										<span class="time-dial-separator" aria-hidden="true">:</span>
+										<div class="time-dial-window" data-time-wheel="minute" aria-label="분"></div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="setting-row">
+							<span>
+								<strong>신규 공고 등록 알림</strong>
+								<small>맞춤공고 조건에 맞는 새로운 공고가 등록되면 알림을 전송합니다</small>
+							</span>
+							<button type="button" class="notification-toggle" aria-label="신규 공고 등록 알림" aria-pressed="false" disabled>
+								<span aria-hidden="true"></span>
+							</button>
+						</div>
+					</div>
+					<div class="kakao-connect-overlay">
+						<p class="kakao-connect-copy">알림기능을 사용하기 위해서는 SNS 계정 연동이 필요합니다.</p>
+						<button type="button" class="kakao-connect-button" id="kakaoConnectButton">
+							<img src="/images/kakao_login_image.png" alt="카카오톡 계정 연동">
+						</button>
+					</div>
+				</div>
+				<div class="notification-history-modal" id="notificationHistoryPanel" role="dialog" aria-modal="true" aria-labelledby="notificationHistoryTitle" hidden>
+					<div class="notification-history-backdrop" data-notification-history-close></div>
+					<section class="notification-history-dialog">
+						<div class="notification-history-heading">
+							<div>
+								<p class="eyebrow">Notification History</p>
+								<h3 id="notificationHistoryTitle">알림 발송이력</h3>
+							</div>
+							<div class="notification-history-dialog-actions">
+								<button type="button" class="notification-history-refresh" id="notificationHistoryRefreshButton" aria-label="알림 발송이력 새로고침">
+									<svg viewBox="0 0 24 24" aria-hidden="true">
+										<path d="M21 12a9 9 0 0 1-15.4 6.4"></path>
+										<path d="M3 12a9 9 0 0 1 15.4-6.4"></path>
+										<path d="M18 3v5h-5"></path>
+										<path d="M6 21v-5h5"></path>
+									</svg>
+								</button>
+								<button type="button" class="notification-history-close" aria-label="알림 발송이력 닫기" data-notification-history-close>
+									<svg viewBox="0 0 24 24" aria-hidden="true">
+										<path d="M18 6 6 18"></path>
+										<path d="m6 6 12 12"></path>
+									</svg>
+								</button>
+							</div>
+						</div>
+						<div class="notification-history-list" id="notificationHistoryList"></div>
+					</section>
+				</div>
+			</section>
+		</section>
+	</main>
+</div>
+<script th:src="@{/js/mypage.js}"></script>
+</body>
+</html>

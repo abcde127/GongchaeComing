@@ -826,6 +826,76 @@ select:focus {
 	gap: 10px;
 }
 
+.preference-toggle {
+	display: inline-grid;
+	grid-template-columns: minmax(0, auto) 38px;
+	align-items: center;
+	gap: 7px;
+	min-height: 28px;
+	padding: 0 3px;
+	color: var(--muted);
+	cursor: pointer;
+}
+
+.preference-toggle input {
+	position: absolute;
+	inline-size: 1px;
+	block-size: 1px;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.preference-toggle-track {
+	position: relative;
+	width: 38px;
+	height: 22px;
+	border-radius: 999px;
+	background: rgba(100, 116, 139, 0.24);
+	transition: background-color 0.16s ease;
+}
+
+.preference-toggle-track::after {
+	content: "";
+	position: absolute;
+	top: 3px;
+	left: 3px;
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: #ffffff;
+	box-shadow: 0 2px 6px rgba(23, 32, 51, 0.24);
+	transition: transform 0.16s ease;
+}
+
+.preference-toggle input:checked ~ .preference-toggle-track {
+	background: var(--accent);
+}
+
+.preference-toggle input:checked ~ .preference-toggle-track::after {
+	transform: translateX(16px);
+}
+
+.preference-toggle input:focus-visible ~ .preference-toggle-track {
+	outline: 3px solid rgba(56, 189, 248, 0.22);
+	outline-offset: 2px;
+}
+
+.preference-toggle input:disabled ~ .preference-toggle-track {
+	opacity: 0.58;
+}
+
+.preference-toggle-copy {
+	display: inline-flex;
+	align-items: center;
+	min-width: 0;
+}
+
+.preference-toggle-copy strong {
+	color: inherit;
+	font-size: 0.82rem;
+	font-weight: 900;
+}
+
 .list-filter-row {
 	display: grid;
 	grid-template-columns: minmax(300px, 1.32fr) minmax(620px, 2.1fr) 58px;
@@ -1265,7 +1335,89 @@ select:focus {
 	transform: none;
 }
 
+.recruitment-card-shell {
+	position: relative;
+	isolation: isolate;
+}
+
+.favorite-reveal-button {
+	position: absolute;
+	left: 0;
+	top: 50%;
+	z-index: 0;
+	display: inline-grid;
+	place-items: center;
+	width: 42px;
+	height: 54px;
+	padding: 0 16px 0 0;
+	border: 1px solid rgba(180, 83, 9, 0.34);
+	border-right: 0;
+	border-radius: 8px 0 0 8px;
+	background: #ffffff;
+	color: #f59e0b;
+	cursor: pointer;
+	box-shadow: 0 8px 18px rgba(180, 83, 9, 0.12);
+	opacity: 0;
+	transform: translate(14px, -50%);
+	transition: opacity 0.16s ease, transform 0.18s ease, background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.favorite-reveal-button svg {
+	width: 17px;
+	height: 17px;
+	fill: currentColor;
+	stroke: currentColor;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.favorite-reveal-button:hover,
+.favorite-reveal-button:focus-visible {
+	background: #fffbeb;
+	color: #d97706;
+}
+
+.favorite-reveal-button:focus-visible {
+	outline: 3px solid rgba(250, 204, 21, 0.32);
+	outline-offset: 2px;
+}
+
+.recruitment-card-shell:hover .favorite-reveal-button,
+.recruitment-card-shell:focus-within .favorite-reveal-button {
+	opacity: 1;
+	transform: translate(-28px, -50%);
+}
+
+.recruitment-card-shell.is-favorite .favorite-reveal-button {
+	opacity: 1;
+	border-color: rgba(245, 158, 11, 0.3);
+	background: #f59e0b;
+	color: #ffffff;
+	box-shadow: 0 10px 22px rgba(245, 158, 11, 0.18);
+	transform: translate(-16px, -50%);
+}
+
+.recruitment-card-shell.is-favorite .favorite-reveal-button svg {
+	opacity: 0;
+	transition: opacity 0.12s ease;
+}
+
+.recruitment-card-shell.is-favorite .favorite-reveal-button:hover,
+.recruitment-card-shell.is-favorite .favorite-reveal-button:focus-visible {
+	background: #d97706;
+	color: #ffffff;
+	transform: translate(-28px, -50%);
+}
+
+.recruitment-card-shell.is-favorite .favorite-reveal-button:hover svg,
+.recruitment-card-shell.is-favorite .favorite-reveal-button:focus-visible svg {
+	opacity: 1;
+}
+
 .recruitment-card {
+	position: relative;
+	z-index: 1;
 	display: grid;
 	grid-template-columns: minmax(300px, 1.32fr) minmax(620px, 2.1fr) 58px;
 	align-items: center;
@@ -1275,6 +1427,7 @@ select:focus {
 	background: var(--panel-strong);
 	border: 1px solid rgba(23, 32, 51, 0.08);
 	box-shadow: 0 8px 18px rgba(23, 32, 51, 0.06);
+	transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
 .card-top {

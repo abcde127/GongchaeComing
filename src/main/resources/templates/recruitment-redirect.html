@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>공고 원문 이동 중 | Gongchae Coming</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
+	<link rel="stylesheet" th:href="@{/css/recruitment-redirect.css}">
+</head>
+<body>
+<main class="redirect-shell" th:data-recruitment-id="${recruitmentId}">
+	<section class="redirect-panel" aria-labelledby="redirectTitle">
+		<a class="brand" href="/recruitments">
+			<span class="brand-mark">G</span>
+			<span>Gongchae Coming</span>
+		</a>
+
+		<div class="redirect-loader" id="redirectLoader" aria-hidden="true"></div>
+		<p class="eyebrow">Opening recruitment</p>
+		<h1 id="redirectTitle">공고 원문으로 이동 중입니다</h1>
+		<p class="redirect-copy" id="redirectCopy">잠시만 기다려주세요. 원문 링크를 확인하고 있습니다.</p>
+
+		<div class="redirect-actions">
+			<button type="button" class="primary-button" id="retryRedirectButton" hidden>다시 시도</button>
+			<a class="secondary-link" href="/recruitments">채용 목록으로 이동</a>
+		</div>
+	</section>
+</main>
+<script th:src="@{/js/recruitment-redirect.js}"></script>
+</body>
+</html>
