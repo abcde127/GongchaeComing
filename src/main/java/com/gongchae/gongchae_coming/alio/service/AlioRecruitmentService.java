@@ -9,7 +9,6 @@ import com.gongchae.gongchae_coming.alio.domain.AlioRecruitment;
 import com.gongchae.gongchae_coming.alio.domain.AlioRecruitmentSyncState;
 import com.gongchae.gongchae_coming.alio.dto.AlioFilterOptionResponse;
 import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentListRequest;
-import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentSyncProgressResponse;
 import com.gongchae.gongchae_coming.alio.exception.AlioApiException;
 import com.gongchae.gongchae_coming.alio.repository.AlioRecruitmentRepository;
 import com.gongchae.gongchae_coming.alio.repository.AlioRecruitmentSyncStateRepository;
@@ -132,37 +131,10 @@ public class AlioRecruitmentService {
 	private final AlioRecruitmentSyncProgressStore syncProgressStore;
 	private final NewRecruitmentNotificationService newRecruitmentNotificationService;
 	private final AtomicBoolean syncInProgress = new AtomicBoolean(false);
-	private final AtomicBoolean syncCancelRequested = new AtomicBoolean(false);
-	private final AtomicBoolean syncPauseRequested = new AtomicBoolean(false);
-	private final Object syncPauseMonitor = new Object();
 	private final ExecutorService syncExecutor = Executors.newSingleThreadExecutor();
 
 	@Transactional
 	public JsonNode getRecruitments(AlioRecruitmentListRequest request) {
-		return getRecruitments(request, false);
-	}
-
-	@Transactional
-	public JsonNode getRecruitments(AlioRecruitmentListRequest request, boolean refresh) {
-		return getRecruitments(request, refresh, false, null);
-	}
-
-	@Transactional
-	public JsonNode getRecruitments(AlioRecruitmentListRequest request, boolean refresh, String progressKey) {
-		return getRecruitments(request, refresh, false, progressKey);
-	}
-
-	@Transactional
-	public JsonNode getRecruitments(
-		AlioRecruitmentListRequest request,
-		boolean refresh,
-		boolean resume,
-		String progressKey
-	) {
-		if (refresh) {
-			startBackgroundSynchronization(request, resume);
-		}
-
 		ObjectNode response = buildResponseFromCachedRecruitments(request);
 		filterRecruitmentItems(response, request);
 		sortRecruitmentItems(response, request.resolvedSortBy(), request.resolvedSortDirection());
@@ -171,21 +143,14 @@ public class AlioRecruitmentService {
 	}
 
 	public boolean startBackgroundSynchronization(AlioRecruitmentListRequest request) {
-		return startBackgroundSynchronization(request, false);
-	}
-
-	public boolean startBackgroundSynchronization(AlioRecruitmentListRequest request, boolean resume) {
 		if (!syncInProgress.compareAndSet(false, true)) {
 			return false;
 		}
-		syncCancelRequested.set(false);
-		syncPauseRequested.set(false);
-		AlioRecruitmentSyncProgressResponse previousProgress = syncProgressStore.get();
 		syncProgressStore.start();
 
 		syncExecutor.submit(() -> {
 			try {
-				synchronizeRecruitments(request, resume, previousProgress);
+				synchronizeRecruitments(request);
 			} catch (Exception exception) {
 				if (!"FAILED".equals(syncProgressStore.get().status())) {
 					syncProgressStore.fail(
@@ -205,64 +170,23 @@ public class AlioRecruitmentService {
 		return true;
 	}
 
-	public boolean cancelBackgroundSynchronization() {
-		if (!syncInProgress.get()) {
-			return false;
-		}
-		syncCancelRequested.set(true);
-		syncPauseRequested.set(false);
-		syncProgressStore.canceling();
-		synchronized (syncPauseMonitor) {
-			syncPauseMonitor.notifyAll();
-		}
-		return true;
-	}
-
-	public boolean pauseBackgroundSynchronization() {
-		if (!syncInProgress.get()) {
-			return false;
-		}
-		syncPauseRequested.set(true);
-		syncProgressStore.paused();
-		return true;
-	}
-
-	public boolean resumePausedSynchronization() {
-		if (!syncInProgress.get() || !syncPauseRequested.get()) {
-			return false;
-		}
-		syncPauseRequested.set(false);
-		syncProgressStore.resumed();
-		synchronized (syncPauseMonitor) {
-			syncPauseMonitor.notifyAll();
-		}
-		return true;
-	}
-
-	private void synchronizeRecruitments(
-		AlioRecruitmentListRequest request,
-		boolean resume,
-		AlioRecruitmentSyncProgressResponse previousProgress
-	) {
+	private void synchronizeRecruitments(AlioRecruitmentListRequest request) {
 		LocalDateTime now = LocalDateTime.now();
 		AlioRecruitmentListRequest syncRequest = request.withoutSearchAndFilters();
-		int pageNo = resume && previousProgress.failedPage() > 0 ? previousProgress.failedPage() : 1;
-		int fetchedCount = resume ? previousProgress.fetchedCount() : 0;
+		int pageNo = 1;
+		int newRecruitmentCount = 0;
+		int syncedRecruitmentCount = 0;
 		Integer totalCount = null;
-		if (resume && previousProgress.totalCount() > 0) {
-			totalCount = previousProgress.totalCount();
-		}
-		int totalPages = resume ? previousProgress.totalPages() : 0;
+		int totalPages = 0;
 		List<AlioRecruitment> newRecruitments = new ArrayList<>();
+		Long latestStoredRecruitmentSequence = alioRecruitmentRepository.findMaxRecrutPblntSn().orElse(null);
+		long storedRecruitmentCount = alioRecruitmentRepository.count();
+		LocalDate synchronizationDate = now.toLocalDate();
+		boolean stopSynchronization = false;
 
-		while (totalCount == null || fetchedCount < totalCount) {
-			waitWhileSynchronizationPaused();
-			if (syncCancelRequested.get()) {
-				syncProgressStore.canceled(pageNo - 1, totalPages, fetchedCount, totalCount == null ? 0 : totalCount);
-				return;
-			}
+		while (!stopSynchronization && (totalCount == null || pageNo <= totalPages)) {
 			AlioRecruitmentListRequest pageRequest = syncRequest.withPage(pageNo, SYNC_PAGE_SIZE);
-			JsonNode response = fetchRecruitmentsOrFail(pageRequest, pageNo, totalPages, fetchedCount, totalCount);
+			JsonNode response = fetchRecruitmentsOrFail(pageRequest, pageNo, totalPages, syncedRecruitmentCount, totalCount);
 
 			ArrayNode items = findRecruitmentItems(response);
 			if (items == null || items.isEmpty()) {
@@ -270,68 +194,52 @@ public class AlioRecruitmentService {
 			}
 
 			totalCount = extractTotalCount(response);
+			if (totalCount != null) {
+				int expectedNewRecruitmentCount = Math.max(0, totalCount - saturatedInt(storedRecruitmentCount));
+				totalPages = Math.max(1, (int) Math.ceil((double) expectedNewRecruitmentCount / SYNC_PAGE_SIZE));
+			}
 			List<JsonNode> pageItems = new ArrayList<>();
 			items.forEach(pageItems::add);
-			newRecruitments.addAll(upsertRecruitments(pageItems, now));
-			fetchedCount += pageItems.size();
-			totalPages = totalCount == null
-				? Math.max(totalPages, pageNo + (items.size() == SYNC_PAGE_SIZE ? 1 : 0))
-				: Math.max(1, (int) Math.ceil((double) totalCount / SYNC_PAGE_SIZE));
-			syncProgressStore.update(pageNo, totalPages, fetchedCount, totalCount == null ? 0 : totalCount);
-			if (syncCancelRequested.get()) {
-				syncProgressStore.canceled(pageNo, totalPages, fetchedCount, totalCount == null ? 0 : totalCount);
-				return;
+			List<JsonNode> newPageItems = new ArrayList<>();
+			for (JsonNode item : pageItems) {
+				if (shouldStopSynchronization(item, latestStoredRecruitmentSequence, synchronizationDate)) {
+					stopSynchronization = true;
+					break;
+				}
+				newPageItems.add(item);
 			}
-			waitWhileSynchronizationPaused();
-			if (syncCancelRequested.get()) {
-				syncProgressStore.canceled(pageNo, totalPages, fetchedCount, totalCount == null ? 0 : totalCount);
-				return;
+			newRecruitments.addAll(upsertRecruitments(newPageItems, now));
+			newRecruitmentCount += newPageItems.size();
+			if (totalCount == null) {
+				totalPages = Math.max(totalPages, pageNo + (items.size() == SYNC_PAGE_SIZE ? 1 : 0));
+				syncedRecruitmentCount = newRecruitmentCount;
+			} else {
+				syncedRecruitmentCount = Math.min(totalCount, saturatedInt(storedRecruitmentCount) + newRecruitmentCount);
 			}
+			syncProgressStore.update(
+				Math.min(pageNo, totalPages),
+				totalPages,
+				syncedRecruitmentCount,
+				totalCount == null ? syncedRecruitmentCount : totalCount
+			);
 			if (totalCount == null && items.size() < SYNC_PAGE_SIZE) {
+				break;
+			}
+			if (totalCount != null && pageNo >= totalPages) {
 				break;
 			}
 			pageNo++;
 		}
 
 		int completedPages = totalPages == 0 ? 0 : Math.min(pageNo, totalPages);
-		if (totalCount != null && fetchedCount < totalCount) {
-			ObjectNode failureResponse = OBJECT_MAPPER.createObjectNode();
-			failureResponse.put("message", "API totalCount보다 적은 데이터만 수집된 상태로 갱신이 종료되었습니다.");
-			failureResponse.put("fetchedCount", fetchedCount);
-			failureResponse.put("totalCount", totalCount);
-			syncProgressStore.fail(
-				completedPages,
-				totalPages,
-				fetchedCount,
-				totalCount,
-				"전체 데이터 갱신을 완료하지 못했습니다.",
-				pageNo,
-				failureResponse
-			);
-			return;
-		}
 		syncStateRepository.save(AlioRecruitmentSyncState.global(LocalDateTime.now()));
 		syncProgressStore.complete(
 			completedPages,
 			totalPages,
-			fetchedCount,
-			totalCount == null ? fetchedCount : totalCount
+			totalCount == null ? newRecruitmentCount : Math.min(totalCount, saturatedInt(storedRecruitmentCount) + newRecruitmentCount),
+			totalCount == null ? newRecruitmentCount : totalCount
 		);
 		newRecruitmentNotificationService.sendNewRecruitmentNotifications(newRecruitments);
-	}
-
-	private void waitWhileSynchronizationPaused() {
-		while (syncPauseRequested.get() && !syncCancelRequested.get()) {
-			syncProgressStore.paused();
-			synchronized (syncPauseMonitor) {
-				try {
-					syncPauseMonitor.wait(1000);
-				} catch (InterruptedException exception) {
-					Thread.currentThread().interrupt();
-					syncCancelRequested.set(true);
-				}
-			}
-		}
 	}
 
 	private JsonNode fetchRecruitmentsOrFail(
@@ -390,6 +298,26 @@ public class AlioRecruitmentService {
 		ObjectNode response = OBJECT_MAPPER.createObjectNode();
 		response.put("message", exception.getMessage());
 		return response;
+	}
+
+	private boolean shouldStopSynchronization(
+		JsonNode item,
+		Long latestStoredRecruitmentSequence,
+		LocalDate synchronizationDate
+	) {
+		Long recruitmentSequence = extractRecruitmentSequence(item);
+		if (latestStoredRecruitmentSequence != null
+			&& recruitmentSequence != null
+			&& recruitmentSequence <= latestStoredRecruitmentSequence) {
+			return true;
+		}
+
+		LocalDate deadlineDate = parseDate(item, "pbancEndYmd", "aplyEndYmd", "endDate");
+		return deadlineDate != null && deadlineDate.isBefore(synchronizationDate);
+	}
+
+	private int saturatedInt(long value) {
+		return value > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) value;
 	}
 
 	@PreDestroy
