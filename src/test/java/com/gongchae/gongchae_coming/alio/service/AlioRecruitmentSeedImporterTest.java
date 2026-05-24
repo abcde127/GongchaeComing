@@ -22,14 +22,14 @@ class AlioRecruitmentSeedImporterTest {
 		AlioRecruitmentSeedImporter importer = new AlioRecruitmentSeedImporter(service);
 		setSeedResource(importer, """
 			{
-			  "items": [
-			    {
+			  "items": {
+			    "300658": {
 			      "recrutPblntSn": 300658,
 			      "recrutPbancTtl": "식품안전정보원 개방형 직위 공개 모집",
 			      "pbancBgngYmd": "20260515",
 			      "pbancEndYmd": "20260601"
 			    }
-			  ]
+			  }
 			}
 			""");
 
@@ -42,6 +42,31 @@ class AlioRecruitmentSeedImporterTest {
 		assertThat(itemsCaptor.getValue()).hasSize(1);
 		assertThat(itemsCaptor.getValue().get(0).path("recrutPbancTtl").asText())
 			.isEqualTo("식품안전정보원 개방형 직위 공개 모집");
+	}
+
+	@Test
+	void importSeedRecruitmentsUsesKeyAsRecruitmentSequenceWhenItemOmitsIt() {
+		AlioRecruitmentService service = mock(AlioRecruitmentService.class);
+		AlioRecruitmentSeedImporter importer = new AlioRecruitmentSeedImporter(service);
+		setSeedResource(importer, """
+			{
+			  "items": {
+			    "300658": {
+			      "recrutPbancTtl": "식품안전정보원 개방형 직위 공개 모집",
+			      "pbancBgngYmd": "20260515",
+			      "pbancEndYmd": "20260601"
+			    }
+			  }
+			}
+			""");
+
+		int importedCount = importer.importSeedRecruitments();
+
+		@SuppressWarnings("unchecked")
+		ArgumentCaptor<List<JsonNode>> itemsCaptor = ArgumentCaptor.forClass(List.class);
+		verify(service).importRecruitments(itemsCaptor.capture(), org.mockito.ArgumentMatchers.any());
+		assertThat(importedCount).isEqualTo(1);
+		assertThat(itemsCaptor.getValue().get(0).path("recrutPblntSn").asLong()).isEqualTo(300658);
 	}
 
 	@Test

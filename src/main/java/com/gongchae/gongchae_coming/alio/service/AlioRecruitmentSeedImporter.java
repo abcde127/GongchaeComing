@@ -2,10 +2,13 @@ package com.gongchae.gongchae_coming.alio.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -45,7 +48,13 @@ public class AlioRecruitmentSeedImporter {
 
 	private List<JsonNode> extractItems(JsonNode seed) {
 		JsonNode items = findItems(seed);
-		if (items == null || !items.isArray()) {
+		if (items == null) {
+			return List.of();
+		}
+		if (items.isObject()) {
+			return extractKeyedItems(items);
+		}
+		if (!items.isArray()) {
 			return List.of();
 		}
 
@@ -54,11 +63,32 @@ public class AlioRecruitmentSeedImporter {
 		return result;
 	}
 
+	private List<JsonNode> extractKeyedItems(JsonNode items) {
+		List<JsonNode> result = new ArrayList<>();
+		Iterator<Map.Entry<String, JsonNode>> fields = items.properties().iterator();
+		while (fields.hasNext()) {
+			Map.Entry<String, JsonNode> field = fields.next();
+			JsonNode item = field.getValue();
+			if (!item.isObject()) {
+				continue;
+			}
+			ObjectNode objectItem = ((ObjectNode) item).deepCopy();
+			if (objectItem.path("recrutPblntSn").isMissingNode()) {
+				objectItem.put("recrutPblntSn", field.getKey());
+			}
+			result.add(objectItem);
+		}
+		return result;
+	}
+
 	private JsonNode findItems(JsonNode seed) {
 		if (seed.isArray()) {
 			return seed;
 		}
 		if (seed.path("items").isArray()) {
+			return seed.path("items");
+		}
+		if (seed.path("items").isObject()) {
 			return seed.path("items");
 		}
 		if (seed.path("result").isArray()) {

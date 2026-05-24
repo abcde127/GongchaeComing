@@ -38,11 +38,12 @@ class AlioRecruitmentSeedExporterTest {
 
 		JsonNode seed = OBJECT_MAPPER.readTree(seedPath.toFile());
 		assertThat(exportedCount).isEqualTo(2);
+		assertThat(seed.path("items").isObject()).isTrue();
 		assertThat(seed.path("items")).hasSize(2);
-		assertThat(seed.at("/items/0/recrutPblntSn").asLong()).isEqualTo(101L);
-		assertThat(seed.at("/items/0/recrutPbancTtl").asText()).isEqualTo("신규 공고");
+		assertThat(seed.at("/items/101/recrutPblntSn").asLong()).isEqualTo(101L);
+		assertThat(seed.at("/items/101/recrutPbancTtl").asText()).isEqualTo("신규 공고");
 		assertThat(seed.path("fetchedAt").isMissingNode()).isTrue();
-		assertThat(seed.at("/items/0/fetchedAt").isMissingNode()).isTrue();
+		assertThat(seed.at("/items/101/fetchedAt").isMissingNode()).isTrue();
 	}
 
 	private AlioRecruitment recruitment(Long sequence, String title) {

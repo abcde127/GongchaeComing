@@ -7,3 +7,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
+app:
+  alio:
+    recruitment-seed-location: file:build/test-seed/input-alio-recruitments.json
+    recruitment-seed-output-path: build/test-seed/alio-recruitments.json

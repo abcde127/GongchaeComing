@@ -2,7 +2,6 @@ package com.gongchae.gongchae_coming.alio.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.gongchae.gongchae_coming.alio.domain.AlioRecruitment;
 import com.gongchae.gongchae_coming.alio.repository.AlioRecruitmentRepository;
@@ -63,11 +62,15 @@ public class AlioRecruitmentSeedExporter {
 
 	private ObjectNode buildSeedJson(List<AlioRecruitment> recruitments) {
 		ObjectNode root = OBJECT_MAPPER.createObjectNode();
-		ArrayNode items = root.putArray("items");
+		ObjectNode items = root.putObject("items");
 		recruitments.forEach(recruitment -> {
+			Long recruitmentSequence = recruitment.getRecrutPblntSn();
+			if (recruitmentSequence == null) {
+				return;
+			}
 			ObjectNode item = OBJECT_MAPPER.createObjectNode();
 			recruitment.writeTo(item);
-			items.add(item);
+			items.set(String.valueOf(recruitmentSequence), item);
 		});
 		return root;
 	}
