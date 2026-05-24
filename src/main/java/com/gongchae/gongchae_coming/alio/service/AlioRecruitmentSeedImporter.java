@@ -35,7 +35,7 @@ public class AlioRecruitmentSeedImporter {
 			if (items.isEmpty()) {
 				return 0;
 			}
-			alioRecruitmentService.importRecruitments(items, resolveFetchedAt(seed));
+			alioRecruitmentService.importRecruitments(items, LocalDateTime.now());
 			log.info("Imported {} ALIO recruitment seed items.", items.size());
 			return items.size();
 		} catch (IOException exception) {
@@ -68,11 +68,4 @@ public class AlioRecruitmentSeedImporter {
 		return alioItems.isMissingNode() ? null : alioItems;
 	}
 
-	private LocalDateTime resolveFetchedAt(JsonNode seed) {
-		String fetchedAt = seed.path("fetchedAt").asText(null);
-		if (fetchedAt == null || fetchedAt.isBlank()) {
-			return LocalDateTime.now();
-		}
-		return LocalDateTime.parse(fetchedAt);
-	}
 }

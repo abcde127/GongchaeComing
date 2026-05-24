@@ -10,7 +10,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -64,7 +63,6 @@ public class AlioRecruitmentSeedExporter {
 
 	private ObjectNode buildSeedJson(List<AlioRecruitment> recruitments) {
 		ObjectNode root = OBJECT_MAPPER.createObjectNode();
-		root.put("fetchedAt", LocalDateTime.now().toString());
 		ArrayNode items = root.putArray("items");
 		recruitments.forEach(recruitment -> {
 			ObjectNode item = OBJECT_MAPPER.createObjectNode();

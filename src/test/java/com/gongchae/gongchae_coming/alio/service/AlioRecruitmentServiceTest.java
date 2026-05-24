@@ -210,6 +210,32 @@ class AlioRecruitmentServiceTest {
 	}
 
 	@Test
+	void getRecruitmentsUsesLatestRecruitmentCreatedAtWhenSyncStateIsMissing() {
+		AlioRecruitmentClient client = mock(AlioRecruitmentClient.class);
+		AlioRecruitmentRepository recruitmentRepository = mock(AlioRecruitmentRepository.class);
+		AlioRecruitmentSyncStateRepository syncStateRepository = mock(AlioRecruitmentSyncStateRepository.class);
+		AlioRecruitmentService service = new AlioRecruitmentService(
+			client,
+			recruitmentRepository,
+			syncStateRepository,
+			new AlioRecruitmentSyncProgressStore(),
+			mock(NewRecruitmentNotificationService.class),
+			mock(AlioRecruitmentSeedExporter.class)
+		);
+		LocalDateTime latestCreatedAt = LocalDateTime.of(2026, 5, 24, 22, 30);
+		when(recruitmentRepository.findAll()).thenReturn(toRecruitments(createResponse(
+			recruitment("신규 공고", "20260515", "20260601")
+		)));
+		when(syncStateRepository.findById(any())).thenReturn(Optional.empty());
+		when(recruitmentRepository.findLatestCreatedAt()).thenReturn(Optional.of(latestCreatedAt));
+
+		var result = service.getRecruitments(request("REGISTRATION_DATE", "DESC"));
+
+		assertThat(result.path("lastFetchedAt").asText()).isEqualTo("2026-05-24T22:30");
+		assertThat(result.at("/response/body/lastFetchedAt").asText()).isEqualTo("2026-05-24T22:30");
+	}
+
+	@Test
 	void startBackgroundSynchronizationRefreshesFromRootResultArrayWithOneThousandRows() {
 		AlioRecruitmentClient client = mock(AlioRecruitmentClient.class);
 		AlioRecruitmentRepository recruitmentRepository = mock(AlioRecruitmentRepository.class);

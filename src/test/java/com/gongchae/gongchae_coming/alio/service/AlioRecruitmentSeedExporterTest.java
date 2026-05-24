@@ -41,7 +41,8 @@ class AlioRecruitmentSeedExporterTest {
 		assertThat(seed.path("items")).hasSize(2);
 		assertThat(seed.at("/items/0/recrutPblntSn").asLong()).isEqualTo(101L);
 		assertThat(seed.at("/items/0/recrutPbancTtl").asText()).isEqualTo("신규 공고");
-		assertThat(seed.path("fetchedAt").asText()).isNotBlank();
+		assertThat(seed.path("fetchedAt").isMissingNode()).isTrue();
+		assertThat(seed.at("/items/0/fetchedAt").isMissingNode()).isTrue();
 	}
 
 	private AlioRecruitment recruitment(Long sequence, String title) {

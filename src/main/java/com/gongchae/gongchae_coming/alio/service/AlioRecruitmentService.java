@@ -385,6 +385,7 @@ public class AlioRecruitmentService {
 		});
 		LocalDateTime lastFetchedAt = syncStateRepository.findById(AlioRecruitmentSyncState.GLOBAL_ID)
 			.map(AlioRecruitmentSyncState::getLastSucceededAt)
+			.or(() -> alioRecruitmentRepository.findLatestCreatedAt())
 			.orElse(null);
 		if (lastFetchedAt != null) {
 			root.put("lastFetchedAt", lastFetchedAt.toString());

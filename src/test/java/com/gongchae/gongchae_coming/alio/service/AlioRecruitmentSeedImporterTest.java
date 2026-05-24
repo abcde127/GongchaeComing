@@ -2,7 +2,6 @@ package com.gongchae.gongchae_coming.alio.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -23,7 +22,6 @@ class AlioRecruitmentSeedImporterTest {
 		AlioRecruitmentSeedImporter importer = new AlioRecruitmentSeedImporter(service);
 		setSeedResource(importer, """
 			{
-			  "fetchedAt": "2026-05-24T10:30:00",
 			  "items": [
 			    {
 			      "recrutPblntSn": 300658,
@@ -39,13 +37,11 @@ class AlioRecruitmentSeedImporterTest {
 
 		@SuppressWarnings("unchecked")
 		ArgumentCaptor<List<JsonNode>> itemsCaptor = ArgumentCaptor.forClass(List.class);
-		ArgumentCaptor<LocalDateTime> fetchedAtCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
-		verify(service).importRecruitments(itemsCaptor.capture(), fetchedAtCaptor.capture());
+		verify(service).importRecruitments(itemsCaptor.capture(), org.mockito.ArgumentMatchers.any());
 		assertThat(importedCount).isEqualTo(1);
 		assertThat(itemsCaptor.getValue()).hasSize(1);
 		assertThat(itemsCaptor.getValue().get(0).path("recrutPbancTtl").asText())
 			.isEqualTo("식품안전정보원 개방형 직위 공개 모집");
-		assertThat(fetchedAtCaptor.getValue()).isEqualTo(LocalDateTime.of(2026, 5, 24, 10, 30));
 	}
 
 	@Test
