@@ -39,8 +39,11 @@ out/
 # Local secrets
 .env
 
-# Local H2 database files
+# Local database files
 data/
+*.db
 *.mv.db
-*.lock.db
 *.trace.db
+*.lock.db
+*.sqlite
+*.sqlite3
