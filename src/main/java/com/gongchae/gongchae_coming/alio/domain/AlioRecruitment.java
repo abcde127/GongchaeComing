@@ -268,6 +268,10 @@ public class AlioRecruitment {
 		return sourceRecruitmentId;
 	}
 
+	public Long getRecrutPblntSn() {
+		return recrutPblntSn;
+	}
+
 	public String getRecruitmentUrl() {
 		if (StringUtils.hasText(recrutPbancUrl)) {
 			return recrutPbancUrl;
