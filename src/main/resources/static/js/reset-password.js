@@ -7,14 +7,23 @@ const emailError = document.querySelector("#emailError");
 const codeError = document.querySelector("#codeError");
 const newPasswordError = document.querySelector("#newPasswordError");
 const newPasswordConfirmError = document.querySelector("#newPasswordConfirmError");
+const codeHint = document.querySelector("#codeHint");
+const newPasswordGroup = document.querySelector("#newPasswordGroup");
+const newPasswordConfirmGroup = document.querySelector("#newPasswordConfirmGroup");
 const messageBox = document.querySelector("#resetPasswordMessage");
 const requestCodeButton = document.querySelector("#requestCodeButton");
 const verifyCodeButton = document.querySelector("#verifyCodeButton");
 const resetPasswordButton = document.querySelector("#resetPasswordButton");
 const toggleNewPassword = document.querySelector("#toggleNewPassword");
 
+const CODE_TTL_SECONDS = 5 * 60;
+const RESEND_COOLDOWN_SECONDS = 60;
+
 let verifiedEmail = "";
 let verifiedCode = "";
+let codeRequestedEmail = "";
+let codeTimerId = null;
+let resendTimerId = null;
 
 function setMessage(message, type = "error") {
 	messageBox.textContent = message;
@@ -29,6 +38,97 @@ function setLoading(button, loading, text) {
 	}
 }
 
+function formatTime(totalSeconds) {
+	const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
+	const seconds = String(totalSeconds % 60).padStart(2, "0");
+	return `${minutes}:${seconds}`;
+}
+
+function stopCodeTimer() {
+	if (codeTimerId) {
+		window.clearInterval(codeTimerId);
+		codeTimerId = null;
+	}
+}
+
+function stopResendCooldown() {
+	if (resendTimerId) {
+		window.clearInterval(resendTimerId);
+		resendTimerId = null;
+	}
+}
+
+function renderCodeTimer(remainingSeconds) {
+	codeHint.hidden = false;
+	codeHint.innerHTML = `인증번호 유효 시간 <strong class="verification-timer" id="codeTimer">${formatTime(remainingSeconds)}</strong>`;
+}
+
+function expireVerificationCode() {
+	stopCodeTimer();
+	codeRequestedEmail = "";
+	verifiedEmail = "";
+	verifiedCode = "";
+	verifyCodeButton.disabled = true;
+	newPasswordGroup.hidden = true;
+	newPasswordConfirmGroup.hidden = true;
+	resetPasswordButton.hidden = true;
+	codeHint.innerHTML = '인증번호가 만료되었습니다. <strong class="verification-timer">00:00</strong>';
+}
+
+function startCodeTimer() {
+	stopCodeTimer();
+	let remainingSeconds = CODE_TTL_SECONDS;
+	renderCodeTimer(remainingSeconds);
+
+	codeTimerId = window.setInterval(() => {
+		remainingSeconds -= 1;
+		if (remainingSeconds <= 0) {
+			expireVerificationCode();
+			return;
+		}
+		renderCodeTimer(remainingSeconds);
+	}, 1000);
+}
+
+function startResendCooldown() {
+	stopResendCooldown();
+	let remainingSeconds = RESEND_COOLDOWN_SECONDS;
+	requestCodeButton.disabled = true;
+	requestCodeButton.textContent = `재발송 ${remainingSeconds}초`;
+
+	resendTimerId = window.setInterval(() => {
+		remainingSeconds -= 1;
+		if (remainingSeconds <= 0) {
+			stopResendCooldown();
+			requestCodeButton.disabled = false;
+			requestCodeButton.textContent = "인증번호 발송";
+			return;
+		}
+		requestCodeButton.textContent = `재발송 ${remainingSeconds}초`;
+	}, 1000);
+}
+
+function resetVerificationState() {
+	stopCodeTimer();
+	codeRequestedEmail = "";
+	verifiedEmail = "";
+	verifiedCode = "";
+	codeInput.value = "";
+	codeHint.hidden = true;
+	verifyCodeButton.disabled = true;
+	newPasswordGroup.hidden = true;
+	newPasswordConfirmGroup.hidden = true;
+	resetPasswordButton.hidden = true;
+	newPasswordInput.value = "";
+	newPasswordConfirmInput.value = "";
+}
+
+function showPasswordFields() {
+	newPasswordGroup.hidden = false;
+	newPasswordConfirmGroup.hidden = false;
+	resetPasswordButton.hidden = false;
+}
+
 function clearErrors() {
 	emailError.textContent = "";
 	codeError.textContent = "";
@@ -40,11 +140,11 @@ function clearErrors() {
 function validateEmail() {
 	const email = emailInput.value.trim();
 	if (!email) {
-		emailError.textContent = "이메일을 입력해주세요.";
+		emailError.textContent = "아이디를 입력해주세요.";
 		return false;
 	}
 	if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-		emailError.textContent = "올바른 이메일 형식으로 입력해주세요.";
+		emailError.textContent = "올바른 이메일 형식의 아이디를 입력해주세요.";
 		return false;
 	}
 	return true;
@@ -100,12 +200,14 @@ async function requestCode() {
 		return;
 	}
 
+	let requestSucceeded = false;
 	setLoading(requestCodeButton, true, "발송 중");
 	try {
+		const email = emailInput.value.trim();
 		const response = await fetch("/api/members/password-reset-verifications", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ email: emailInput.value.trim() })
+			body: JSON.stringify({ email })
 		});
 
 		if (!response.ok) {
@@ -114,17 +216,38 @@ async function requestCode() {
 
 		verifiedEmail = "";
 		verifiedCode = "";
-		setMessage("가입 이메일이라면 인증번호가 발송됩니다.", "success");
+		codeInput.value = "";
+		codeRequestedEmail = email;
+		codeHint.hidden = false;
+		verifyCodeButton.disabled = false;
+		newPasswordGroup.hidden = true;
+		newPasswordConfirmGroup.hidden = true;
+		resetPasswordButton.hidden = true;
+		startCodeTimer();
+		requestSucceeded = true;
+		setMessage("인증번호 발송 요청이 접수되었습니다. 메일함을 확인해주세요.", "success");
 	} catch (error) {
 		setMessage(translateServerMessage(error.message));
 	} finally {
-		setLoading(requestCodeButton, false, "인증번호");
+		if (requestSucceeded) {
+			startResendCooldown();
+		} else {
+			setLoading(requestCodeButton, false, "인증번호 발송");
+		}
 	}
 }
 
 async function verifyCode() {
 	clearErrors();
+	if (!codeRequestedEmail) {
+		codeError.textContent = "인증번호 발송을 먼저 완료해주세요.";
+		return;
+	}
 	if (!validateEmail() || !validateCode()) {
+		return;
+	}
+	if (codeRequestedEmail !== emailInput.value.trim()) {
+		codeError.textContent = "인증번호를 발송한 이메일과 일치하지 않습니다.";
 		return;
 	}
 
@@ -144,6 +267,7 @@ async function verifyCode() {
 
 		verifiedEmail = email;
 		verifiedCode = code;
+		showPasswordFields();
 		setMessage("인증번호가 확인되었습니다.", "success");
 		newPasswordInput.focus();
 	} catch (error) {
@@ -190,6 +314,11 @@ async function resetPassword(event) {
 			window.location.href = "/login";
 		}, 1200);
 	} catch (error) {
+		if (error.message === "new password must be different from current password") {
+			newPasswordError.textContent = "기존 비밀번호와 다른 비밀번호를 입력해주세요.";
+			newPasswordInput.focus();
+			return;
+		}
 		setMessage(translateServerMessage(error.message));
 	} finally {
 		setLoading(resetPasswordButton, false, "비밀번호 변경");
@@ -199,8 +328,7 @@ async function resetPassword(event) {
 function translateServerMessage(message) {
 	const messages = {
 		"verification code can be requested once per minute": "인증번호는 1분에 한 번만 요청할 수 있습니다.",
-		"verification code is invalid or expired": "인증번호가 올바르지 않거나 만료되었습니다.",
-		"new password must be different from current password": "기존 비밀번호와 다른 비밀번호를 입력해주세요."
+		"verification code is invalid or expired": "인증번호가 올바르지 않거나 만료되었습니다."
 	};
 	return messages[message] || message || "요청을 처리하지 못했습니다.";
 }
@@ -219,13 +347,15 @@ toggleNewPassword.addEventListener("click", () => {
 });
 
 emailInput.addEventListener("input", () => {
-	verifiedEmail = "";
-	verifiedCode = "";
+	resetVerificationState();
 });
 codeInput.addEventListener("input", () => {
 	codeInput.value = codeInput.value.replace(/\D/g, "").slice(0, 6);
 	verifiedEmail = "";
 	verifiedCode = "";
+	newPasswordGroup.hidden = true;
+	newPasswordConfirmGroup.hidden = true;
+	resetPasswordButton.hidden = true;
 });
 requestCodeButton.addEventListener("click", requestCode);
 verifyCodeButton.addEventListener("click", verifyCode);

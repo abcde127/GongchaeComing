@@ -289,6 +289,10 @@ input:focus {
 	gap: 8px;
 }
 
+.reset-password-page .input-action-row {
+	grid-template-columns: minmax(0, 1fr) 124px;
+}
+
 .password-field {
 	position: relative;
 }
@@ -363,6 +367,11 @@ input:focus {
 	color: var(--muted);
 	font-size: 0.82rem;
 	line-height: 1.5;
+}
+
+.verification-timer {
+	color: var(--accent);
+	font-weight: 800;
 }
 
 .alert[data-type="success"] {
