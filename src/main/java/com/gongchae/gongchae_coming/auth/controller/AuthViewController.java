@@ -23,7 +23,12 @@ public class AuthViewController {
 
 	@GetMapping("/find-password")
 	public String findPassword() {
-		return "find-password";
+		return "redirect:/reset-password";
+	}
+
+	@GetMapping("/reset-password")
+	public String resetPassword() {
+		return "reset-password";
 	}
 
 	@GetMapping("/mypage")

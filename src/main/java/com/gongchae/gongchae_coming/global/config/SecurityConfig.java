@@ -20,6 +20,7 @@ public class SecurityConfig {
 					"/",
 					"/login",
 					"/find-password",
+					"/reset-password",
 					"/recruitments",
 					"/recruitments/*/redirect",
 					"/signup",
