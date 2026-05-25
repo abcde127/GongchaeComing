@@ -199,20 +199,47 @@ function renderRegionDetailStatistic(items) {
 
 function renderPeriodStatistic(items) {
 	regionDetailStats.replaceChildren();
-	regionDetailStats.appendChild(createStatisticGroup("년도별 공고 수", yearlyCountsFromMonthly(items), "year"));
-	regionDetailStats.appendChild(createStatisticGroup("최근 12개월 공고 수", latestItems(items, 12), "yearMonth"));
+	regionDetailStats.appendChild(createStatisticGroup("년도별 공고 수", yearlyCountsFromMonthly(items), "year", "yearly"));
+	regionDetailStats.appendChild(createStatisticGroup("최근 12개월 공고 수", latestItems(items, 12), "yearMonth", "monthly"));
 }
 
-function createStatisticGroup(title, items, labelKey) {
+function createStatisticGroup(title, items, labelKey, variant) {
 	const group = document.createElement("section");
 	group.className = "statistic-group";
 	const heading = document.createElement("h4");
 	heading.textContent = title;
 	const list = document.createElement("div");
-	list.className = "bar-list statistic-group-list";
+	list.className = `column-chart statistic-group-list column-chart-${variant}`;
 	group.append(heading, list);
-	renderBarList(list, items, labelKey);
+	renderColumnChart(list, items, labelKey);
 	return group;
+}
+
+function renderColumnChart(container, items, labelKey) {
+	container.replaceChildren();
+	if (!items.length) {
+		const empty = document.createElement("p");
+		empty.className = "empty-note";
+		empty.textContent = "표시할 통계가 없습니다.";
+		container.appendChild(empty);
+		return;
+	}
+
+	const maxCount = Math.max(...items.map((item) => item.count || 0), 1);
+	items.forEach((item) => {
+		const value = item.count || 0;
+		const percent = Math.max(6, Math.round((value / maxCount) * 100));
+		const column = document.createElement("div");
+		column.className = "column-item";
+		column.innerHTML = `
+			<strong class="column-value">${formatNumber(value)}</strong>
+			<div class="column-bar-wrap" aria-hidden="true">
+				<span class="column-bar" style="height: ${percent}%"></span>
+			</div>
+			<span class="column-label">${escapeHtml(item[labelKey] || "-")}</span>
+		`;
+		container.appendChild(column);
+	});
 }
 
 function yearlyCountsFromMonthly(items) {
