@@ -47,7 +47,11 @@ public interface AlioRecruitmentRepository extends JpaRepository<AlioRecruitment
 			recruitment.pblntInstCd as pblntInstCd,
 			recruitment.instNm as instNm,
 			recruitment.ncsCdLst as ncsCdLst,
-			recruitment.ncsCdNmLst as ncsCdNmLst
+			recruitment.ncsCdNmLst as ncsCdNmLst,
+			recruitment.recrutSe as recrutSe,
+			recruitment.recrutSeNm as recrutSeNm,
+			recruitment.hireTypeLst as hireTypeLst,
+			recruitment.hireTypeNmLst as hireTypeNmLst
 		from AlioRecruitment recruitment
 		""")
 	List<AlioRecruitmentStatisticsRow> findStatisticsRows();

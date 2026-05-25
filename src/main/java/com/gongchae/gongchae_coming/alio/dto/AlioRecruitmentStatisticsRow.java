@@ -17,4 +17,12 @@ public interface AlioRecruitmentStatisticsRow {
 	String getNcsCdLst();
 
 	String getNcsCdNmLst();
+
+	String getRecrutSe();
+
+	String getRecrutSeNm();
+
+	String getHireTypeLst();
+
+	String getHireTypeNmLst();
 }

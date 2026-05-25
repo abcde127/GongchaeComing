@@ -340,6 +340,10 @@ class AlioRecruitmentServiceTest {
 		seoul.put("instNm", "서울기관");
 		seoul.put("ncsCdLst", "R600001,R600002");
 		seoul.put("ncsCdNmLst", "사업관리,경영.회계.사무");
+		seoul.put("recrutSe", "R2030");
+		seoul.put("recrutSeNm", "신입+경력");
+		seoul.put("hireTypeLst", "R1010,R1040");
+		seoul.put("hireTypeNmLst", "정규직,비정규직");
 		ObjectNode busan = recruitment("부산 공고", "2025-03-01", "2025-03-20");
 		busan.put("workRgnLst", "R3014");
 		busan.put("workRgnNmLst", "부산");
@@ -347,6 +351,10 @@ class AlioRecruitmentServiceTest {
 		busan.put("instNm", "부산기관");
 		busan.put("ncsCdLst", "R600003");
 		busan.put("ncsCdNmLst", "금융.보험");
+		busan.put("recrutSe", "R2020");
+		busan.put("recrutSeNm", "경력");
+		busan.put("hireTypeLst", "R1030");
+		busan.put("hireTypeNmLst", "무기계약직");
 
 		when(recruitmentRepository.findStatisticsRows()).thenReturn(toStatisticsRows(createResponse(seoul, busan)));
 
@@ -362,6 +370,15 @@ class AlioRecruitmentServiceTest {
 		assertThat(service.getRecruitmentCompanyCounts("R3010"))
 			.extracting("label", "count")
 			.containsExactly(org.assertj.core.groups.Tuple.tuple("서울기관", 1L));
+		assertThat(service.getRecruitmentCategoryCounts("R3010"))
+			.extracting("label", "count")
+			.containsExactly(org.assertj.core.groups.Tuple.tuple("신입+경력", 1L));
+		assertThat(service.getRecruitmentHireTypeCounts("R3010"))
+			.extracting("label", "count")
+			.contains(
+				org.assertj.core.groups.Tuple.tuple("정규직", 1L),
+				org.assertj.core.groups.Tuple.tuple("비정규직", 1L)
+			);
 	}
 
 	@Test
@@ -686,6 +703,26 @@ class AlioRecruitmentServiceTest {
 					@Override
 					public String getNcsCdNmLst() {
 						return item.path("ncsCdNmLst").asText(null);
+					}
+
+					@Override
+					public String getRecrutSe() {
+						return item.path("recrutSe").asText(null);
+					}
+
+					@Override
+					public String getRecrutSeNm() {
+						return item.path("recrutSeNm").asText(null);
+					}
+
+					@Override
+					public String getHireTypeLst() {
+						return item.path("hireTypeLst").asText(null);
+					}
+
+					@Override
+					public String getHireTypeNmLst() {
+						return item.path("hireTypeNmLst").asText(null);
 					}
 				};
 			})

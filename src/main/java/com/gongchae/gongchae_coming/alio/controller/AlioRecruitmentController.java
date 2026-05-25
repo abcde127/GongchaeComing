@@ -67,6 +67,20 @@ public class AlioRecruitmentController {
 		return alioRecruitmentService.getRecruitmentCompanyCounts(regionCode);
 	}
 
+	@GetMapping("/statistics/recruitment-category-counts")
+	public java.util.List<AlioRecruitmentStatisticsResponse.CategoryCount> getRecruitmentCategoryCounts(
+		@RequestParam(required = false) String regionCode
+	) {
+		return alioRecruitmentService.getRecruitmentCategoryCounts(regionCode);
+	}
+
+	@GetMapping("/statistics/hire-type-counts")
+	public java.util.List<AlioRecruitmentStatisticsResponse.CategoryCount> getRecruitmentHireTypeCounts(
+		@RequestParam(required = false) String regionCode
+	) {
+		return alioRecruitmentService.getRecruitmentHireTypeCounts(regionCode);
+	}
+
 	@GetMapping("/statistics/region-counts")
 	public java.util.List<AlioRecruitmentStatisticsResponse.RegionCount> getRecruitmentRegionCounts() {
 		return alioRecruitmentService.getRecruitmentRegionCounts();

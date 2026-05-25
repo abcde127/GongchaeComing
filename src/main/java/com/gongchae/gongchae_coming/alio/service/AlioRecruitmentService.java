@@ -206,6 +206,16 @@ public class AlioRecruitmentService {
 	}
 
 	@Transactional(readOnly = true)
+	public List<AlioRecruitmentStatisticsResponse.CategoryCount> getRecruitmentCategoryCounts(String regionCode) {
+		return countRecruitmentsByRecruitmentCategory(statisticsRows(regionCode));
+	}
+
+	@Transactional(readOnly = true)
+	public List<AlioRecruitmentStatisticsResponse.CategoryCount> getRecruitmentHireTypeCounts(String regionCode) {
+		return countRecruitmentsByHireType(statisticsRows(regionCode));
+	}
+
+	@Transactional(readOnly = true)
 	public List<AlioRecruitmentStatisticsResponse.RegionCount> getRecruitmentRegionCounts() {
 		return countRecruitmentsByRegion(alioRecruitmentRepository.findStatisticsRows());
 	}
@@ -553,6 +563,30 @@ public class AlioRecruitmentService {
 		return categoryCounts(companyCounts);
 	}
 
+	private List<AlioRecruitmentStatisticsResponse.CategoryCount> countRecruitmentsByRecruitmentCategory(
+		List<AlioRecruitmentStatisticsRow> recruitments
+	) {
+		Map<String, CategoryAccumulator> recruitmentCategoryCounts = new HashMap<>();
+		recruitments.forEach(recruitment -> addCategoryCounts(
+			recruitmentCategoryCounts,
+			splitCsv(recruitment.getRecrutSe()),
+			splitCsv(recruitment.getRecrutSeNm())
+		));
+		return categoryCounts(recruitmentCategoryCounts);
+	}
+
+	private List<AlioRecruitmentStatisticsResponse.CategoryCount> countRecruitmentsByHireType(
+		List<AlioRecruitmentStatisticsRow> recruitments
+	) {
+		Map<String, CategoryAccumulator> hireTypeCounts = new HashMap<>();
+		recruitments.forEach(recruitment -> addCategoryCounts(
+			hireTypeCounts,
+			splitCsv(recruitment.getHireTypeLst()),
+			splitCsv(recruitment.getHireTypeNmLst())
+		));
+		return categoryCounts(hireTypeCounts);
+	}
+
 	private List<AlioRecruitmentStatisticsResponse.RegionCount> countRecruitmentsByRegion(
 		List<AlioRecruitmentStatisticsRow> recruitments
 	) {
@@ -680,8 +714,12 @@ public class AlioRecruitmentService {
 		return List.of(value.split(","))
 			.stream()
 			.map(String::trim)
-			.filter(StringUtils::hasText)
+			.filter(this::hasMeaningfulText)
 			.toList();
+	}
+
+	private boolean hasMeaningfulText(String value) {
+		return StringUtils.hasText(value) && !"null".equalsIgnoreCase(value);
 	}
 
 	private String valueAt(List<String> values, int index) {

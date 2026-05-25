@@ -9,6 +9,11 @@ const regionDetailStats = document.querySelector("#regionDetailStats");
 const statTabs = document.querySelectorAll("[data-stat-tab]");
 const revealElements = document.querySelectorAll(".reveal-on-scroll");
 const SUMMARY_ANIMATION_DURATION_MS = 900;
+const RECRUITMENT_CATEGORY_DISPLAY_OPTIONS = [
+	{ code: "R2010", label: "신입", sourceCodes: ["R2010", "R2030"] },
+	{ code: "R2020", label: "경력", sourceCodes: ["R2020", "R2030"] },
+	{ code: "R2040", label: "외국인", sourceCodes: ["R2040"] }
+];
 const WORK_REGION_OPTIONS = [
 	{ code: "ALL", label: "전국" },
 	{ code: "R3010", label: "서울" },
@@ -238,6 +243,12 @@ function statisticEndpoint(tab) {
 	if (tab === "company") {
 		return "/api/recruitments/alio/statistics/company-counts";
 	}
+	if (tab === "recruitmentCategory") {
+		return "/api/recruitments/alio/statistics/recruitment-category-counts";
+	}
+	if (tab === "hireType") {
+		return "/api/recruitments/alio/statistics/hire-type-counts";
+	}
 	return "/api/recruitments/alio/statistics/monthly-start-counts";
 }
 
@@ -247,7 +258,20 @@ function renderRegionDetailStatistic(items) {
 		renderPeriodStatistic(items);
 		return;
 	}
+	if (activeDetailTab === "recruitmentCategory") {
+		renderBarList(regionDetailStats, recruitmentCategoryDisplayCounts(items), "label");
+		return;
+	}
 	renderBarList(regionDetailStats, items.slice(0, 12), "label");
+}
+
+function recruitmentCategoryDisplayCounts(items) {
+	const countsByCode = new Map(items.map((item) => [item.code, item.count || 0]));
+	return RECRUITMENT_CATEGORY_DISPLAY_OPTIONS.map((option) => ({
+		code: option.code,
+		label: option.label,
+		count: option.sourceCodes.reduce((sum, code) => sum + (countsByCode.get(code) || 0), 0)
+	}));
 }
 
 function renderPeriodStatistic(items) {
