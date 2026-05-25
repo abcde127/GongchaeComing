@@ -365,22 +365,6 @@ input:focus {
 	color: #166534;
 }
 
-.check-row {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	width: fit-content;
-	color: var(--muted);
-	font-size: 0.92rem;
-	font-weight: 600;
-}
-
-.check-row input {
-	width: 17px;
-	height: 17px;
-	accent-color: var(--accent);
-}
-
 .primary-button {
 	display: inline-flex;
 	align-items: center;
