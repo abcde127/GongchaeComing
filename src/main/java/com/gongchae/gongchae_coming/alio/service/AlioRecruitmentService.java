@@ -176,12 +176,11 @@ public class AlioRecruitmentService {
 
 	@Transactional(readOnly = true)
 	public AlioRecruitmentStatisticsResponse.Summary getRecruitmentStatisticsSummary() {
-		List<AlioRecruitmentStatisticsRow> recruitments = alioRecruitmentRepository.findStatisticsRows();
-		Map<String, Long> statusCounts = countRecruitmentsByStatus(recruitments);
+		String today = todayBasicDate();
 		return new AlioRecruitmentStatisticsResponse.Summary(
-			recruitments.size(),
-			statusCounts.get("scheduled"),
-			statusCounts.get("active"),
+			alioRecruitmentRepository.count(),
+			alioRecruitmentRepository.countScheduledRecruitments(today),
+			alioRecruitmentRepository.countActiveRecruitments(today),
 			resolveLastFetchedAt()
 		);
 	}

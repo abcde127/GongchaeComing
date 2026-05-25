@@ -5,6 +5,7 @@ const statisticsReferenceAt = document.querySelector("#statisticsReferenceAt");
 const statisticsStatus = document.querySelector("#statisticsStatus");
 const monthlyStats = document.querySelector("#monthlyStats");
 const regionStats = document.querySelector("#regionStats");
+const SUMMARY_ANIMATION_DURATION_MS = 900;
 
 loadStatistics();
 
@@ -17,19 +18,44 @@ function loadStatistics() {
 async function loadSummaryStatistics() {
 	try {
 		const summary = await fetchJson("/api/recruitments/alio/statistics/summary");
-		totalRecruitmentCount.textContent = formatNumber(summary.totalCount || 0);
-		scheduledRecruitmentCount.textContent = formatNumber(summary.scheduledCount || 0);
-		activeRecruitmentCount.textContent = formatNumber(summary.activeCount || 0);
+		animateNumber(totalRecruitmentCount, summary.totalCount || 0);
+		animateNumber(scheduledRecruitmentCount, summary.scheduledCount || 0);
+		animateNumber(activeRecruitmentCount, summary.activeCount || 0);
 		statisticsReferenceAt.textContent = summary.referenceAt
 			? `${formatDateTime(summary.referenceAt)} 기준`
 			: "기준 정보 없음";
 	} catch (error) {
-		totalRecruitmentCount.textContent = "-";
-		scheduledRecruitmentCount.textContent = "-";
-		activeRecruitmentCount.textContent = "-";
+		renderSummaryError(totalRecruitmentCount);
+		renderSummaryError(scheduledRecruitmentCount);
+		renderSummaryError(activeRecruitmentCount);
 		statisticsReferenceAt.textContent = "기준 정보 없음";
 		showStatus(error.message || "요약 통계를 불러오지 못했습니다.", true);
 	}
+}
+
+function animateNumber(element, targetValue) {
+	element.classList.remove("is-loading", "is-error");
+	const target = Number.isFinite(Number(targetValue)) ? Number(targetValue) : 0;
+	const startTime = performance.now();
+
+	function update(now) {
+		const progress = Math.min((now - startTime) / SUMMARY_ANIMATION_DURATION_MS, 1);
+		const easedProgress = 1 - Math.pow(1 - progress, 3);
+		element.textContent = formatNumber(Math.round(target * easedProgress));
+		if (progress < 1) {
+			requestAnimationFrame(update);
+			return;
+		}
+		element.textContent = formatNumber(target);
+	}
+
+	requestAnimationFrame(update);
+}
+
+function renderSummaryError(element) {
+	element.classList.remove("is-loading");
+	element.classList.add("is-error");
+	element.textContent = "-";
 }
 
 async function loadMonthlyStatistics() {

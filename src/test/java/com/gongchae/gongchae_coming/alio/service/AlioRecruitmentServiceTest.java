@@ -284,8 +284,39 @@ class AlioRecruitmentServiceTest {
 			.contains(
 				org.assertj.core.groups.Tuple.tuple("서울", 2L),
 				org.assertj.core.groups.Tuple.tuple("경기", 1L),
-				org.assertj.core.groups.Tuple.tuple("세종특별자치시", 1L)
+			org.assertj.core.groups.Tuple.tuple("세종특별자치시", 1L)
 			);
+	}
+
+	@Test
+	void getRecruitmentStatisticsSummaryUsesDedicatedCountQueries() {
+		AlioRecruitmentClient client = mock(AlioRecruitmentClient.class);
+		AlioRecruitmentRepository recruitmentRepository = mock(AlioRecruitmentRepository.class);
+		AlioRecruitmentSyncStateRepository syncStateRepository = mock(AlioRecruitmentSyncStateRepository.class);
+		AlioRecruitmentService service = new AlioRecruitmentService(
+			client,
+			recruitmentRepository,
+			syncStateRepository,
+			mock(PublicInstitutionRepository.class),
+			new AlioRecruitmentSyncProgressStore(),
+			mock(NewRecruitmentNotificationService.class),
+			mock(AlioRecruitmentSeedExporter.class)
+		);
+		when(recruitmentRepository.count()).thenReturn(100L);
+		when(recruitmentRepository.countScheduledRecruitments(any())).thenReturn(7L);
+		when(recruitmentRepository.countActiveRecruitments(any())).thenReturn(23L);
+		when(syncStateRepository.findById(any())).thenReturn(Optional.of(
+			AlioRecruitmentSyncState.global(LocalDateTime.of(2026, 5, 24, 10, 30))
+		));
+
+		var result = service.getRecruitmentStatisticsSummary();
+
+		assertThat(result.totalCount()).isEqualTo(100L);
+		assertThat(result.scheduledCount()).isEqualTo(7L);
+		assertThat(result.activeCount()).isEqualTo(23L);
+		assertThat(result.referenceAt()).isEqualTo("2026-05-24T10:30");
+		verify(recruitmentRepository).countScheduledRecruitments(any());
+		verify(recruitmentRepository).countActiveRecruitments(any());
 	}
 
 	@Test

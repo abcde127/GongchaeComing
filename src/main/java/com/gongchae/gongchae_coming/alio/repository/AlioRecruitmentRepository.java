@@ -9,6 +9,7 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface AlioRecruitmentRepository extends JpaRepository<AlioRecruitment, Long>, JpaSpecificationExecutor<AlioRecruitment> {
 
@@ -21,6 +22,21 @@ public interface AlioRecruitmentRepository extends JpaRepository<AlioRecruitment
 
 	@Query("select max(recruitment.createdAt) from AlioRecruitment recruitment")
 	Optional<LocalDateTime> findLatestCreatedAt();
+
+	@Query("""
+		select count(recruitment)
+		from AlioRecruitment recruitment
+		where function('replace', coalesce(recruitment.pbancBgngYmd, ''), '-', '') > :today
+		""")
+	long countScheduledRecruitments(@Param("today") String today);
+
+	@Query("""
+		select count(recruitment)
+		from AlioRecruitment recruitment
+		where function('replace', coalesce(recruitment.pbancBgngYmd, ''), '-', '') <= :today
+			and function('replace', coalesce(recruitment.pbancEndYmd, ''), '-', '') >= :today
+		""")
+	long countActiveRecruitments(@Param("today") String today);
 
 	@Query("""
 		select

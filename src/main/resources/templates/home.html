@@ -7,7 +7,7 @@
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
-	<link rel="stylesheet" th:href="@{/css/home.css(v=3)}">
+	<link rel="stylesheet" th:href="@{/css/home.css(v=5)}">
 </head>
 <body>
 <div class="page-shell">
@@ -41,15 +41,15 @@
 				<div class="hero-stats" aria-label="공고 요약">
 					<div class="hero-stat">
 						<span class="hero-stat-label">전체 공고</span>
-						<strong id="totalRecruitmentCount">-</strong>
+						<strong id="totalRecruitmentCount" class="is-loading"></strong>
 					</div>
 					<div class="hero-stat hero-stat-scheduled">
 						<span class="hero-stat-label">예정 공고</span>
-						<strong id="scheduledRecruitmentCount">-</strong>
+						<strong id="scheduledRecruitmentCount" class="is-loading"></strong>
 					</div>
 					<div class="hero-stat hero-stat-active">
 						<span class="hero-stat-label">진행중 공고</span>
-						<strong id="activeRecruitmentCount">-</strong>
+						<strong id="activeRecruitmentCount" class="is-loading"></strong>
 					</div>
 					<span class="hero-reference" id="statisticsReferenceAt">기준 확인 중</span>
 				</div>
@@ -97,6 +97,6 @@
 		</section>
 	</main>
 </div>
-<script th:src="@{/js/home.js(v=3)}"></script>
+<script th:src="@{/js/home.js(v=4)}"></script>
 </body>
 </html>
