@@ -5,11 +5,30 @@ const statisticsReferenceAt = document.querySelector("#statisticsReferenceAt");
 const statisticsStatus = document.querySelector("#statisticsStatus");
 const statisticsSection = document.querySelector("#statistics");
 const regionStats = document.querySelector("#regionStats");
-const regionDetailTitle = document.querySelector("#regionDetailTitle");
-const selectedRegionCount = document.querySelector("#selectedRegionCount");
 const regionDetailStats = document.querySelector("#regionDetailStats");
 const statTabs = document.querySelectorAll("[data-stat-tab]");
 const SUMMARY_ANIMATION_DURATION_MS = 900;
+const WORK_REGION_OPTIONS = [
+	{ code: "ALL", label: "전국" },
+	{ code: "R3010", label: "서울" },
+	{ code: "R3011", label: "인천" },
+	{ code: "R3012", label: "대전" },
+	{ code: "R3013", label: "대구" },
+	{ code: "R3014", label: "부산" },
+	{ code: "R3015", label: "광주" },
+	{ code: "R3016", label: "울산" },
+	{ code: "R3017", label: "경기" },
+	{ code: "R3018", label: "강원" },
+	{ code: "R3019", label: "충청남도" },
+	{ code: "R3020", label: "충청북도" },
+	{ code: "R3021", label: "경상북도" },
+	{ code: "R3022", label: "경상남도" },
+	{ code: "R3023", label: "전라남도" },
+	{ code: "R3024", label: "전라북도" },
+	{ code: "R3025", label: "제주" },
+	{ code: "R3026", label: "세종" },
+	{ code: "R3030", label: "해외" }
+];
 let detailStatisticsLoaded = false;
 let selectedRegion = null;
 let activeDetailTab = "period";
@@ -30,6 +49,7 @@ async function loadSummaryStatistics() {
 		animateNumber(totalRecruitmentCount, summary.totalCount || 0);
 		animateNumber(scheduledRecruitmentCount, summary.scheduledCount || 0);
 		animateNumber(activeRecruitmentCount, summary.activeCount || 0);
+		animateRegionCount("ALL", summaryTotalCount);
 		statisticsReferenceAt.textContent = summary.referenceAt
 			? `${formatDateTime(summary.referenceAt)} 기준`
 			: "기준 정보 없음";
@@ -43,7 +63,10 @@ async function loadSummaryStatistics() {
 }
 
 function animateNumber(element, targetValue) {
-	element.classList.remove("is-loading", "is-error");
+	if (!element) {
+		return;
+	}
+	element.classList.remove("is-loading", "is-error", "region-count-skeleton", "skeleton-surface");
 	const target = Number.isFinite(Number(targetValue)) ? Number(targetValue) : 0;
 	const startTime = performance.now();
 
@@ -81,10 +104,7 @@ async function loadRegionStatistics() {
 	renderRegionLoadingState(regionStats);
 	try {
 		const regionCounts = await fetchJson("/api/recruitments/alio/statistics/region-counts");
-		renderRegionButtons([
-			{ code: "ALL", label: "전국", count: summaryTotalCount },
-			...(regionCounts || []).slice(0, 18)
-		]);
+		renderRegionButtons(mergeRegionCounts(regionCounts || []), true);
 	} catch (error) {
 		renderPanelError(regionStats, error.message || "지역별 통계를 불러오지 못했습니다.");
 	}
@@ -118,7 +138,7 @@ async function loadDetailStatistics() {
 	await loadRegionStatistics();
 }
 
-function renderRegionButtons(regions) {
+function renderRegionButtons(regions, animateCounts = false) {
 	regionStats.replaceChildren();
 	regionStats.removeAttribute("aria-busy");
 	if (!regions.length) {
@@ -132,18 +152,19 @@ function renderRegionButtons(regions) {
 		button.dataset.regionCode = region.code;
 		button.innerHTML = `
 			<span>${escapeHtml(region.label || "-")}</span>
-			<strong>${formatOptionalNumber(region.count)}</strong>
+			<strong data-region-count="${escapeHtml(region.code)}">${formatOptionalNumber(region.count)}</strong>
 		`;
 		button.addEventListener("click", () => selectRegion(region));
 		regionStats.appendChild(button);
+		if (animateCounts) {
+			animateNumber(button.querySelector("[data-region-count]"), region.count || 0);
+		}
 	});
-	selectRegion(regions[0]);
+	selectRegion(regions.find((region) => region.code === selectedRegion?.code) || regions[0]);
 }
 
 function selectRegion(region) {
 	selectedRegion = region;
-	regionDetailTitle.textContent = `${region.label} 통계`;
-	selectedRegionCount.textContent = `${formatOptionalNumber(region.count)}개`;
 	document.querySelectorAll(".region-stat-button").forEach((button) => {
 		button.classList.toggle("is-active", button.dataset.regionCode === region.code);
 	});
@@ -240,7 +261,7 @@ function renderColumnChart(container, items, labelKey) {
 		column.innerHTML = `
 			<strong class="column-value">${formatNumber(value)}</strong>
 			<div class="column-bar-wrap" aria-hidden="true">
-				<span class="column-bar" style="height: ${percent}%"></span>
+				<span class="column-bar" style="--bar-height: ${percent}%"></span>
 			</div>
 			<span class="column-label">${escapeHtml(label)}</span>
 		`;
@@ -304,7 +325,7 @@ function renderBarList(container, items, labelKey) {
 				<strong>${formatNumber(item.count || 0)}</strong>
 			</div>
 			<div class="bar-track" aria-hidden="true">
-				<span style="width: ${percent}%"></span>
+				<span style="--bar-width: ${percent}%"></span>
 			</div>
 		`;
 		container.appendChild(row);
@@ -321,15 +342,18 @@ function latestItems(items, limit) {
 function renderRegionLoadingState(container) {
 	container.replaceChildren();
 	container.setAttribute("aria-busy", "true");
-	for (let index = 0; index < 8; index += 1) {
-		const skeleton = document.createElement("div");
-		skeleton.className = "region-stat-skeleton skeleton-surface";
-		skeleton.innerHTML = `
-			<span></span>
-			<strong></strong>
+	WORK_REGION_OPTIONS.forEach((region) => {
+		const button = document.createElement("button");
+		button.type = "button";
+		button.className = "region-stat-button is-loading";
+		button.disabled = true;
+		button.dataset.regionCode = region.code;
+		button.innerHTML = `
+			<span>${escapeHtml(region.label)}</span>
+			<strong class="region-count-skeleton skeleton-surface"></strong>
 		`;
-		container.appendChild(skeleton);
-	}
+		container.appendChild(button);
+	});
 }
 
 function renderStatisticLoadingState(container, tab) {
@@ -372,7 +396,7 @@ function createColumnChartSkeleton(title, count, variant) {
 		column.innerHTML = `
 			<strong class="column-value skeleton-surface"></strong>
 			<div class="column-bar-wrap skeleton-bar-wrap" aria-hidden="true">
-				<span class="column-bar skeleton-surface" style="height: ${height}%"></span>
+				<span class="column-bar skeleton-surface" style="--bar-height: ${height}%"></span>
 			</div>
 			<span class="column-label skeleton-surface"></span>
 		`;
@@ -380,6 +404,23 @@ function createColumnChartSkeleton(title, count, variant) {
 	}
 	group.append(heading, chart);
 	return group;
+}
+
+function mergeRegionCounts(regionCounts) {
+	const countsByCode = new Map(regionCounts.map((region) => [region.code, region.count || 0]));
+	return WORK_REGION_OPTIONS.map((region) => ({
+		...region,
+		count: region.code === "ALL"
+			? summaryTotalCount
+			: countsByCode.get(region.code) || 0
+	}));
+}
+
+function animateRegionCount(regionCode, count) {
+	const target = regionStats?.querySelector(`[data-region-count="${regionCode}"]`);
+	if (target) {
+		animateNumber(target, count || 0);
+	}
 }
 
 function renderPanelError(container, message) {

@@ -511,9 +511,11 @@ button {
 
 .column-bar {
 	display: block;
+	height: var(--bar-height, 0);
 	width: min(100%, 26px);
 	border-radius: 8px 8px 0 0;
 	background: var(--accent);
+	animation: column-bar-fill 0.72s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .column-chart-monthly .column-bar {
@@ -545,6 +547,7 @@ button {
 
 .skeleton-column-item .column-bar {
 	background: #dbe5ef;
+	animation: none;
 }
 
 .skeleton-bar-wrap {
@@ -596,31 +599,11 @@ button {
 	white-space: nowrap;
 }
 
-.region-stat-skeleton {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 14px;
-	min-height: 44px;
-	padding: 10px 12px;
-	border-radius: 8px;
-}
-
-.region-stat-skeleton span,
-.region-stat-skeleton strong {
+.region-count-skeleton {
 	display: block;
-	border-radius: 999px;
-	background: rgba(255, 255, 255, 0.74);
-}
-
-.region-stat-skeleton span {
-	width: 86px;
-	height: 14px;
-}
-
-.region-stat-skeleton strong {
 	width: 42px;
 	height: 18px;
+	border-radius: 999px;
 }
 
 .region-stat-button.is-active span,
@@ -630,24 +613,6 @@ button {
 
 .region-detail-panel {
 	min-height: 460px;
-}
-
-.region-detail-heading {
-	display: flex;
-	align-items: start;
-	justify-content: space-between;
-	gap: 18px;
-}
-
-.region-detail-heading .eyebrow {
-	margin-bottom: 8px;
-	color: var(--accent-strong);
-}
-
-.region-detail-heading strong {
-	color: var(--accent-strong);
-	font-size: 1.35rem;
-	white-space: nowrap;
 }
 
 .stat-tabs {
@@ -734,8 +699,10 @@ button {
 .bar-track span {
 	display: block;
 	height: 100%;
+	width: var(--bar-width, 0);
 	border-radius: inherit;
 	background: var(--accent);
+	animation: horizontal-bar-fill 0.72s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .region-list .bar-track span {
@@ -755,6 +722,29 @@ button {
 @media (prefers-reduced-motion: reduce) {
 	.skeleton-surface::after {
 		animation: none;
+	}
+
+	.column-bar,
+	.bar-track span {
+		animation: none;
+	}
+}
+
+@keyframes column-bar-fill {
+	from {
+		height: 0;
+	}
+	to {
+		height: var(--bar-height, 0);
+	}
+}
+
+@keyframes horizontal-bar-fill {
+	from {
+		width: 0;
+	}
+	to {
+		width: var(--bar-width, 0);
 	}
 }
 

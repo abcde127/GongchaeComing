@@ -7,7 +7,7 @@
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
-	<link rel="stylesheet" th:href="@{/css/home.css(v=10)}">
+	<link rel="stylesheet" th:href="@{/css/home.css(v=11)}">
 </head>
 <body>
 <div class="page-shell">
@@ -86,14 +86,7 @@
 						<div class="region-button-list" id="regionStats"></div>
 					</section>
 
-					<section class="stat-panel region-detail-panel" aria-labelledby="regionDetailTitle">
-						<div class="region-detail-heading">
-							<div>
-								<p class="eyebrow">Regional Statistics</p>
-								<h3 id="regionDetailTitle">지역 통계</h3>
-							</div>
-							<strong id="selectedRegionCount">-</strong>
-						</div>
+					<section class="stat-panel region-detail-panel" aria-label="지역 상세 통계">
 						<div class="stat-tabs" role="tablist" aria-label="지역 통계 종류">
 							<button type="button" class="stat-tab is-active" data-stat-tab="period">기간별</button>
 							<button type="button" class="stat-tab" data-stat-tab="ncs">NCS 직군별</button>
@@ -106,6 +99,6 @@
 		</section>
 	</main>
 </div>
-<script th:src="@{/js/home.js(v=11)}"></script>
+<script th:src="@{/js/home.js(v=12)}"></script>
 </body>
 </html>
