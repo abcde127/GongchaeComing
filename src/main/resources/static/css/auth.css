@@ -105,7 +105,8 @@ a:hover {
 	min-height: 100vh;
 }
 
-.login-page {
+.login-page,
+.signup-page {
 	grid-template-columns: 1fr;
 	min-height: calc(100vh - 72px);
 	background:
@@ -176,7 +177,8 @@ a:hover {
 	padding: 32px 20px;
 }
 
-.login-page .auth-panel {
+.login-page .auth-panel,
+.signup-page .auth-panel {
 	min-height: calc(100vh - 72px);
 	padding: 48px 20px;
 }
@@ -185,7 +187,8 @@ a:hover {
 	width: min(100%, 420px);
 }
 
-.login-page .auth-card {
+.login-page .auth-card,
+.signup-page .auth-card {
 	padding: 36px;
 	border: 1px solid rgba(215, 220, 229, 0.86);
 	border-radius: 8px;
@@ -506,7 +509,8 @@ input:focus {
 		padding-top: 36px;
 	}
 
-	.login-page .auth-panel {
+	.login-page .auth-panel,
+	.signup-page .auth-panel {
 		align-items: center;
 		padding: 32px 20px;
 	}
@@ -525,7 +529,8 @@ input:focus {
 		font-size: 1.7rem;
 	}
 
-	.login-page .auth-card {
+	.login-page .auth-card,
+	.signup-page .auth-card {
 		padding: 28px 22px;
 	}
 
