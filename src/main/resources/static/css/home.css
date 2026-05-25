@@ -473,6 +473,11 @@ button {
 	margin-top: 18px;
 }
 
+.bar-list.is-compact-statistic {
+	gap: 28px;
+	margin-top: 32px;
+}
+
 .statistic-group {
 	display: grid;
 	gap: 12px;

@@ -342,8 +342,8 @@ class AlioRecruitmentServiceTest {
 		seoul.put("ncsCdNmLst", "사업관리,경영.회계.사무");
 		seoul.put("recrutSe", "R2030");
 		seoul.put("recrutSeNm", "신입+경력");
-		seoul.put("hireTypeLst", "R1010,R1040");
-		seoul.put("hireTypeNmLst", "정규직,비정규직");
+		seoul.put("hireTypeLst", "R1010,null,R1040");
+		seoul.put("hireTypeNmLst", "정규직,계약직,비정규직");
 		ObjectNode busan = recruitment("부산 공고", "2025-03-01", "2025-03-20");
 		busan.put("workRgnLst", "R3014");
 		busan.put("workRgnNmLst", "부산");
@@ -377,6 +377,7 @@ class AlioRecruitmentServiceTest {
 			.extracting("label", "count")
 			.contains(
 				org.assertj.core.groups.Tuple.tuple("정규직", 1L),
+				org.assertj.core.groups.Tuple.tuple("계약직", 1L),
 				org.assertj.core.groups.Tuple.tuple("비정규직", 1L)
 			);
 	}

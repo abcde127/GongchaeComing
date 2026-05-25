@@ -39,9 +39,11 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -579,10 +581,11 @@ public class AlioRecruitmentService {
 		List<AlioRecruitmentStatisticsRow> recruitments
 	) {
 		Map<String, CategoryAccumulator> hireTypeCounts = new HashMap<>();
-		recruitments.forEach(recruitment -> addCategoryCounts(
+		recruitments.forEach(recruitment -> addFixedOptionCounts(
 			hireTypeCounts,
 			splitCsv(recruitment.getHireTypeLst()),
-			splitCsv(recruitment.getHireTypeNmLst())
+			splitCsv(recruitment.getHireTypeNmLst()),
+			HIRE_TYPE_FILTER_OPTIONS
 		));
 		return categoryCounts(hireTypeCounts);
 	}
@@ -688,6 +691,35 @@ public class AlioRecruitmentService {
 				? new CategoryAccumulator(code, label, 1)
 				: accumulator.increment()
 		);
+	}
+
+	private void addFixedOptionCounts(
+		Map<String, CategoryAccumulator> categoryCounts,
+		List<String> codes,
+		List<String> labels,
+		List<AlioFilterOptionResponse> options
+	) {
+		Map<String, AlioFilterOptionResponse> optionsByCode = options.stream()
+			.collect(Collectors.toMap(AlioFilterOptionResponse::code, option -> option));
+		Map<String, AlioFilterOptionResponse> optionsByLabel = options.stream()
+			.collect(Collectors.toMap(AlioFilterOptionResponse::name, option -> option));
+		Set<String> matchedCodes = new HashSet<>();
+
+		codes.stream()
+			.map(optionsByCode::get)
+			.filter(Objects::nonNull)
+			.map(AlioFilterOptionResponse::code)
+			.forEach(matchedCodes::add);
+		labels.stream()
+			.map(optionsByLabel::get)
+			.filter(Objects::nonNull)
+			.map(AlioFilterOptionResponse::code)
+			.forEach(matchedCodes::add);
+
+		matchedCodes.forEach(code -> {
+			AlioFilterOptionResponse option = optionsByCode.get(code);
+			addCategoryCount(categoryCounts, option.code(), option.name());
+		});
 	}
 
 	private List<AlioRecruitmentStatisticsResponse.CategoryCount> categoryCounts(

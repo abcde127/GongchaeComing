@@ -254,6 +254,7 @@ function statisticEndpoint(tab) {
 
 function renderRegionDetailStatistic(items) {
 	regionDetailStats.removeAttribute("aria-busy");
+	regionDetailStats.classList.toggle("is-compact-statistic", activeDetailTab === "recruitmentCategory");
 	if (activeDetailTab === "period") {
 		renderPeriodStatistic(items);
 		return;
