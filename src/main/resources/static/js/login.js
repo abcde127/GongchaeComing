@@ -14,6 +14,29 @@ function setMessage(message) {
 	loginMessage.hidden = !message;
 }
 
+function showToast(message) {
+	const toast = document.createElement("div");
+	toast.className = "toast";
+	toast.setAttribute("role", "status");
+	toast.setAttribute("aria-live", "polite");
+	toast.textContent = message;
+	document.body.append(toast);
+
+	window.setTimeout(() => {
+		toast.classList.add("is-hiding");
+	}, 2400);
+
+	window.setTimeout(() => {
+		toast.remove();
+	}, 2800);
+}
+
+function removeQueryParam(name) {
+	const url = new URL(window.location.href);
+	url.searchParams.delete(name);
+	window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+}
+
 function validateLoginForm() {
 	let valid = true;
 	const email = emailInput.value.trim();
@@ -54,7 +77,8 @@ if (params.has("error")) {
 }
 
 if (params.has("logout")) {
-	setMessage("로그아웃되었습니다.");
+	showToast("로그아웃되었습니다.");
+	removeQueryParam("logout");
 }
 
 form.addEventListener("submit", (event) => {
