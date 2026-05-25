@@ -7,7 +7,7 @@
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
-	<link rel="stylesheet" th:href="@{/css/home.css(v=16)}">
+	<link rel="stylesheet" th:href="@{/css/home.css(v=19)}">
 </head>
 <body>
 <div class="page-shell">
@@ -34,23 +34,8 @@
 					<p>공공기관 채용 공고를 한곳에서 확인하고 채용 흐름을 한눈에 파악해보세요.</p>
 					<div class="hero-actions">
 						<a class="primary-action" href="/recruitments">채용공고 보기</a>
-						<a class="secondary-action" href="#statistics">통계 살펴보기</a>
+						<a class="secondary-action" href="/statistics">통계 살펴보기</a>
 					</div>
-				</div>
-				<div class="hero-stats" aria-label="공고 요약">
-					<div class="hero-stat">
-						<span class="hero-stat-label">전체 공고</span>
-						<strong id="totalRecruitmentCount" class="is-loading"></strong>
-					</div>
-					<div class="hero-stat hero-stat-scheduled">
-						<span class="hero-stat-label">예정 공고</span>
-						<strong id="scheduledRecruitmentCount" class="is-loading"></strong>
-					</div>
-					<div class="hero-stat hero-stat-active">
-						<span class="hero-stat-label">진행중 공고</span>
-						<strong id="activeRecruitmentCount" class="is-loading"></strong>
-					</div>
-					<span class="hero-reference" id="statisticsReferenceAt">기준 확인 중</span>
 				</div>
 			</div>
 		</section>
@@ -100,38 +85,30 @@
 						<p>ALIO 공고 데이터를 동기화해 목록과 통계를 같은 기준으로 제공합니다.</p>
 					</article>
 				</div>
-			</div>
-		</section>
-
-		<section class="statistics-section" id="statistics" aria-labelledby="statisticsTitle">
-			<div class="section-inner">
-				<div class="section-heading">
-					<p class="eyebrow">Statistics</p>
-					<h2 id="statisticsTitle">채용공고 통계</h2>
-				</div>
-
-				<div class="status-banner" id="statisticsStatus" hidden></div>
-
-				<div class="region-dashboard" aria-live="polite">
-					<section class="stat-panel region-panel" aria-label="지역별 공고 수">
-						<div class="region-button-list" id="regionStats"></div>
-					</section>
-
-					<section class="stat-panel region-detail-panel" aria-label="지역 상세 통계">
-						<div class="stat-tabs" role="tablist" aria-label="지역 통계 종류">
-							<button type="button" class="stat-tab is-active" data-stat-tab="period">기간별</button>
-							<button type="button" class="stat-tab" data-stat-tab="ncs">NCS 직군별</button>
-							<button type="button" class="stat-tab" data-stat-tab="company">기업별</button>
-							<button type="button" class="stat-tab" data-stat-tab="recruitmentCategory">채용구분별</button>
-							<button type="button" class="stat-tab" data-stat-tab="hireType">고용형태별</button>
+				<section class="landing-status-panel reveal-on-scroll" aria-label="공고 상태별 통계">
+					<div class="landing-status-heading">
+						<p>지금 확인할 수 있는 공공기관 채용 흐름을 숫자로 먼저 살펴보세요.</p>
+						<span id="statisticsReferenceAt">기준 확인 중</span>
+					</div>
+					<div class="status-cards">
+						<div class="status-card">
+							<span>전체 공고</span>
+							<strong id="totalRecruitmentCount" class="is-loading"></strong>
 						</div>
-						<div class="bar-list" id="regionDetailStats"></div>
-					</section>
-				</div>
+						<div class="status-card status-card-scheduled">
+							<span>예정 공고</span>
+							<strong id="scheduledRecruitmentCount" class="is-loading"></strong>
+						</div>
+						<div class="status-card status-card-active">
+							<span>진행중 공고</span>
+							<strong id="activeRecruitmentCount" class="is-loading"></strong>
+						</div>
+					</div>
+				</section>
 			</div>
 		</section>
 	</main>
 </div>
-<script th:src="@{/js/home.js(v=19)}"></script>
+<script th:src="@{/js/home.js(v=22)}"></script>
 </body>
 </html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>채용공고 통계 | 공채왔어요</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
+	<link rel="stylesheet" th:href="@{/css/statistics.css(v=2)}">
+</head>
+<body>
+<div class="page-shell">
+	<header class="service-topbar">
+		<a class="service-brand" href="/">
+			<span class="brand-mark">G</span>
+			<span>공채왔어요</span>
+		</a>
+		<nav class="service-topnav" aria-label="서비스 상단 메뉴">
+			<a href="/recruitments">공고 목록</a>
+			<a href="/mypage" th:if="${isLoggedIn}">마이페이지</a>
+			<a href="/login" th:if="${!isLoggedIn}">로그인</a>
+			<form th:if="${isLoggedIn}" method="post" action="/logout">
+				<button type="submit">로그아웃</button>
+			</form>
+		</nav>
+	</header>
+
+	<main class="statistics-page">
+		<div class="statistics-layout" id="statistics">
+			<aside class="stat-panel region-panel" aria-labelledby="statisticsTitle">
+				<section class="sidebar-heading">
+					<p class="eyebrow">Statistics</p>
+					<h1 id="statisticsTitle">채용공고 통계</h1>
+				</section>
+				<div class="sidebar-divider" aria-hidden="true"></div>
+				<div class="region-button-list" id="regionStats" aria-label="지역별 공고 수"></div>
+			</aside>
+
+			<section class="stat-panel region-detail-panel" aria-label="지역 상세 통계">
+				<div class="status-banner" id="statisticsStatus" hidden></div>
+				<div class="stat-tabs" role="tablist" aria-label="지역 통계 종류">
+					<button type="button" class="stat-tab is-active" data-stat-tab="period">기간별</button>
+					<button type="button" class="stat-tab" data-stat-tab="ncs">NCS 직군별</button>
+					<button type="button" class="stat-tab" data-stat-tab="company">기업별</button>
+					<button type="button" class="stat-tab" data-stat-tab="recruitmentCategory">채용구분별</button>
+					<button type="button" class="stat-tab" data-stat-tab="hireType">고용형태별</button>
+				</div>
+				<div class="bar-list" id="regionDetailStats"></div>
+			</section>
+		</div>
+	</main>
+</div>
+<script th:src="@{/js/statistics.js(v=4)}"></script>
+</body>
+</html>

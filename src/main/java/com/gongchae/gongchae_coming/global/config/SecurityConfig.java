@@ -22,6 +22,7 @@ public class SecurityConfig {
 					"/reset-password",
 					"/recruitments",
 					"/recruitments/*/redirect",
+					"/statistics",
 					"/signup",
 					"/signup-complete",
 					"/css/**",

@@ -22,6 +22,12 @@ public class RecruitmentViewController {
 		return "recruitments";
 	}
 
+	@GetMapping("/statistics")
+	public String statistics(Authentication authentication, Model model) {
+		addLoginStatus(authentication, model);
+		return "statistics";
+	}
+
 	@GetMapping("/recruitments/{recruitmentId}/redirect")
 	public String recruitmentRedirectPage(
 		@PathVariable String recruitmentId,

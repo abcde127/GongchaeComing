@@ -20,6 +20,16 @@ class RecruitmentViewControllerTest {
 	}
 
 	@Test
+	void statisticsRendersStatisticsTemplate() {
+		ConcurrentModel model = new ConcurrentModel();
+
+		String viewName = controller.statistics(null, model);
+
+		assertThat(viewName).isEqualTo("statistics");
+		assertThat(model.getAttribute("isLoggedIn")).isEqualTo(false);
+	}
+
+	@Test
 	void recruitmentRedirectPageRendersRedirectLandingTemplate() {
 		ConcurrentModel model = new ConcurrentModel();
 
