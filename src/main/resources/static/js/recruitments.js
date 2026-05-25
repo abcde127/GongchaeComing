@@ -63,10 +63,11 @@ const completedButtonContent = `
 `;
 
 function buildRefreshButtonContent(icon, label, detail = "") {
+	const detailContent = detail ? `<span class="data-refresh-detail">${detail}</span>` : "";
 	return `
 		<span class="data-refresh-icon">${icon || ""}</span>
 		<span class="data-refresh-label">${label}</span>
-		<span class="data-refresh-detail">${detail}</span>
+		${detailContent}
 	`;
 }
 
@@ -402,6 +403,7 @@ function updateSyncStatus(progress) {
 	if (progress?.inProgress) {
 		shouldShowSyncCompletion = true;
 		window.clearTimeout(syncCompletionHideTimer);
+		setStatus("");
 		syncStatusBadge.hidden = true;
 		dataRefreshText.hidden = true;
 		renderRefreshButtonProgress(
@@ -419,6 +421,7 @@ function updateSyncStatus(progress) {
 	if (status === "FAILED") {
 		shouldShowSyncCompletion = false;
 		window.clearTimeout(syncCompletionHideTimer);
+		setStatus("");
 		renderRefreshButtonFailed();
 		syncStatusBadge.hidden = true;
 		dataRefreshText.hidden = true;
@@ -517,6 +520,7 @@ async function startRecruitmentSynchronization() {
 
 	try {
 		shouldShowSyncCompletion = true;
+		setStatus("");
 		dataRefreshButton.disabled = true;
 		dataRefreshText.hidden = true;
 		syncFailurePanel.hidden = true;
