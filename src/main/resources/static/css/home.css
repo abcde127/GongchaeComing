@@ -529,10 +529,24 @@ button {
 }
 
 .column-chart-yearly {
-	grid-auto-flow: row;
-	grid-template-columns: repeat(auto-fit, minmax(52px, 68px));
-	justify-content: start;
+	grid-auto-flow: column;
+	grid-template-columns: repeat(9, minmax(0, 1fr));
+	grid-auto-columns: initial;
+	gap: 6px;
+	justify-content: stretch;
 	overflow-x: hidden;
+}
+
+.column-chart-monthly {
+	grid-auto-flow: column;
+	grid-template-columns: repeat(12, minmax(0, 1fr));
+	grid-auto-columns: initial;
+	gap: 6px;
+	overflow-x: hidden;
+}
+
+.column-chart-yearly .column-bar {
+	width: min(100%, 22px);
 }
 
 .column-item {
@@ -542,9 +556,18 @@ button {
 	grid-template-rows: auto 150px auto;
 	gap: 8px;
 	min-width: 0;
+	padding: 0;
+	border: 0;
 	border-radius: 8px;
+	background: transparent;
+	color: inherit;
 	outline: none;
+	font: inherit;
 	text-align: center;
+}
+
+.column-item.is-clickable {
+	cursor: pointer;
 }
 
 .column-item:focus-visible {
@@ -587,6 +610,10 @@ button {
 	background: var(--blue);
 }
 
+.column-item.is-selected .column-bar {
+	background: var(--accent-strong);
+}
+
 .column-label {
 	overflow: hidden;
 	color: var(--muted);
@@ -605,9 +632,9 @@ button {
 
 .skeleton-column-item .column-label {
 	justify-self: center;
-	width: 42px;
-	height: 13px;
-	border-radius: 999px;
+	width: auto;
+	height: auto;
+	border-radius: 0;
 }
 
 .skeleton-column-item .column-bar {

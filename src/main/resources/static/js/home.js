@@ -33,6 +33,7 @@ const WORK_REGION_OPTIONS = [
 let detailStatisticsLoaded = false;
 let selectedRegion = null;
 let activeDetailTab = "period";
+let selectedPeriodYear = String(new Date().getFullYear());
 let summaryTotalCount = null;
 const regionDetailCache = new Map();
 
@@ -250,24 +251,32 @@ function renderRegionDetailStatistic(items) {
 }
 
 function renderPeriodStatistic(items) {
+	const yearlyCounts = latestNineYearCountsFromMonthly(items);
+	if (!yearlyCounts.some((item) => item.year === selectedPeriodYear)) {
+		selectedPeriodYear = yearlyCounts.at(-1)?.year || String(new Date().getFullYear());
+	}
 	regionDetailStats.replaceChildren();
-	regionDetailStats.appendChild(createStatisticGroup("년도별 공고 수", yearlyCountsFromMonthly(items), "year", "yearly"));
-	regionDetailStats.appendChild(createStatisticGroup("최근 12개월 공고 수", latestItems(items, 12), "yearMonth", "monthly"));
+	regionDetailStats.appendChild(createStatisticGroup(yearlyCounts, "year", "yearly", {
+		selectedLabel: selectedPeriodYear,
+		onSelect: (item) => {
+			selectedPeriodYear = item.year;
+			renderPeriodStatistic(items);
+		}
+	}));
+	regionDetailStats.appendChild(createStatisticGroup(monthlyCountsForYear(items, selectedPeriodYear), "label", "monthly"));
 }
 
-function createStatisticGroup(title, items, labelKey, variant) {
+function createStatisticGroup(items, labelKey, variant, options = {}) {
 	const group = document.createElement("section");
 	group.className = "statistic-group";
-	const heading = document.createElement("h4");
-	heading.textContent = title;
 	const list = document.createElement("div");
 	list.className = `column-chart statistic-group-list column-chart-${variant}`;
-	group.append(heading, list);
-	renderColumnChart(list, items, labelKey);
+	group.appendChild(list);
+	renderColumnChart(list, items, labelKey, options);
 	return group;
 }
 
-function renderColumnChart(container, items, labelKey) {
+function renderColumnChart(container, items, labelKey, options = {}) {
 	container.replaceChildren();
 	container.removeAttribute("aria-busy");
 	if (!items.length) {
@@ -283,8 +292,14 @@ function renderColumnChart(container, items, labelKey) {
 		const value = item.count || 0;
 		const label = item[labelKey] || "-";
 		const percent = Math.max(6, Math.round((value / maxCount) * 100));
-		const column = document.createElement("div");
+		const column = document.createElement(options.onSelect ? "button" : "div");
 		column.className = "column-item";
+		if (options.onSelect) {
+			column.type = "button";
+			column.classList.add("is-clickable");
+			column.classList.toggle("is-selected", label === options.selectedLabel);
+			column.addEventListener("click", () => options.onSelect(item));
+		}
 		column.tabIndex = 0;
 		column.setAttribute("aria-label", `${label} ${formatNumber(value)}개`);
 		column.innerHTML = `
@@ -298,7 +313,7 @@ function renderColumnChart(container, items, labelKey) {
 	});
 }
 
-function yearlyCountsFromMonthly(items) {
+function latestNineYearCountsFromMonthly(items) {
 	const yearlyCounts = new Map();
 	items.forEach((item) => {
 		const year = String(item.yearMonth || "").slice(0, 4);
@@ -307,9 +322,31 @@ function yearlyCountsFromMonthly(items) {
 		}
 		yearlyCounts.set(year, (yearlyCounts.get(year) || 0) + (item.count || 0));
 	});
-	return [...yearlyCounts.entries()]
-		.sort(([left], [right]) => left.localeCompare(right))
-		.map(([year, count]) => ({ year, count }));
+	const currentYear = new Date().getFullYear();
+	return Array.from({ length: 9 }, (_, index) => String(currentYear - 8 + index))
+		.map((year) => ({ year, count: yearlyCounts.get(year) || 0 }));
+}
+
+function monthlyCountsForYear(items, year) {
+	const countsByMonth = new Map();
+	items.forEach((item) => {
+		const yearMonth = String(item.yearMonth || "");
+		if (!yearMonth.startsWith(`${year}-`)) {
+			return;
+		}
+		const month = Number(yearMonth.slice(5, 7));
+		if (!month) {
+			return;
+		}
+		countsByMonth.set(month, (countsByMonth.get(month) || 0) + (item.count || 0));
+	});
+	return Array.from({ length: 12 }, (_, index) => {
+		const month = index + 1;
+		return {
+			label: `${month}월`,
+			count: countsByMonth.get(month) || 0
+		};
+	});
 }
 
 statTabs.forEach((tab) => {
@@ -389,8 +426,8 @@ function renderStatisticLoadingState(container, tab) {
 	container.replaceChildren();
 	container.setAttribute("aria-busy", "true");
 	if (tab === "period") {
-		container.appendChild(createColumnChartSkeleton("년도별 공고 수", 5, "yearly"));
-		container.appendChild(createColumnChartSkeleton("최근 12개월 공고 수", 12, "monthly"));
+		container.appendChild(createColumnChartSkeleton(recentYearLabels(), "yearly"));
+		container.appendChild(createColumnChartSkeleton(monthLabels(), "monthly"));
 		return;
 	}
 
@@ -411,28 +448,35 @@ function renderStatisticLoadingState(container, tab) {
 	container.appendChild(list);
 }
 
-function createColumnChartSkeleton(title, count, variant) {
+function createColumnChartSkeleton(labels, variant) {
 	const group = document.createElement("section");
 	group.className = "statistic-group";
-	const heading = document.createElement("h4");
-	heading.textContent = title;
 	const chart = document.createElement("div");
 	chart.className = `column-chart statistic-group-list column-chart-${variant} column-chart-skeleton`;
-	for (let index = 0; index < count; index += 1) {
+	labels.forEach((label, index) => {
 		const column = document.createElement("div");
 		column.className = "column-item skeleton-column-item";
 		const height = 28 + ((index * 19) % 58);
 		column.innerHTML = `
-			<strong class="column-value skeleton-surface"></strong>
+			<strong class="column-value" aria-hidden="true"></strong>
 			<div class="column-bar-wrap skeleton-bar-wrap" aria-hidden="true">
 				<span class="column-bar skeleton-surface" style="--bar-height: ${height}%"></span>
 			</div>
-			<span class="column-label skeleton-surface"></span>
+			<span class="column-label">${escapeHtml(label)}</span>
 		`;
 		chart.appendChild(column);
-	}
-	group.append(heading, chart);
+	});
+	group.appendChild(chart);
 	return group;
+}
+
+function recentYearLabels() {
+	const currentYear = new Date().getFullYear();
+	return Array.from({ length: 9 }, (_, index) => String(currentYear - 8 + index));
+}
+
+function monthLabels() {
+	return Array.from({ length: 12 }, (_, index) => `${index + 1}월`);
 }
 
 function mergeRegionCounts(regionCounts) {
