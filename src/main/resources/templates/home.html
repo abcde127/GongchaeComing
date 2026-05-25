@@ -7,7 +7,7 @@
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
-	<link rel="stylesheet" th:href="@{/css/home.css(v=5)}">
+	<link rel="stylesheet" th:href="@{/css/home.css(v=6)}">
 </head>
 <body>
 <div class="page-shell">
@@ -82,21 +82,33 @@
 
 				<div class="status-banner" id="statisticsStatus" hidden></div>
 
-				<div class="stats-grid" aria-live="polite">
-					<section class="stat-panel" aria-labelledby="monthlyStatsTitle">
-						<h3 id="monthlyStatsTitle">신청 시작년월 기준 공고 수</h3>
-						<div class="bar-list" id="monthlyStats"></div>
+				<div class="region-dashboard" aria-live="polite">
+					<section class="stat-panel region-panel" aria-labelledby="regionStatsTitle">
+						<h3 id="regionStatsTitle">지역별 공고 수</h3>
+						<div class="region-button-list" id="regionStats"></div>
 					</section>
 
-					<section class="stat-panel" aria-labelledby="regionStatsTitle">
-						<h3 id="regionStatsTitle">지역별 공고 수</h3>
-						<div class="bar-list region-list" id="regionStats"></div>
+					<section class="stat-panel region-detail-panel" aria-labelledby="regionDetailTitle">
+						<div class="region-detail-heading">
+							<div>
+								<p class="eyebrow">Regional Statistics</p>
+								<h3 id="regionDetailTitle">지역 통계</h3>
+							</div>
+							<strong id="selectedRegionCount">-</strong>
+						</div>
+						<div class="stat-tabs" role="tablist" aria-label="지역 통계 종류">
+							<button type="button" class="stat-tab is-active" data-stat-tab="yearly">년도별</button>
+							<button type="button" class="stat-tab" data-stat-tab="monthly">최근 12개월</button>
+							<button type="button" class="stat-tab" data-stat-tab="ncs">NCS 직군별</button>
+							<button type="button" class="stat-tab" data-stat-tab="company">기업별</button>
+						</div>
+						<div class="bar-list" id="regionDetailStats"></div>
 					</section>
 				</div>
 			</div>
 		</section>
 	</main>
 </div>
-<script th:src="@{/js/home.js(v=5)}"></script>
+<script th:src="@{/js/home.js(v=6)}"></script>
 </body>
 </html>

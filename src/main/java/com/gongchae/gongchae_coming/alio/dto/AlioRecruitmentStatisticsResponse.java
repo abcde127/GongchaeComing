@@ -31,6 +31,19 @@ public record AlioRecruitmentStatisticsResponse(
 	) {
 	}
 
+	public record YearlyCount(
+		String year,
+		long count
+	) {
+	}
+
+	public record CategoryCount(
+		String code,
+		String label,
+		long count
+	) {
+	}
+
 	public record RegionCount(
 		String code,
 		String label,

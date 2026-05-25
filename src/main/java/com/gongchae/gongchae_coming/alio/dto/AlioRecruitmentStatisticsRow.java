@@ -9,4 +9,12 @@ public interface AlioRecruitmentStatisticsRow {
 	String getWorkRgnLst();
 
 	String getWorkRgnNmLst();
+
+	String getPblntInstCd();
+
+	String getInstNm();
+
+	String getNcsCdLst();
+
+	String getNcsCdNmLst();
 }

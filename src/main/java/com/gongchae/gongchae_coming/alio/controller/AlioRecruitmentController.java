@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -39,8 +40,31 @@ public class AlioRecruitmentController {
 	}
 
 	@GetMapping("/statistics/monthly-start-counts")
-	public java.util.List<AlioRecruitmentStatisticsResponse.MonthlyCount> getRecruitmentMonthlyStartCounts() {
-		return alioRecruitmentService.getRecruitmentMonthlyStartCounts();
+	public java.util.List<AlioRecruitmentStatisticsResponse.MonthlyCount> getRecruitmentMonthlyStartCounts(
+		@RequestParam(required = false) String regionCode
+	) {
+		return alioRecruitmentService.getRecruitmentMonthlyStartCounts(regionCode);
+	}
+
+	@GetMapping("/statistics/yearly-start-counts")
+	public java.util.List<AlioRecruitmentStatisticsResponse.YearlyCount> getRecruitmentYearlyStartCounts(
+		@RequestParam(required = false) String regionCode
+	) {
+		return alioRecruitmentService.getRecruitmentYearlyStartCounts(regionCode);
+	}
+
+	@GetMapping("/statistics/ncs-counts")
+	public java.util.List<AlioRecruitmentStatisticsResponse.CategoryCount> getRecruitmentNcsCounts(
+		@RequestParam(required = false) String regionCode
+	) {
+		return alioRecruitmentService.getRecruitmentNcsCounts(regionCode);
+	}
+
+	@GetMapping("/statistics/company-counts")
+	public java.util.List<AlioRecruitmentStatisticsResponse.CategoryCount> getRecruitmentCompanyCounts(
+		@RequestParam(required = false) String regionCode
+	) {
+		return alioRecruitmentService.getRecruitmentCompanyCounts(regionCode);
 	}
 
 	@GetMapping("/statistics/region-counts")

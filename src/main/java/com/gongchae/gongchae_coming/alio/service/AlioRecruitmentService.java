@@ -186,8 +186,23 @@ public class AlioRecruitmentService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<AlioRecruitmentStatisticsResponse.MonthlyCount> getRecruitmentMonthlyStartCounts() {
-		return countRecruitmentsByMonthlyStart(alioRecruitmentRepository.findStatisticsRows());
+	public List<AlioRecruitmentStatisticsResponse.MonthlyCount> getRecruitmentMonthlyStartCounts(String regionCode) {
+		return countRecruitmentsByMonthlyStart(statisticsRows(regionCode));
+	}
+
+	@Transactional(readOnly = true)
+	public List<AlioRecruitmentStatisticsResponse.YearlyCount> getRecruitmentYearlyStartCounts(String regionCode) {
+		return countRecruitmentsByYearlyStart(statisticsRows(regionCode));
+	}
+
+	@Transactional(readOnly = true)
+	public List<AlioRecruitmentStatisticsResponse.CategoryCount> getRecruitmentNcsCounts(String regionCode) {
+		return countRecruitmentsByNcs(statisticsRows(regionCode));
+	}
+
+	@Transactional(readOnly = true)
+	public List<AlioRecruitmentStatisticsResponse.CategoryCount> getRecruitmentCompanyCounts(String regionCode) {
+		return countRecruitmentsByCompany(statisticsRows(regionCode));
 	}
 
 	@Transactional(readOnly = true)
@@ -488,6 +503,56 @@ public class AlioRecruitmentService {
 			.toList();
 	}
 
+	private List<AlioRecruitmentStatisticsResponse.YearlyCount> countRecruitmentsByYearlyStart(
+		List<AlioRecruitmentStatisticsRow> recruitments
+	) {
+		Map<String, Long> yearlyStartCounts = new HashMap<>();
+		recruitments.forEach(recruitment -> {
+			LocalDate startDate = parseDate(recruitment.getPbancBgngYmd());
+			if (startDate != null) {
+				yearlyStartCounts.merge(String.valueOf(startDate.getYear()), 1L, Long::sum);
+			}
+		});
+		return yearlyStartCounts.entrySet()
+			.stream()
+			.sorted(Map.Entry.comparingByKey())
+			.map(entry -> new AlioRecruitmentStatisticsResponse.YearlyCount(entry.getKey(), entry.getValue()))
+			.toList();
+	}
+
+	private List<AlioRecruitmentStatisticsResponse.CategoryCount> countRecruitmentsByNcs(
+		List<AlioRecruitmentStatisticsRow> recruitments
+	) {
+		Map<String, CategoryAccumulator> ncsCounts = new HashMap<>();
+		recruitments.forEach(recruitment -> addCategoryCounts(
+			ncsCounts,
+			splitCsv(recruitment.getNcsCdLst()),
+			splitCsv(recruitment.getNcsCdNmLst())
+		));
+		return categoryCounts(ncsCounts);
+	}
+
+	private List<AlioRecruitmentStatisticsResponse.CategoryCount> countRecruitmentsByCompany(
+		List<AlioRecruitmentStatisticsRow> recruitments
+	) {
+		Map<String, CategoryAccumulator> companyCounts = new HashMap<>();
+		recruitments.forEach(recruitment -> {
+			String code = recruitment.getPblntInstCd();
+			String label = recruitment.getInstNm();
+			if (!StringUtils.hasText(code) && !StringUtils.hasText(label)) {
+				return;
+			}
+			if (!StringUtils.hasText(code)) {
+				code = label;
+			}
+			if (!StringUtils.hasText(label)) {
+				label = code;
+			}
+			addCategoryCount(companyCounts, code, label);
+		});
+		return categoryCounts(companyCounts);
+	}
+
 	private List<AlioRecruitmentStatisticsResponse.RegionCount> countRecruitmentsByRegion(
 		List<AlioRecruitmentStatisticsRow> recruitments
 	) {
@@ -549,6 +614,65 @@ public class AlioRecruitmentService {
 		}
 	}
 
+	private List<AlioRecruitmentStatisticsRow> statisticsRows(String regionCode) {
+		List<AlioRecruitmentStatisticsRow> recruitments = alioRecruitmentRepository.findStatisticsRows();
+		if (!StringUtils.hasText(regionCode)) {
+			return recruitments;
+		}
+		String normalizedRegionCode = regionCode.trim();
+		return recruitments.stream()
+			.filter(recruitment -> splitCsv(recruitment.getWorkRgnLst()).contains(normalizedRegionCode))
+			.toList();
+	}
+
+	private void addCategoryCounts(
+		Map<String, CategoryAccumulator> categoryCounts,
+		List<String> codes,
+		List<String> labels
+	) {
+		int categorySize = Math.max(codes.size(), labels.size());
+		for (int index = 0; index < categorySize; index++) {
+			String code = valueAt(codes, index);
+			String label = valueAt(labels, index);
+			if (!StringUtils.hasText(code) && !StringUtils.hasText(label)) {
+				continue;
+			}
+			if (!StringUtils.hasText(code)) {
+				code = label;
+			}
+			if (!StringUtils.hasText(label)) {
+				label = code;
+			}
+			addCategoryCount(categoryCounts, code, label);
+		}
+	}
+
+	private void addCategoryCount(Map<String, CategoryAccumulator> categoryCounts, String code, String label) {
+		categoryCounts.compute(
+			code,
+			(ignored, accumulator) -> accumulator == null
+				? new CategoryAccumulator(code, label, 1)
+				: accumulator.increment()
+		);
+	}
+
+	private List<AlioRecruitmentStatisticsResponse.CategoryCount> categoryCounts(
+		Map<String, CategoryAccumulator> categoryCounts
+	) {
+		return categoryCounts.values()
+			.stream()
+			.sorted(Comparator
+				.comparingLong(CategoryAccumulator::count)
+				.reversed()
+				.thenComparing(CategoryAccumulator::label))
+			.map(category -> new AlioRecruitmentStatisticsResponse.CategoryCount(
+				category.code(),
+				category.label(),
+				category.count()
+			))
+			.toList();
+	}
+
 	private List<String> splitCsv(String value) {
 		if (!StringUtils.hasText(value)) {
 			return List.of();
@@ -580,6 +704,17 @@ public class AlioRecruitmentService {
 
 		private RegionAccumulator increment() {
 			return new RegionAccumulator(code, label, count + 1);
+		}
+	}
+
+	private record CategoryAccumulator(
+		String code,
+		String label,
+		long count
+	) {
+
+		private CategoryAccumulator increment() {
+			return new CategoryAccumulator(code, label, count + 1);
 		}
 	}
 

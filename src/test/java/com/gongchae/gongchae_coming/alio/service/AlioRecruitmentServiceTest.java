@@ -320,6 +320,51 @@ class AlioRecruitmentServiceTest {
 	}
 
 	@Test
+	void regionStatisticCountsFilterRecruitmentsByRegion() {
+		AlioRecruitmentClient client = mock(AlioRecruitmentClient.class);
+		AlioRecruitmentRepository recruitmentRepository = mock(AlioRecruitmentRepository.class);
+		AlioRecruitmentSyncStateRepository syncStateRepository = mock(AlioRecruitmentSyncStateRepository.class);
+		AlioRecruitmentService service = new AlioRecruitmentService(
+			client,
+			recruitmentRepository,
+			syncStateRepository,
+			mock(PublicInstitutionRepository.class),
+			new AlioRecruitmentSyncProgressStore(),
+			mock(NewRecruitmentNotificationService.class),
+			mock(AlioRecruitmentSeedExporter.class)
+		);
+		ObjectNode seoul = recruitment("서울 공고", "2026-05-01", "2026-05-20");
+		seoul.put("workRgnLst", "R3010");
+		seoul.put("workRgnNmLst", "서울");
+		seoul.put("pblntInstCd", "C001");
+		seoul.put("instNm", "서울기관");
+		seoul.put("ncsCdLst", "R600001,R600002");
+		seoul.put("ncsCdNmLst", "사업관리,경영.회계.사무");
+		ObjectNode busan = recruitment("부산 공고", "2025-03-01", "2025-03-20");
+		busan.put("workRgnLst", "R3014");
+		busan.put("workRgnNmLst", "부산");
+		busan.put("pblntInstCd", "C002");
+		busan.put("instNm", "부산기관");
+		busan.put("ncsCdLst", "R600003");
+		busan.put("ncsCdNmLst", "금융.보험");
+
+		when(recruitmentRepository.findStatisticsRows()).thenReturn(toStatisticsRows(createResponse(seoul, busan)));
+
+		assertThat(service.getRecruitmentYearlyStartCounts("R3010"))
+			.extracting("year", "count")
+			.containsExactly(org.assertj.core.groups.Tuple.tuple("2026", 1L));
+		assertThat(service.getRecruitmentNcsCounts("R3010"))
+			.extracting("label", "count")
+			.contains(
+				org.assertj.core.groups.Tuple.tuple("사업관리", 1L),
+				org.assertj.core.groups.Tuple.tuple("경영.회계.사무", 1L)
+			);
+		assertThat(service.getRecruitmentCompanyCounts("R3010"))
+			.extracting("label", "count")
+			.containsExactly(org.assertj.core.groups.Tuple.tuple("서울기관", 1L));
+	}
+
+	@Test
 	void startBackgroundSynchronizationRefreshesFromRootResultArrayWithOneThousandRows() {
 		AlioRecruitmentClient client = mock(AlioRecruitmentClient.class);
 		AlioRecruitmentRepository recruitmentRepository = mock(AlioRecruitmentRepository.class);
@@ -621,6 +666,26 @@ class AlioRecruitmentServiceTest {
 					@Override
 					public String getWorkRgnNmLst() {
 						return item.path("workRgnNmLst").asText(null);
+					}
+
+					@Override
+					public String getPblntInstCd() {
+						return item.path("pblntInstCd").asText(null);
+					}
+
+					@Override
+					public String getInstNm() {
+						return item.path("instNm").asText(null);
+					}
+
+					@Override
+					public String getNcsCdLst() {
+						return item.path("ncsCdLst").asText(null);
+					}
+
+					@Override
+					public String getNcsCdNmLst() {
+						return item.path("ncsCdNmLst").asText(null);
 					}
 				};
 			})

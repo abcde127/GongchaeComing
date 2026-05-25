@@ -4,10 +4,16 @@ const activeRecruitmentCount = document.querySelector("#activeRecruitmentCount")
 const statisticsReferenceAt = document.querySelector("#statisticsReferenceAt");
 const statisticsStatus = document.querySelector("#statisticsStatus");
 const statisticsSection = document.querySelector("#statistics");
-const monthlyStats = document.querySelector("#monthlyStats");
 const regionStats = document.querySelector("#regionStats");
+const regionDetailTitle = document.querySelector("#regionDetailTitle");
+const selectedRegionCount = document.querySelector("#selectedRegionCount");
+const regionDetailStats = document.querySelector("#regionDetailStats");
+const statTabs = document.querySelectorAll("[data-stat-tab]");
 const SUMMARY_ANIMATION_DURATION_MS = 900;
 let detailStatisticsLoaded = false;
+let selectedRegion = null;
+let activeDetailTab = "yearly";
+const regionDetailCache = new Map();
 
 loadStatistics();
 
@@ -60,12 +66,12 @@ function renderSummaryError(element) {
 }
 
 async function loadMonthlyStatistics() {
-	renderLoadingState(monthlyStats);
+	renderLoadingState(regionDetailStats);
 	try {
-		const monthlyCounts = await fetchJson("/api/recruitments/alio/statistics/monthly-start-counts");
-		renderBarList(monthlyStats, latestItems(monthlyCounts || [], 12), "yearMonth");
+		const monthlyCounts = await fetchRegionStatistic("monthly");
+		renderBarList(regionDetailStats, latestItems(monthlyCounts || [], 12), "yearMonth");
 	} catch (error) {
-		renderPanelError(monthlyStats, error.message || "월별 통계를 불러오지 못했습니다.");
+		renderPanelError(regionDetailStats, error.message || "월별 통계를 불러오지 못했습니다.");
 	}
 }
 
@@ -73,15 +79,15 @@ async function loadRegionStatistics() {
 	renderLoadingState(regionStats);
 	try {
 		const regionCounts = await fetchJson("/api/recruitments/alio/statistics/region-counts");
-		renderBarList(regionStats, (regionCounts || []).slice(0, 12), "label");
+		renderRegionButtons((regionCounts || []).slice(0, 18));
 	} catch (error) {
 		renderPanelError(regionStats, error.message || "지역별 통계를 불러오지 못했습니다.");
 	}
 }
 
 function prepareDetailStatisticsLoading() {
-	renderLoadingState(monthlyStats);
 	renderLoadingState(regionStats);
+	renderLoadingState(regionDetailStats);
 	if (!statisticsSection || !("IntersectionObserver" in window)) {
 		loadDetailStatistics();
 		return;
@@ -104,9 +110,97 @@ async function loadDetailStatistics() {
 		return;
 	}
 	detailStatisticsLoaded = true;
-	await loadMonthlyStatistics();
-	window.setTimeout(loadRegionStatistics, 150);
+	await loadRegionStatistics();
 }
+
+function renderRegionButtons(regions) {
+	regionStats.replaceChildren();
+	if (!regions.length) {
+		renderPanelError(regionStats, "표시할 지역 통계가 없습니다.");
+		return;
+	}
+	regions.forEach((region) => {
+		const button = document.createElement("button");
+		button.type = "button";
+		button.className = "region-stat-button";
+		button.dataset.regionCode = region.code;
+		button.innerHTML = `
+			<span>${escapeHtml(region.label || "-")}</span>
+			<strong>${formatNumber(region.count || 0)}</strong>
+		`;
+		button.addEventListener("click", () => selectRegion(region));
+		regionStats.appendChild(button);
+	});
+	selectRegion(regions[0]);
+}
+
+function selectRegion(region) {
+	selectedRegion = region;
+	regionDetailTitle.textContent = `${region.label} 통계`;
+	selectedRegionCount.textContent = `${formatNumber(region.count || 0)}개`;
+	document.querySelectorAll(".region-stat-button").forEach((button) => {
+		button.classList.toggle("is-active", button.dataset.regionCode === region.code);
+	});
+	loadSelectedRegionStatistic();
+}
+
+async function loadSelectedRegionStatistic() {
+	if (!selectedRegion) {
+		return;
+	}
+	renderLoadingState(regionDetailStats);
+	try {
+		const items = await fetchRegionStatistic(activeDetailTab);
+		renderRegionDetailStatistic(items || []);
+	} catch (error) {
+		renderPanelError(regionDetailStats, error.message || "지역 통계를 불러오지 못했습니다.");
+	}
+}
+
+async function fetchRegionStatistic(tab) {
+	const cacheKey = `${selectedRegion.code}:${tab}`;
+	if (regionDetailCache.has(cacheKey)) {
+		return regionDetailCache.get(cacheKey);
+	}
+	const url = new URL(statisticEndpoint(tab), window.location.origin);
+	url.searchParams.set("regionCode", selectedRegion.code);
+	const items = await fetchJson(url.pathname + url.search);
+	regionDetailCache.set(cacheKey, items);
+	return items;
+}
+
+function statisticEndpoint(tab) {
+	if (tab === "monthly") {
+		return "/api/recruitments/alio/statistics/monthly-start-counts";
+	}
+	if (tab === "ncs") {
+		return "/api/recruitments/alio/statistics/ncs-counts";
+	}
+	if (tab === "company") {
+		return "/api/recruitments/alio/statistics/company-counts";
+	}
+	return "/api/recruitments/alio/statistics/yearly-start-counts";
+}
+
+function renderRegionDetailStatistic(items) {
+	const limitedItems = activeDetailTab === "monthly"
+		? latestItems(items, 12)
+		: items.slice(0, 12);
+	const labelKey = activeDetailTab === "yearly"
+		? "year"
+		: activeDetailTab === "monthly"
+			? "yearMonth"
+			: "label";
+	renderBarList(regionDetailStats, limitedItems, labelKey);
+}
+
+statTabs.forEach((tab) => {
+	tab.addEventListener("click", () => {
+		activeDetailTab = tab.dataset.statTab;
+		statTabs.forEach((item) => item.classList.toggle("is-active", item === tab));
+		loadSelectedRegionStatistic();
+	});
+});
 
 async function fetchJson(url) {
 	const response = await fetch(url, {

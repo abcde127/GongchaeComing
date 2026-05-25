@@ -348,6 +348,13 @@ button {
 	align-items: start;
 }
 
+.region-dashboard {
+	display: grid;
+	grid-template-columns: minmax(260px, 0.42fr) minmax(0, 1fr);
+	gap: 18px;
+	align-items: start;
+}
+
 .stat-panel {
 	padding: 22px;
 }
@@ -402,6 +409,106 @@ button {
 	display: grid;
 	gap: 14px;
 	margin-top: 18px;
+}
+
+.region-panel {
+	position: sticky;
+	top: 94px;
+}
+
+.region-button-list {
+	display: grid;
+	gap: 8px;
+	max-height: 620px;
+	margin-top: 18px;
+	overflow: auto;
+	padding-right: 4px;
+}
+
+.region-stat-button {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 14px;
+	width: 100%;
+	min-height: 44px;
+	padding: 10px 12px;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	background: #f8fafc;
+	color: var(--ink);
+	cursor: pointer;
+	text-align: left;
+}
+
+.region-stat-button:hover,
+.region-stat-button.is-active {
+	border-color: #99d6cf;
+	background: var(--accent-soft);
+}
+
+.region-stat-button span {
+	min-width: 0;
+	overflow: hidden;
+	color: var(--muted);
+	font-weight: 800;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.region-stat-button.is-active span,
+.region-stat-button strong {
+	color: var(--accent-strong);
+}
+
+.region-detail-panel {
+	min-height: 460px;
+}
+
+.region-detail-heading {
+	display: flex;
+	align-items: start;
+	justify-content: space-between;
+	gap: 18px;
+}
+
+.region-detail-heading .eyebrow {
+	margin-bottom: 8px;
+	color: var(--accent-strong);
+}
+
+.region-detail-heading strong {
+	color: var(--accent-strong);
+	font-size: 1.35rem;
+	white-space: nowrap;
+}
+
+.stat-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 18px;
+	padding-bottom: 16px;
+	border-bottom: 1px solid var(--line);
+}
+
+.stat-tab {
+	min-height: 36px;
+	padding: 0 12px;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	background: #ffffff;
+	color: var(--muted);
+	cursor: pointer;
+	font-size: 0.88rem;
+	font-weight: 800;
+}
+
+.stat-tab:hover,
+.stat-tab.is-active {
+	border-color: #99d6cf;
+	background: var(--accent);
+	color: #ffffff;
 }
 
 .bar-row {
@@ -465,12 +572,17 @@ button {
 
 	.hero-inner,
 	.stats-grid,
+	.region-dashboard,
 	.intro-grid {
 		grid-template-columns: 1fr;
 	}
 
 	.hero-stats {
 		max-width: 340px;
+	}
+
+	.region-panel {
+		position: static;
 	}
 
 }
