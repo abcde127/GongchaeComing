@@ -821,12 +821,14 @@ function createMetaRow(value, className = "") {
 
 function createCompanyMeta(institution, companyDivision, companyType) {
 	const details = [companyDivision, companyType].filter(Boolean);
+	const detailText = details.join(" · ");
+	const institutionText = institution || "정보 없음";
 
 	return `
 		<div class="meta-row meta-row-company">
 			<span class="company-meta">
-				${details.length ? `<span class="company-meta-detail">${details.join(" · ")}</span>` : ""}
-				<span class="company-meta-name">${institution || "정보 없음"}</span>
+				${detailText ? `<span class="company-meta-detail" title="${escapeAttribute(detailText)}" aria-label="${escapeAttribute(detailText)}">${detailText}</span>` : ""}
+				<span class="company-meta-name" title="${escapeAttribute(institutionText)}" aria-label="${escapeAttribute(institutionText)}">${institutionText}</span>
 			</span>
 		</div>
 	`;
@@ -909,6 +911,7 @@ function isFavoriteListActive() {
 
 function createRecruitmentCard(item) {
 	const title = getValue(item, "recrutPbancTtl");
+	const titleText = title || "제목 정보 없음";
 	const institution = getValue(item, "instNm");
 	const companyDivision = getValue(item, "instSeNm", "instSe", "orgSeNm", "orgSe");
 	const companyType = getValue(item, "instKndNm", "instKnd", "pblntInstTypeNm", "pblntInstType");
@@ -941,7 +944,7 @@ function createRecruitmentCard(item) {
 		<div class="card-top">
 			${createStatusBadge(status)}
 			<div class="card-main">
-				<h3 class="card-title">${title || "제목 정보 없음"}</h3>
+				<h3 class="card-title" title="${escapeAttribute(titleText)}">${titleText}</h3>
 			</div>
 		</div>
 
@@ -954,7 +957,7 @@ function createRecruitmentCard(item) {
 			${createMetaRow(ncs)}
 		</div>
 	`;
-	const cardLabel = `${title || "채용공고"} 원문보기`;
+	const cardLabel = `${titleText || "채용공고"} 원문보기`;
 	const cardElement = detailUrl
 		? `<a class="recruitment-card" href="${escapeAttribute(detailUrl)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeAttribute(cardLabel)}">${cardContent}</a>`
 		: `<div class="recruitment-card recruitment-card-disabled" aria-label="상세 링크 정보 없음">${cardContent}</div>`;
