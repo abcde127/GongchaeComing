@@ -7,6 +7,8 @@ const emailError = document.querySelector("#emailError");
 const codeError = document.querySelector("#codeError");
 const newPasswordError = document.querySelector("#newPasswordError");
 const newPasswordConfirmError = document.querySelector("#newPasswordConfirmError");
+const emailGroup = document.querySelector("#emailGroup");
+const codeGroup = document.querySelector("#codeGroup");
 const codeHint = document.querySelector("#codeHint");
 const newPasswordGroup = document.querySelector("#newPasswordGroup");
 const newPasswordConfirmGroup = document.querySelector("#newPasswordConfirmGroup");
@@ -29,6 +31,23 @@ function setMessage(message, type = "error") {
 	messageBox.textContent = message;
 	messageBox.dataset.type = type;
 	messageBox.hidden = !message;
+}
+
+function showToast(message) {
+	const toast = document.createElement("div");
+	toast.className = "toast";
+	toast.setAttribute("role", "status");
+	toast.setAttribute("aria-live", "polite");
+	toast.textContent = message;
+	document.body.append(toast);
+
+	window.setTimeout(() => {
+		toast.classList.add("is-hiding");
+	}, 2400);
+
+	window.setTimeout(() => {
+		toast.remove();
+	}, 2800);
 }
 
 function setLoading(button, loading, text) {
@@ -72,7 +91,8 @@ function expireVerificationCode() {
 	newPasswordGroup.hidden = true;
 	newPasswordConfirmGroup.hidden = true;
 	resetPasswordButton.hidden = true;
-	codeHint.innerHTML = '인증번호가 만료되었습니다. <strong class="verification-timer">00:00</strong>';
+	codeHint.hidden = false;
+	codeHint.textContent = "유효 시간이 만료되었습니다. 인증 번호를 다시 요청해주세요.";
 }
 
 function startCodeTimer() {
@@ -94,7 +114,7 @@ function startResendCooldown() {
 	stopResendCooldown();
 	let remainingSeconds = RESEND_COOLDOWN_SECONDS;
 	requestCodeButton.disabled = true;
-	requestCodeButton.textContent = `재발송 ${remainingSeconds}초`;
+	requestCodeButton.textContent = `재발송 ${formatTime(remainingSeconds)}`;
 
 	resendTimerId = window.setInterval(() => {
 		remainingSeconds -= 1;
@@ -104,7 +124,7 @@ function startResendCooldown() {
 			requestCodeButton.textContent = "인증번호 발송";
 			return;
 		}
-		requestCodeButton.textContent = `재발송 ${remainingSeconds}초`;
+		requestCodeButton.textContent = `재발송 ${formatTime(remainingSeconds)}`;
 	}, 1000);
 }
 
@@ -124,6 +144,10 @@ function resetVerificationState() {
 }
 
 function showPasswordFields() {
+	stopCodeTimer();
+	emailGroup.hidden = true;
+	codeGroup.hidden = true;
+	verifyCodeButton.hidden = true;
 	newPasswordGroup.hidden = false;
 	newPasswordConfirmGroup.hidden = false;
 	resetPasswordButton.hidden = false;
@@ -225,7 +249,7 @@ async function requestCode() {
 		resetPasswordButton.hidden = true;
 		startCodeTimer();
 		requestSucceeded = true;
-		setMessage("인증번호 발송 요청이 접수되었습니다. 메일함을 확인해주세요.", "success");
+		showToast("인증번호 발송 요청이 접수되었습니다. 메일함을 확인해주세요.");
 	} catch (error) {
 		setMessage(translateServerMessage(error.message));
 	} finally {
@@ -268,20 +292,25 @@ async function verifyCode() {
 		verifiedEmail = email;
 		verifiedCode = code;
 		showPasswordFields();
-		setMessage("인증번호가 확인되었습니다.", "success");
+		showToast("인증번호가 확인되었습니다.");
 		newPasswordInput.focus();
 	} catch (error) {
 		verifiedEmail = "";
 		verifiedCode = "";
 		setMessage(translateServerMessage(error.message));
 	} finally {
-		setLoading(verifyCodeButton, false, "확인");
+		setLoading(verifyCodeButton, false, "인증번호 확인");
 	}
 }
 
 async function resetPassword(event) {
 	event.preventDefault();
 	clearErrors();
+
+	if (resetPasswordButton.hidden) {
+		await verifyCode();
+		return;
+	}
 
 	const email = emailInput.value.trim();
 	const code = codeInput.value.trim();
