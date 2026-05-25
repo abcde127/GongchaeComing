@@ -19,7 +19,6 @@ public class SecurityConfig {
 				.requestMatchers(
 					"/",
 					"/login",
-					"/find-password",
 					"/reset-password",
 					"/recruitments",
 					"/recruitments/*/redirect",

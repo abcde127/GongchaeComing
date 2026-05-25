@@ -21,11 +21,6 @@ public class AuthViewController {
 		return "signup-complete";
 	}
 
-	@GetMapping("/find-password")
-	public String findPassword() {
-		return "redirect:/reset-password";
-	}
-
 	@GetMapping("/reset-password")
 	public String resetPassword() {
 		return "reset-password";

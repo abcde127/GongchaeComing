@@ -1,4 +1,4 @@
-const form = document.querySelector("#findPasswordForm");
+const form = document.querySelector("#resetPasswordForm");
 const emailInput = document.querySelector("#email");
 const codeInput = document.querySelector("#code");
 const newPasswordInput = document.querySelector("#newPassword");
@@ -7,7 +7,7 @@ const emailError = document.querySelector("#emailError");
 const codeError = document.querySelector("#codeError");
 const newPasswordError = document.querySelector("#newPasswordError");
 const newPasswordConfirmError = document.querySelector("#newPasswordConfirmError");
-const messageBox = document.querySelector("#findPasswordMessage");
+const messageBox = document.querySelector("#resetPasswordMessage");
 const requestCodeButton = document.querySelector("#requestCodeButton");
 const verifyCodeButton = document.querySelector("#verifyCodeButton");
 const resetPasswordButton = document.querySelector("#resetPasswordButton");
