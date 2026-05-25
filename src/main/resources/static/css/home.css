@@ -547,6 +547,7 @@ button {
 
 .column-chart-yearly .column-bar {
 	width: min(100%, 22px);
+	background: #cbd5e1;
 }
 
 .column-item {
@@ -585,7 +586,8 @@ button {
 }
 
 .column-item:hover .column-value,
-.column-item:focus-visible .column-value {
+.column-item:focus-visible .column-value,
+.column-item.is-selected .column-value {
 	opacity: 1;
 	transform: translateY(0);
 }
@@ -611,7 +613,7 @@ button {
 }
 
 .column-item.is-selected .column-bar {
-	background: var(--accent-strong);
+	background: var(--accent);
 }
 
 .column-label {

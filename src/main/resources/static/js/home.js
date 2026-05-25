@@ -260,15 +260,35 @@ function renderPeriodStatistic(items) {
 		selectedLabel: selectedPeriodYear,
 		onSelect: (item) => {
 			selectedPeriodYear = item.year;
-			renderPeriodStatistic(items);
+			updateSelectedPeriodYear(regionDetailStats, selectedPeriodYear);
+			renderSelectedYearMonthlyStatistic(regionDetailStats, items, selectedPeriodYear);
 		}
 	}));
-	regionDetailStats.appendChild(createStatisticGroup(monthlyCountsForYear(items, selectedPeriodYear), "label", "monthly"));
+	regionDetailStats.appendChild(createPeriodMonthlyGroup(items, selectedPeriodYear));
+}
+
+function updateSelectedPeriodYear(container, selectedYear) {
+	container.querySelectorAll(".column-chart-yearly .column-item").forEach((column) => {
+		column.classList.toggle("is-selected", column.dataset.statLabel === selectedYear);
+	});
+}
+
+function renderSelectedYearMonthlyStatistic(container, items, year) {
+	const monthlyGroup = container.querySelector(".statistic-group-monthly");
+	if (!monthlyGroup) {
+		container.appendChild(createPeriodMonthlyGroup(items, year));
+		return;
+	}
+	monthlyGroup.replaceWith(createPeriodMonthlyGroup(items, year));
+}
+
+function createPeriodMonthlyGroup(items, year) {
+	return createStatisticGroup(monthlyCountsForYear(items, year), "label", "monthly");
 }
 
 function createStatisticGroup(items, labelKey, variant, options = {}) {
 	const group = document.createElement("section");
-	group.className = "statistic-group";
+	group.className = `statistic-group statistic-group-${variant}`;
 	const list = document.createElement("div");
 	list.className = `column-chart statistic-group-list column-chart-${variant}`;
 	group.appendChild(list);
@@ -300,6 +320,7 @@ function renderColumnChart(container, items, labelKey, options = {}) {
 			column.classList.toggle("is-selected", label === options.selectedLabel);
 			column.addEventListener("click", () => options.onSelect(item));
 		}
+		column.dataset.statLabel = label;
 		column.tabIndex = 0;
 		column.setAttribute("aria-label", `${label} ${formatNumber(value)}개`);
 		column.innerHTML = `
