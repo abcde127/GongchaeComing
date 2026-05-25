@@ -3,16 +3,17 @@ const scheduledRecruitmentCount = document.querySelector("#scheduledRecruitmentC
 const activeRecruitmentCount = document.querySelector("#activeRecruitmentCount");
 const statisticsReferenceAt = document.querySelector("#statisticsReferenceAt");
 const statisticsStatus = document.querySelector("#statisticsStatus");
+const statisticsSection = document.querySelector("#statistics");
 const monthlyStats = document.querySelector("#monthlyStats");
 const regionStats = document.querySelector("#regionStats");
 const SUMMARY_ANIMATION_DURATION_MS = 900;
+let detailStatisticsLoaded = false;
 
 loadStatistics();
 
 function loadStatistics() {
 	loadSummaryStatistics();
-	loadMonthlyStatistics();
-	loadRegionStatistics();
+	prepareDetailStatisticsLoading();
 }
 
 async function loadSummaryStatistics() {
@@ -76,6 +77,35 @@ async function loadRegionStatistics() {
 	} catch (error) {
 		renderPanelError(regionStats, error.message || "지역별 통계를 불러오지 못했습니다.");
 	}
+}
+
+function prepareDetailStatisticsLoading() {
+	renderLoadingState(monthlyStats);
+	renderLoadingState(regionStats);
+	if (!statisticsSection || !("IntersectionObserver" in window)) {
+		loadDetailStatistics();
+		return;
+	}
+
+	const observer = new IntersectionObserver((entries) => {
+		if (!entries.some((entry) => entry.isIntersecting)) {
+			return;
+		}
+		observer.disconnect();
+		loadDetailStatistics();
+	}, {
+		rootMargin: "240px 0px"
+	});
+	observer.observe(statisticsSection);
+}
+
+async function loadDetailStatistics() {
+	if (detailStatisticsLoaded) {
+		return;
+	}
+	detailStatisticsLoaded = true;
+	await loadMonthlyStatistics();
+	window.setTimeout(loadRegionStatistics, 150);
 }
 
 async function fetchJson(url) {
