@@ -19,6 +19,7 @@ public class SecurityConfig {
 				.requestMatchers(
 					"/",
 					"/login",
+					"/find-password",
 					"/recruitments",
 					"/recruitments/*/redirect",
 					"/signup",
@@ -30,6 +31,8 @@ public class SecurityConfig {
 					"/api/members/email-availability",
 					"/api/members/signup",
 					"/api/members/find-id",
+					"/api/members/password-reset-verifications",
+					"/api/members/password-reset-verifications/verify",
 					"/api/members/reset-password",
 					"/api/recruitments/*/redirect",
 					"/api/recruitments/*/redirect-url",

@@ -45,6 +45,8 @@ public class Member {
 	@Column(nullable = false, updatable = false)
 	private LocalDateTime createdAt;
 
+	private LocalDateTime passwordChangedAt;
+
 	@Column(length = 100)
 	private String preferredSearchKeyword;
 
@@ -94,6 +96,7 @@ public class Member {
 
 	public void resetPassword(String encodedPassword) {
 		this.password = encodedPassword;
+		this.passwordChangedAt = LocalDateTime.now();
 	}
 
 	public void updateNickname(String nickname) {

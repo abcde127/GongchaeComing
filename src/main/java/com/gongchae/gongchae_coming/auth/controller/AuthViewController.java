@@ -21,6 +21,11 @@ public class AuthViewController {
 		return "signup-complete";
 	}
 
+	@GetMapping("/find-password")
+	public String findPassword() {
+		return "find-password";
+	}
+
 	@GetMapping("/mypage")
 	public String mypage() {
 		return "mypage";
