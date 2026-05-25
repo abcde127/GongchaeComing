@@ -13,6 +13,7 @@ const SUMMARY_ANIMATION_DURATION_MS = 900;
 let detailStatisticsLoaded = false;
 let selectedRegion = null;
 let activeDetailTab = "yearly";
+let summaryTotalCount = null;
 const regionDetailCache = new Map();
 
 loadStatistics();
@@ -25,6 +26,7 @@ function loadStatistics() {
 async function loadSummaryStatistics() {
 	try {
 		const summary = await fetchJson("/api/recruitments/alio/statistics/summary");
+		summaryTotalCount = summary.totalCount || 0;
 		animateNumber(totalRecruitmentCount, summary.totalCount || 0);
 		animateNumber(scheduledRecruitmentCount, summary.scheduledCount || 0);
 		animateNumber(activeRecruitmentCount, summary.activeCount || 0);
@@ -79,7 +81,10 @@ async function loadRegionStatistics() {
 	renderLoadingState(regionStats);
 	try {
 		const regionCounts = await fetchJson("/api/recruitments/alio/statistics/region-counts");
-		renderRegionButtons((regionCounts || []).slice(0, 18));
+		renderRegionButtons([
+			{ code: "ALL", label: "전국", count: summaryTotalCount },
+			...(regionCounts || []).slice(0, 18)
+		]);
 	} catch (error) {
 		renderPanelError(regionStats, error.message || "지역별 통계를 불러오지 못했습니다.");
 	}
@@ -126,7 +131,7 @@ function renderRegionButtons(regions) {
 		button.dataset.regionCode = region.code;
 		button.innerHTML = `
 			<span>${escapeHtml(region.label || "-")}</span>
-			<strong>${formatNumber(region.count || 0)}</strong>
+			<strong>${formatOptionalNumber(region.count)}</strong>
 		`;
 		button.addEventListener("click", () => selectRegion(region));
 		regionStats.appendChild(button);
@@ -137,7 +142,7 @@ function renderRegionButtons(regions) {
 function selectRegion(region) {
 	selectedRegion = region;
 	regionDetailTitle.textContent = `${region.label} 통계`;
-	selectedRegionCount.textContent = `${formatNumber(region.count || 0)}개`;
+	selectedRegionCount.textContent = `${formatOptionalNumber(region.count)}개`;
 	document.querySelectorAll(".region-stat-button").forEach((button) => {
 		button.classList.toggle("is-active", button.dataset.regionCode === region.code);
 	});
@@ -163,7 +168,9 @@ async function fetchRegionStatistic(tab) {
 		return regionDetailCache.get(cacheKey);
 	}
 	const url = new URL(statisticEndpoint(tab), window.location.origin);
-	url.searchParams.set("regionCode", selectedRegion.code);
+	if (selectedRegion.code !== "ALL") {
+		url.searchParams.set("regionCode", selectedRegion.code);
+	}
 	const items = await fetchJson(url.pathname + url.search);
 	regionDetailCache.set(cacheKey, items);
 	return items;
@@ -278,6 +285,10 @@ function hideStatus() {
 
 function formatNumber(value) {
 	return new Intl.NumberFormat("ko-KR").format(value);
+}
+
+function formatOptionalNumber(value) {
+	return Number.isFinite(Number(value)) ? formatNumber(Number(value)) : "-";
 }
 
 function formatDateTime(value) {
