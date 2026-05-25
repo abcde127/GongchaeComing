@@ -77,6 +77,10 @@ function stopResendCooldown() {
 	}
 }
 
+function updateVerifyCodeButtonState() {
+	verifyCodeButton.disabled = !codeRequestedEmail || codeInput.value.trim().length === 0;
+}
+
 function renderCodeTimer(remainingSeconds) {
 	codeHint.hidden = false;
 	codeHint.innerHTML = `인증번호 유효 시간 <strong class="verification-timer" id="codeTimer">${formatTime(remainingSeconds)}</strong>`;
@@ -136,6 +140,9 @@ function resetVerificationState() {
 	codeInput.value = "";
 	codeHint.hidden = true;
 	verifyCodeButton.disabled = true;
+	verifyCodeButton.hidden = false;
+	emailGroup.hidden = false;
+	codeGroup.hidden = false;
 	newPasswordGroup.hidden = true;
 	newPasswordConfirmGroup.hidden = true;
 	resetPasswordButton.hidden = true;
@@ -243,7 +250,7 @@ async function requestCode() {
 		codeInput.value = "";
 		codeRequestedEmail = email;
 		codeHint.hidden = false;
-		verifyCodeButton.disabled = false;
+		updateVerifyCodeButtonState();
 		newPasswordGroup.hidden = true;
 		newPasswordConfirmGroup.hidden = true;
 		resetPasswordButton.hidden = true;
@@ -385,6 +392,7 @@ codeInput.addEventListener("input", () => {
 	newPasswordGroup.hidden = true;
 	newPasswordConfirmGroup.hidden = true;
 	resetPasswordButton.hidden = true;
+	updateVerifyCodeButtonState();
 });
 requestCodeButton.addEventListener("click", requestCode);
 verifyCodeButton.addEventListener("click", verifyCode);

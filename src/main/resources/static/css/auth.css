@@ -237,6 +237,10 @@ a:hover {
 	gap: 18px;
 }
 
+.auth-form [hidden] {
+	display: none !important;
+}
+
 .field-group {
 	display: grid;
 	gap: 8px;
