@@ -68,7 +68,7 @@ function renderSummaryError(element) {
 }
 
 async function loadMonthlyStatistics() {
-	renderLoadingState(regionDetailStats);
+	renderStatisticLoadingState(regionDetailStats, "period");
 	try {
 		const monthlyCounts = await fetchRegionStatistic("period");
 		renderBarList(regionDetailStats, latestItems(monthlyCounts || [], 12), "yearMonth");
@@ -78,7 +78,7 @@ async function loadMonthlyStatistics() {
 }
 
 async function loadRegionStatistics() {
-	renderLoadingState(regionStats);
+	renderRegionLoadingState(regionStats);
 	try {
 		const regionCounts = await fetchJson("/api/recruitments/alio/statistics/region-counts");
 		renderRegionButtons([
@@ -91,8 +91,8 @@ async function loadRegionStatistics() {
 }
 
 function prepareDetailStatisticsLoading() {
-	renderLoadingState(regionStats);
-	renderLoadingState(regionDetailStats);
+	renderRegionLoadingState(regionStats);
+	renderStatisticLoadingState(regionDetailStats, activeDetailTab);
 	if (!statisticsSection || !("IntersectionObserver" in window)) {
 		loadDetailStatistics();
 		return;
@@ -120,6 +120,7 @@ async function loadDetailStatistics() {
 
 function renderRegionButtons(regions) {
 	regionStats.replaceChildren();
+	regionStats.removeAttribute("aria-busy");
 	if (!regions.length) {
 		renderPanelError(regionStats, "표시할 지역 통계가 없습니다.");
 		return;
@@ -153,7 +154,7 @@ async function loadSelectedRegionStatistic() {
 	if (!selectedRegion) {
 		return;
 	}
-	renderLoadingState(regionDetailStats);
+	renderStatisticLoadingState(regionDetailStats, activeDetailTab);
 	try {
 		const items = await fetchRegionStatistic(activeDetailTab);
 		renderRegionDetailStatistic(items || []);
@@ -190,6 +191,7 @@ function statisticEndpoint(tab) {
 }
 
 function renderRegionDetailStatistic(items) {
+	regionDetailStats.removeAttribute("aria-busy");
 	if (activeDetailTab === "period") {
 		renderPeriodStatistic(items);
 		return;
@@ -217,6 +219,7 @@ function createStatisticGroup(title, items, labelKey, variant) {
 
 function renderColumnChart(container, items, labelKey) {
 	container.replaceChildren();
+	container.removeAttribute("aria-busy");
 	if (!items.length) {
 		const empty = document.createElement("p");
 		empty.className = "empty-note";
@@ -278,6 +281,7 @@ async function fetchJson(url) {
 
 function renderBarList(container, items, labelKey) {
 	container.replaceChildren();
+	container.removeAttribute("aria-busy");
 	if (!items.length) {
 		const empty = document.createElement("p");
 		empty.className = "empty-note";
@@ -310,16 +314,73 @@ function latestItems(items, limit) {
 		.slice(0, limit);
 }
 
-function renderLoadingState(container) {
+function renderRegionLoadingState(container) {
 	container.replaceChildren();
-	const loading = document.createElement("p");
-	loading.className = "empty-note";
-	loading.textContent = "통계를 불러오고 있습니다.";
-	container.appendChild(loading);
+	container.setAttribute("aria-busy", "true");
+	for (let index = 0; index < 8; index += 1) {
+		const skeleton = document.createElement("div");
+		skeleton.className = "region-stat-skeleton skeleton-surface";
+		skeleton.innerHTML = `
+			<span></span>
+			<strong></strong>
+		`;
+		container.appendChild(skeleton);
+	}
+}
+
+function renderStatisticLoadingState(container, tab) {
+	container.replaceChildren();
+	container.setAttribute("aria-busy", "true");
+	if (tab === "period") {
+		container.appendChild(createColumnChartSkeleton("년도별 공고 수", 5, "yearly"));
+		container.appendChild(createColumnChartSkeleton("최근 12개월 공고 수", 12, "monthly"));
+		return;
+	}
+
+	const list = document.createElement("div");
+	list.className = "bar-list skeleton-bar-list";
+	for (let index = 0; index < 8; index += 1) {
+		const row = document.createElement("div");
+		row.className = "bar-row skeleton-bar-row";
+		row.innerHTML = `
+			<div class="bar-row-meta">
+				<span class="skeleton-surface"></span>
+				<strong class="skeleton-surface"></strong>
+			</div>
+			<div class="bar-track skeleton-surface" aria-hidden="true"></div>
+		`;
+		list.appendChild(row);
+	}
+	container.appendChild(list);
+}
+
+function createColumnChartSkeleton(title, count, variant) {
+	const group = document.createElement("section");
+	group.className = "statistic-group";
+	const heading = document.createElement("h4");
+	heading.textContent = title;
+	const chart = document.createElement("div");
+	chart.className = `column-chart statistic-group-list column-chart-${variant} column-chart-skeleton`;
+	for (let index = 0; index < count; index += 1) {
+		const column = document.createElement("div");
+		column.className = "column-item skeleton-column-item";
+		const height = 28 + ((index * 19) % 58);
+		column.innerHTML = `
+			<strong class="column-value skeleton-surface"></strong>
+			<div class="column-bar-wrap skeleton-bar-wrap" aria-hidden="true">
+				<span class="column-bar skeleton-surface" style="height: ${height}%"></span>
+			</div>
+			<span class="column-label skeleton-surface"></span>
+		`;
+		chart.appendChild(column);
+	}
+	group.append(heading, chart);
+	return group;
 }
 
 function renderPanelError(container, message) {
 	container.replaceChildren();
+	container.removeAttribute("aria-busy");
 	const error = document.createElement("p");
 	error.className = "empty-note is-error";
 	error.textContent = message;

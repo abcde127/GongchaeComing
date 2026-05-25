@@ -432,6 +432,27 @@ button {
 	margin-top: 0;
 }
 
+.skeleton-surface {
+	position: relative;
+	overflow: hidden;
+	background: #e8eef5;
+}
+
+.skeleton-surface::after {
+	position: absolute;
+	inset: 0;
+	content: "";
+	transform: translateX(-100%);
+	background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent);
+	animation: skeleton-shimmer 1.35s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+	100% {
+		transform: translateX(100%);
+	}
+}
+
 .column-chart {
 	display: grid;
 	align-items: end;
@@ -492,6 +513,28 @@ button {
 	white-space: nowrap;
 }
 
+.skeleton-column-item .column-value {
+	justify-self: center;
+	width: 38px;
+	height: 14px;
+	border-radius: 999px;
+}
+
+.skeleton-column-item .column-label {
+	justify-self: center;
+	width: 42px;
+	height: 13px;
+	border-radius: 999px;
+}
+
+.skeleton-column-item .column-bar {
+	background: #dbe5ef;
+}
+
+.skeleton-bar-wrap {
+	background: #f4f7fb;
+}
+
 .region-panel {
 	position: sticky;
 	top: 94px;
@@ -535,6 +578,33 @@ button {
 	font-weight: 800;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+.region-stat-skeleton {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 14px;
+	min-height: 44px;
+	padding: 10px 12px;
+	border-radius: 8px;
+}
+
+.region-stat-skeleton span,
+.region-stat-skeleton strong {
+	display: block;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.74);
+}
+
+.region-stat-skeleton span {
+	width: 86px;
+	height: 14px;
+}
+
+.region-stat-skeleton strong {
+	width: 42px;
+	height: 18px;
 }
 
 .region-stat-button.is-active span,
@@ -618,6 +688,26 @@ button {
 	font-size: 0.98rem;
 }
 
+.skeleton-bar-row .bar-row-meta span,
+.skeleton-bar-row .bar-row-meta strong {
+	display: block;
+	height: 14px;
+	border-radius: 999px;
+}
+
+.skeleton-bar-row .bar-row-meta span {
+	width: min(48%, 180px);
+}
+
+.skeleton-bar-row .bar-row-meta strong {
+	width: 46px;
+}
+
+.skeleton-bar-row .bar-track {
+	height: 10px;
+	border-radius: 999px;
+}
+
 .bar-track {
 	height: 10px;
 	overflow: hidden;
@@ -644,6 +734,12 @@ button {
 
 .empty-note.is-error {
 	color: var(--orange);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.skeleton-surface::after {
+		animation: none;
+	}
 }
 
 @media (max-width: 980px) {
