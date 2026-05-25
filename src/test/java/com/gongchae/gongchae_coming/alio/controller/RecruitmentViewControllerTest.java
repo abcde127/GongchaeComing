@@ -10,6 +10,16 @@ class RecruitmentViewControllerTest {
 	private final RecruitmentViewController controller = new RecruitmentViewController();
 
 	@Test
+	void homeRendersLandingTemplate() {
+		ConcurrentModel model = new ConcurrentModel();
+
+		String viewName = controller.home(null, model);
+
+		assertThat(viewName).isEqualTo("home");
+		assertThat(model.getAttribute("isLoggedIn")).isEqualTo(false);
+	}
+
+	@Test
 	void recruitmentRedirectPageRendersRedirectLandingTemplate() {
 		ConcurrentModel model = new ConcurrentModel();
 

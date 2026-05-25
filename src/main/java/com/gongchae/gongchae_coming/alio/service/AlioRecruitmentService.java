@@ -9,6 +9,8 @@ import com.gongchae.gongchae_coming.alio.domain.AlioRecruitment;
 import com.gongchae.gongchae_coming.alio.domain.AlioRecruitmentSyncState;
 import com.gongchae.gongchae_coming.alio.dto.AlioFilterOptionResponse;
 import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentListRequest;
+import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentStatisticsResponse;
+import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentStatisticsRow;
 import com.gongchae.gongchae_coming.alio.exception.AlioApiException;
 import com.gongchae.gongchae_coming.alio.repository.AlioRecruitmentRepository;
 import com.gongchae.gongchae_coming.alio.repository.AlioRecruitmentSyncStateRepository;
@@ -35,6 +37,9 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -149,6 +154,46 @@ public class AlioRecruitmentService {
 	@Transactional
 	public JsonNode getRecruitments(AlioRecruitmentListRequest request) {
 		return buildResponseFromCachedRecruitments(request);
+	}
+
+	@Transactional(readOnly = true)
+	public AlioRecruitmentStatisticsResponse getRecruitmentStatistics() {
+		List<AlioRecruitmentStatisticsRow> recruitments = alioRecruitmentRepository.findStatisticsRows();
+		Map<String, Long> statusCounts = countRecruitmentsByStatus(recruitments);
+
+		return new AlioRecruitmentStatisticsResponse(
+			recruitments.size(),
+			resolveLastFetchedAt(),
+			List.of(
+				new AlioRecruitmentStatisticsResponse.StatusCount("scheduled", "예정", statusCounts.get("scheduled")),
+				new AlioRecruitmentStatisticsResponse.StatusCount("active", "진행", statusCounts.get("active")),
+				new AlioRecruitmentStatisticsResponse.StatusCount("closed", "마감", statusCounts.get("closed"))
+			),
+			countRecruitmentsByMonthlyStart(recruitments),
+			countRecruitmentsByRegion(recruitments)
+		);
+	}
+
+	@Transactional(readOnly = true)
+	public AlioRecruitmentStatisticsResponse.Summary getRecruitmentStatisticsSummary() {
+		List<AlioRecruitmentStatisticsRow> recruitments = alioRecruitmentRepository.findStatisticsRows();
+		Map<String, Long> statusCounts = countRecruitmentsByStatus(recruitments);
+		return new AlioRecruitmentStatisticsResponse.Summary(
+			recruitments.size(),
+			statusCounts.get("scheduled"),
+			statusCounts.get("active"),
+			resolveLastFetchedAt()
+		);
+	}
+
+	@Transactional(readOnly = true)
+	public List<AlioRecruitmentStatisticsResponse.MonthlyCount> getRecruitmentMonthlyStartCounts() {
+		return countRecruitmentsByMonthlyStart(alioRecruitmentRepository.findStatisticsRows());
+	}
+
+	@Transactional(readOnly = true)
+	public List<AlioRecruitmentStatisticsResponse.RegionCount> getRecruitmentRegionCounts() {
+		return countRecruitmentsByRegion(alioRecruitmentRepository.findStatisticsRows());
 	}
 
 	@Transactional
@@ -406,6 +451,137 @@ public class AlioRecruitmentService {
 		}
 		updateTotalCount(root, saturatedInt(recruitments.getTotalElements()));
 		return root;
+	}
+
+	private String resolveLastFetchedAt() {
+		return syncStateRepository.findById(AlioRecruitmentSyncState.GLOBAL_ID)
+			.map(AlioRecruitmentSyncState::getLastSucceededAt)
+			.or(() -> alioRecruitmentRepository.findLatestCreatedAt())
+			.map(LocalDateTime::toString)
+			.orElse(null);
+	}
+
+	private Map<String, Long> countRecruitmentsByStatus(List<AlioRecruitmentStatisticsRow> recruitments) {
+		Map<String, Long> statusCounts = new LinkedHashMap<>();
+		statusCounts.put("scheduled", 0L);
+		statusCounts.put("active", 0L);
+		statusCounts.put("closed", 0L);
+		recruitments.forEach(recruitment ->
+			statusCounts.computeIfPresent(resolveRecruitmentStatus(recruitment), (status, count) -> count + 1)
+		);
+		return statusCounts;
+	}
+
+	private List<AlioRecruitmentStatisticsResponse.MonthlyCount> countRecruitmentsByMonthlyStart(
+		List<AlioRecruitmentStatisticsRow> recruitments
+	) {
+		Map<String, Long> monthlyStartCounts = new HashMap<>();
+		recruitments.forEach(recruitment -> {
+			String yearMonth = resolveYearMonth(recruitment);
+			if (yearMonth != null) {
+				monthlyStartCounts.merge(yearMonth, 1L, Long::sum);
+			}
+		});
+		return monthlyStartCounts.entrySet()
+			.stream()
+			.sorted(Map.Entry.comparingByKey())
+			.map(entry -> new AlioRecruitmentStatisticsResponse.MonthlyCount(entry.getKey(), entry.getValue()))
+			.toList();
+	}
+
+	private List<AlioRecruitmentStatisticsResponse.RegionCount> countRecruitmentsByRegion(
+		List<AlioRecruitmentStatisticsRow> recruitments
+	) {
+		Map<String, RegionAccumulator> regionCounts = new HashMap<>();
+		recruitments.forEach(recruitment -> addRegionCounts(regionCounts, recruitment));
+		return regionCounts.values()
+			.stream()
+			.sorted(Comparator
+				.comparingLong(RegionAccumulator::count)
+				.reversed()
+				.thenComparing(RegionAccumulator::label))
+			.map(region -> new AlioRecruitmentStatisticsResponse.RegionCount(region.code(), region.label(), region.count()))
+			.toList();
+	}
+
+	private String resolveRecruitmentStatus(AlioRecruitmentStatisticsRow recruitment) {
+		LocalDate today = LocalDate.now();
+		LocalDate startDate = parseDate(recruitment.getPbancBgngYmd());
+		LocalDate endDate = parseDate(recruitment.getPbancEndYmd());
+		if (startDate != null && startDate.isAfter(today)) {
+			return "scheduled";
+		}
+		if (endDate != null && endDate.isBefore(today)) {
+			return "closed";
+		}
+		return "active";
+	}
+
+	private String resolveYearMonth(AlioRecruitmentStatisticsRow recruitment) {
+		LocalDate startDate = parseDate(recruitment.getPbancBgngYmd());
+		return startDate == null ? null : startDate.format(DateTimeFormatter.ofPattern("yyyy-MM"));
+	}
+
+	private void addRegionCounts(Map<String, RegionAccumulator> regionCounts, AlioRecruitmentStatisticsRow recruitment) {
+		List<String> regionCodes = splitCsv(recruitment.getWorkRgnLst());
+		List<String> regionLabels = splitCsv(recruitment.getWorkRgnNmLst());
+		int regionSize = Math.max(regionCodes.size(), regionLabels.size());
+		for (int index = 0; index < regionSize; index++) {
+			String code = valueAt(regionCodes, index);
+			String label = valueAt(regionLabels, index);
+			if (!StringUtils.hasText(code) && !StringUtils.hasText(label)) {
+				continue;
+			}
+			if (!StringUtils.hasText(label)) {
+				label = regionLabelByCode(code);
+			}
+			if (!StringUtils.hasText(code)) {
+				code = label;
+			}
+			String key = StringUtils.hasText(code) ? code : label;
+			String resolvedCode = code;
+			String resolvedLabel = label;
+			regionCounts.compute(
+				key,
+				(ignored, accumulator) -> accumulator == null
+					? new RegionAccumulator(resolvedCode, resolvedLabel, 1)
+					: accumulator.increment()
+			);
+		}
+	}
+
+	private List<String> splitCsv(String value) {
+		if (!StringUtils.hasText(value)) {
+			return List.of();
+		}
+		return List.of(value.split(","))
+			.stream()
+			.map(String::trim)
+			.filter(StringUtils::hasText)
+			.toList();
+	}
+
+	private String valueAt(List<String> values, int index) {
+		return index < values.size() ? values.get(index) : null;
+	}
+
+	private String regionLabelByCode(String code) {
+		return WORK_REGION_FILTER_OPTIONS.stream()
+			.filter(region -> region.code().equals(code))
+			.map(AlioFilterOptionResponse::name)
+			.findFirst()
+			.orElse(code);
+	}
+
+	private record RegionAccumulator(
+		String code,
+		String label,
+		long count
+	) {
+
+		private RegionAccumulator increment() {
+			return new RegionAccumulator(code, label, count + 1);
+		}
 	}
 
 	private Pageable pageable(AlioRecruitmentListRequest request) {
@@ -749,20 +925,26 @@ public class AlioRecruitmentService {
 	private LocalDate parseDate(JsonNode item, String... fieldNames) {
 		for (String fieldName : fieldNames) {
 			String value = item.path(fieldName).asText(null);
-			if (!StringUtils.hasText(value)) {
-				continue;
-			}
-
-			try {
-				if (value.trim().matches("^\\d{8}$")) {
-					return LocalDate.parse(value.trim(), java.time.format.DateTimeFormatter.BASIC_ISO_DATE);
-				}
-				return LocalDate.parse(value.trim());
-			} catch (DateTimeParseException ignored) {
-				// Ignore non-ISO date values and continue with fallback fields.
+			LocalDate parsedDate = parseDate(value);
+			if (parsedDate != null) {
+				return parsedDate;
 			}
 		}
 
 		return null;
+	}
+
+	private LocalDate parseDate(String value) {
+		if (!StringUtils.hasText(value)) {
+			return null;
+		}
+		try {
+			if (value.trim().matches("^\\d{8}$")) {
+				return LocalDate.parse(value.trim(), java.time.format.DateTimeFormatter.BASIC_ISO_DATE);
+			}
+			return LocalDate.parse(value.trim());
+		} catch (DateTimeParseException ignored) {
+			return null;
+		}
 	}
 }

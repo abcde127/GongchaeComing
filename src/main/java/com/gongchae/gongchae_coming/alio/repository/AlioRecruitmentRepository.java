@@ -1,6 +1,7 @@
 package com.gongchae.gongchae_coming.alio.repository;
 
 import com.gongchae.gongchae_coming.alio.domain.AlioRecruitment;
+import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentStatisticsRow;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -20,5 +21,15 @@ public interface AlioRecruitmentRepository extends JpaRepository<AlioRecruitment
 
 	@Query("select max(recruitment.createdAt) from AlioRecruitment recruitment")
 	Optional<LocalDateTime> findLatestCreatedAt();
+
+	@Query("""
+		select
+			recruitment.pbancBgngYmd as pbancBgngYmd,
+			recruitment.pbancEndYmd as pbancEndYmd,
+			recruitment.workRgnLst as workRgnLst,
+			recruitment.workRgnNmLst as workRgnNmLst
+		from AlioRecruitment recruitment
+		""")
+	List<AlioRecruitmentStatisticsRow> findStatisticsRows();
 
 }

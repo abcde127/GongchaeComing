@@ -7,6 +7,7 @@ import com.gongchae.gongchae_coming.alio.client.AlioRecruitmentClient;
 import com.gongchae.gongchae_coming.alio.domain.AlioRecruitment;
 import com.gongchae.gongchae_coming.alio.domain.AlioRecruitmentSyncState;
 import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentListRequest;
+import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentStatisticsRow;
 import com.gongchae.gongchae_coming.alio.repository.AlioRecruitmentRepository;
 import com.gongchae.gongchae_coming.alio.repository.AlioRecruitmentSyncStateRepository;
 import com.gongchae.gongchae_coming.alio.repository.PublicInstitutionRepository;
@@ -234,6 +235,57 @@ class AlioRecruitmentServiceTest {
 
 		assertThat(result.path("lastFetchedAt").asText()).isEqualTo("2026-05-24T22:30");
 		assertThat(result.at("/response/body/lastFetchedAt").asText()).isEqualTo("2026-05-24T22:30");
+	}
+
+	@Test
+	void getRecruitmentStatisticsCountsStatusesMonthsAndRegions() {
+		AlioRecruitmentClient client = mock(AlioRecruitmentClient.class);
+		AlioRecruitmentRepository recruitmentRepository = mock(AlioRecruitmentRepository.class);
+		AlioRecruitmentSyncStateRepository syncStateRepository = mock(AlioRecruitmentSyncStateRepository.class);
+		AlioRecruitmentService service = new AlioRecruitmentService(
+			client,
+			recruitmentRepository,
+			syncStateRepository,
+			mock(PublicInstitutionRepository.class),
+			new AlioRecruitmentSyncProgressStore(),
+			mock(NewRecruitmentNotificationService.class),
+			mock(AlioRecruitmentSeedExporter.class)
+		);
+		ObjectNode scheduled = recruitment("예정 공고", date(LocalDate.now().plusDays(2)), date(LocalDate.now().plusDays(10)));
+		scheduled.put("workRgnLst", "R3010,R3017");
+		scheduled.put("workRgnNmLst", "서울,경기");
+		ObjectNode active = recruitment("진행 공고", date(LocalDate.now().minusDays(2)), date(LocalDate.now().plusDays(2)));
+		active.put("workRgnLst", "R3010");
+		active.put("workRgnNmLst", "서울");
+		ObjectNode closed = recruitment("마감 공고", date(LocalDate.now().minusDays(10)), date(LocalDate.now().minusDays(1)));
+		closed.put("workRgnLst", "R3026");
+
+		when(recruitmentRepository.findStatisticsRows()).thenReturn(toStatisticsRows(createResponse(scheduled, active, closed)));
+		when(syncStateRepository.findById(any())).thenReturn(Optional.of(
+			AlioRecruitmentSyncState.global(LocalDateTime.of(2026, 5, 24, 10, 30))
+		));
+
+		var result = service.getRecruitmentStatistics();
+
+		assertThat(result.totalCount()).isEqualTo(3);
+		assertThat(result.lastFetchedAt()).isEqualTo("2026-05-24T10:30");
+		assertThat(result.statusCounts())
+			.extracting("status", "count")
+			.containsExactly(
+				org.assertj.core.groups.Tuple.tuple("scheduled", 1L),
+				org.assertj.core.groups.Tuple.tuple("active", 1L),
+				org.assertj.core.groups.Tuple.tuple("closed", 1L)
+			);
+		assertThat(result.monthlyStartCounts())
+			.extracting("yearMonth")
+			.contains(date(LocalDate.now().plusDays(2)).substring(0, 7));
+		assertThat(result.regionCounts())
+			.extracting("label", "count")
+			.contains(
+				org.assertj.core.groups.Tuple.tuple("서울", 2L),
+				org.assertj.core.groups.Tuple.tuple("경기", 1L),
+				org.assertj.core.groups.Tuple.tuple("세종특별자치시", 1L)
+			);
 	}
 
 	@Test
@@ -510,6 +562,37 @@ class AlioRecruitmentServiceTest {
 		ArrayNode items = (ArrayNode) response.at("/response/body/items/item");
 		return Arrays.stream(OBJECT_MAPPER.convertValue(items, ObjectNode[].class))
 			.map(item -> AlioRecruitment.from(item, LocalDateTime.now()))
+			.toList();
+	}
+
+	private List<AlioRecruitmentStatisticsRow> toStatisticsRows(ObjectNode response) {
+		return toRecruitments(response)
+			.stream()
+			.<AlioRecruitmentStatisticsRow>map(recruitment -> {
+				ObjectNode item = OBJECT_MAPPER.createObjectNode();
+				recruitment.writeTo(item);
+				return new AlioRecruitmentStatisticsRow() {
+					@Override
+					public String getPbancBgngYmd() {
+						return item.path("pbancBgngYmd").asText(null);
+					}
+
+					@Override
+					public String getPbancEndYmd() {
+						return item.path("pbancEndYmd").asText(null);
+					}
+
+					@Override
+					public String getWorkRgnLst() {
+						return item.path("workRgnLst").asText(null);
+					}
+
+					@Override
+					public String getWorkRgnNmLst() {
+						return item.path("workRgnNmLst").asText(null);
+					}
+				};
+			})
 			.toList();
 	}
 

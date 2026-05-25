@@ -2,6 +2,7 @@ package com.gongchae.gongchae_coming.alio.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentListRequest;
+import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentStatisticsResponse;
 import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentSyncProgressResponse;
 import com.gongchae.gongchae_coming.alio.service.AlioRecruitmentService;
 import com.gongchae.gongchae_coming.alio.service.AlioRecruitmentSyncProgressStore;
@@ -25,6 +26,26 @@ public class AlioRecruitmentController {
 	@GetMapping
 	public JsonNode getRecruitmentList(@Valid @ModelAttribute AlioRecruitmentListRequest request) {
 		return alioRecruitmentService.getRecruitments(request);
+	}
+
+	@GetMapping("/statistics")
+	public AlioRecruitmentStatisticsResponse getRecruitmentStatistics() {
+		return alioRecruitmentService.getRecruitmentStatistics();
+	}
+
+	@GetMapping("/statistics/summary")
+	public AlioRecruitmentStatisticsResponse.Summary getRecruitmentStatisticsSummary() {
+		return alioRecruitmentService.getRecruitmentStatisticsSummary();
+	}
+
+	@GetMapping("/statistics/monthly-start-counts")
+	public java.util.List<AlioRecruitmentStatisticsResponse.MonthlyCount> getRecruitmentMonthlyStartCounts() {
+		return alioRecruitmentService.getRecruitmentMonthlyStartCounts();
+	}
+
+	@GetMapping("/statistics/region-counts")
+	public java.util.List<AlioRecruitmentStatisticsResponse.RegionCount> getRecruitmentRegionCounts() {
+		return alioRecruitmentService.getRecruitmentRegionCounts();
 	}
 
 	@PostMapping("/sync")

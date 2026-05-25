@@ -11,8 +11,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 public class RecruitmentViewController {
 
 	@GetMapping("/")
-	public String home() {
-		return "redirect:/recruitments";
+	public String home(Authentication authentication, Model model) {
+		addLoginStatus(authentication, model);
+		return "home";
 	}
 
 	@GetMapping("/recruitments")
