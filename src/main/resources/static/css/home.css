@@ -276,11 +276,11 @@ button {
 
 .intro-grid {
 	display: grid;
-	grid-template-columns: repeat(3, minmax(0, 1fr));
-	gap: 18px;
+	gap: 22px;
+	max-width: 860px;
 }
 
-.intro-grid article,
+.intro-card,
 .stat-panel {
 	border: 1px solid var(--line);
 	border-radius: 8px;
@@ -288,8 +288,27 @@ button {
 	box-shadow: var(--shadow);
 }
 
-.intro-grid article {
-	padding: 24px;
+.intro-row {
+	display: grid;
+	grid-template-columns: 76px minmax(0, 1fr);
+	gap: 18px;
+	align-items: center;
+}
+
+.intro-row-reverse {
+	grid-template-columns: minmax(0, 1fr) 76px;
+}
+
+.intro-row-reverse .intro-icon {
+	order: 2;
+}
+
+.intro-row-reverse .intro-card {
+	order: 1;
+}
+
+.intro-card {
+	padding: 22px;
 }
 
 .intro-grid h2,
@@ -307,6 +326,49 @@ button {
 	margin: 12px 0 0;
 	color: var(--muted);
 	line-height: 1.65;
+}
+
+.intro-icon {
+	display: grid;
+	place-items: center;
+	width: 76px;
+	height: 76px;
+	border-radius: 8px;
+	border: 1px solid var(--line);
+	background: var(--accent-soft);
+	color: var(--accent-strong);
+	box-shadow: var(--shadow);
+}
+
+.intro-icon-blue {
+	background: #dbeafe;
+	color: var(--blue);
+}
+
+.intro-icon-orange {
+	background: #ffedd5;
+	color: var(--orange);
+}
+
+.intro-icon svg {
+	width: 34px;
+	height: 34px;
+	fill: none;
+	stroke: currentColor;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-width: 1.9;
+}
+
+.reveal-on-scroll {
+	opacity: 0;
+	transform: translateY(18px);
+	transition: opacity 0.52s ease, transform 0.52s ease;
+}
+
+.reveal-on-scroll.is-visible {
+	opacity: 1;
+	transform: translateY(0);
 }
 
 .statistics-section {
@@ -731,6 +793,12 @@ button {
 	.bar-track span {
 		animation: none;
 	}
+
+	.reveal-on-scroll {
+		opacity: 1;
+		transform: none;
+		transition: none;
+	}
 }
 
 @keyframes column-bar-fill {
@@ -759,8 +827,27 @@ button {
 	.hero-inner,
 	.stats-grid,
 	.region-dashboard,
-	.intro-grid {
+	.intro-grid,
+	.intro-row,
+	.intro-row-reverse {
 		grid-template-columns: 1fr;
+	}
+
+	.intro-row .intro-icon,
+	.intro-row .intro-card,
+	.intro-row-reverse .intro-icon,
+	.intro-row-reverse .intro-card {
+		order: initial;
+	}
+
+	.intro-icon {
+		width: 60px;
+		height: 60px;
+	}
+
+	.intro-icon svg {
+		width: 28px;
+		height: 28px;
 	}
 
 	.hero-stats {

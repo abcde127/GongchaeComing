@@ -7,6 +7,7 @@ const statisticsSection = document.querySelector("#statistics");
 const regionStats = document.querySelector("#regionStats");
 const regionDetailStats = document.querySelector("#regionDetailStats");
 const statTabs = document.querySelectorAll("[data-stat-tab]");
+const revealElements = document.querySelectorAll(".reveal-on-scroll");
 const SUMMARY_ANIMATION_DURATION_MS = 900;
 const WORK_REGION_OPTIONS = [
 	{ code: "ALL", label: "전국" },
@@ -39,6 +40,7 @@ loadStatistics();
 
 function loadStatistics() {
 	loadSummaryStatistics();
+	prepareScrollReveal();
 	prepareDetailStatisticsLoading();
 }
 
@@ -128,6 +130,33 @@ function prepareDetailStatisticsLoading() {
 		rootMargin: "240px 0px"
 	});
 	observer.observe(statisticsSection);
+}
+
+function prepareScrollReveal() {
+	if (!revealElements.length) {
+		return;
+	}
+	if (!("IntersectionObserver" in window)) {
+		revealElements.forEach((element) => element.classList.add("is-visible"));
+		return;
+	}
+
+	const observer = new IntersectionObserver((entries) => {
+		entries.forEach((entry) => {
+			if (!entry.isIntersecting) {
+				return;
+			}
+			entry.target.classList.add("is-visible");
+			observer.unobserve(entry.target);
+		});
+	}, {
+		threshold: 0.28
+	});
+
+	revealElements.forEach((element, index) => {
+		element.style.transitionDelay = `${index * 90}ms`;
+		observer.observe(element);
+	});
 }
 
 async function loadDetailStatistics() {
