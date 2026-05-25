@@ -12,7 +12,7 @@ const statTabs = document.querySelectorAll("[data-stat-tab]");
 const SUMMARY_ANIMATION_DURATION_MS = 900;
 let detailStatisticsLoaded = false;
 let selectedRegion = null;
-let activeDetailTab = "yearly";
+let activeDetailTab = "period";
 let summaryTotalCount = null;
 const regionDetailCache = new Map();
 
@@ -70,7 +70,7 @@ function renderSummaryError(element) {
 async function loadMonthlyStatistics() {
 	renderLoadingState(regionDetailStats);
 	try {
-		const monthlyCounts = await fetchRegionStatistic("monthly");
+		const monthlyCounts = await fetchRegionStatistic("period");
 		renderBarList(regionDetailStats, latestItems(monthlyCounts || [], 12), "yearMonth");
 	} catch (error) {
 		renderPanelError(regionDetailStats, error.message || "월별 통계를 불러오지 못했습니다.");
@@ -177,7 +177,7 @@ async function fetchRegionStatistic(tab) {
 }
 
 function statisticEndpoint(tab) {
-	if (tab === "monthly") {
+	if (tab === "period") {
 		return "/api/recruitments/alio/statistics/monthly-start-counts";
 	}
 	if (tab === "ncs") {
@@ -186,19 +186,47 @@ function statisticEndpoint(tab) {
 	if (tab === "company") {
 		return "/api/recruitments/alio/statistics/company-counts";
 	}
-	return "/api/recruitments/alio/statistics/yearly-start-counts";
+	return "/api/recruitments/alio/statistics/monthly-start-counts";
 }
 
 function renderRegionDetailStatistic(items) {
-	const limitedItems = activeDetailTab === "monthly"
-		? latestItems(items, 12)
-		: items.slice(0, 12);
-	const labelKey = activeDetailTab === "yearly"
-		? "year"
-		: activeDetailTab === "monthly"
-			? "yearMonth"
-			: "label";
-	renderBarList(regionDetailStats, limitedItems, labelKey);
+	if (activeDetailTab === "period") {
+		renderPeriodStatistic(items);
+		return;
+	}
+	renderBarList(regionDetailStats, items.slice(0, 12), "label");
+}
+
+function renderPeriodStatistic(items) {
+	regionDetailStats.replaceChildren();
+	regionDetailStats.appendChild(createStatisticGroup("년도별 공고 수", yearlyCountsFromMonthly(items), "year"));
+	regionDetailStats.appendChild(createStatisticGroup("최근 12개월 공고 수", latestItems(items, 12), "yearMonth"));
+}
+
+function createStatisticGroup(title, items, labelKey) {
+	const group = document.createElement("section");
+	group.className = "statistic-group";
+	const heading = document.createElement("h4");
+	heading.textContent = title;
+	const list = document.createElement("div");
+	list.className = "bar-list statistic-group-list";
+	group.append(heading, list);
+	renderBarList(list, items, labelKey);
+	return group;
+}
+
+function yearlyCountsFromMonthly(items) {
+	const yearlyCounts = new Map();
+	items.forEach((item) => {
+		const year = String(item.yearMonth || "").slice(0, 4);
+		if (!year) {
+			return;
+		}
+		yearlyCounts.set(year, (yearlyCounts.get(year) || 0) + (item.count || 0));
+	});
+	return [...yearlyCounts.entries()]
+		.sort(([left], [right]) => left.localeCompare(right))
+		.map(([year, count]) => ({ year, count }));
 }
 
 statTabs.forEach((tab) => {

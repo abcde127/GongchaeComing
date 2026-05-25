@@ -411,6 +411,27 @@ button {
 	margin-top: 18px;
 }
 
+.statistic-group {
+	display: grid;
+	gap: 12px;
+}
+
+.statistic-group + .statistic-group {
+	margin-top: 10px;
+	padding-top: 20px;
+	border-top: 1px solid var(--line);
+}
+
+.statistic-group h4 {
+	margin: 0;
+	color: var(--ink);
+	font-size: 0.95rem;
+}
+
+.statistic-group-list {
+	margin-top: 0;
+}
+
 .region-panel {
 	position: sticky;
 	top: 94px;
