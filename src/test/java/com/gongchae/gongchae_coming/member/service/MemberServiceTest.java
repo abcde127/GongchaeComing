@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.gongchae.gongchae_coming.alio.domain.PublicInstitution;
 import com.gongchae.gongchae_coming.alio.repository.PublicInstitutionRepository;
 import com.gongchae.gongchae_coming.member.domain.Member;
+import com.gongchae.gongchae_coming.member.domain.PasswordResetVerification;
 import com.gongchae.gongchae_coming.member.dto.MemberFindIdRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberFindIdResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberJobPreferenceRequest;
@@ -19,9 +20,13 @@ import com.gongchae.gongchae_coming.member.dto.MemberResetPasswordRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberResetPasswordResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberSignupRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberSignupResponse;
+import com.gongchae.gongchae_coming.member.dto.PasswordResetCodeRequest;
+import com.gongchae.gongchae_coming.member.dto.PasswordResetCodeVerifyRequest;
 import com.gongchae.gongchae_coming.member.exception.DuplicateMemberException;
 import com.gongchae.gongchae_coming.member.exception.MemberNotFoundException;
 import com.gongchae.gongchae_coming.member.repository.MemberRepository;
+import com.gongchae.gongchae_coming.member.repository.PasswordResetVerificationRepository;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +45,9 @@ class MemberServiceTest {
 
 	@Autowired
 	private MemberRepository memberRepository;
+
+	@Autowired
+	private PasswordResetVerificationRepository passwordResetVerificationRepository;
 
 	@Autowired
 	private PublicInstitutionRepository publicInstitutionRepository;
@@ -141,36 +149,97 @@ class MemberServiceTest {
 			"gongchae",
 			"password1"
 		));
+		savePasswordResetVerification("user@example.com", "123456", LocalDateTime.now().plusMinutes(5));
 
 		MemberResetPasswordResponse response = memberService.resetPassword(new MemberResetPasswordRequest(
 			"user@example.com",
-			"gongchae",
+			"123456",
 			"newpassword1"
 		));
 
 		Member savedMember = memberRepository.findById(signupResponse.id()).orElseThrow();
-		assertThat(response.memberId()).isEqualTo(signupResponse.id());
-		assertThat(response.email()).isEqualTo("user@example.com");
-		assertThat(response.nickname()).isEqualTo("gongchae");
+		PasswordResetVerification verification = passwordResetVerificationRepository
+			.findTopByEmailOrderByCreatedAtDesc("user@example.com")
+			.orElseThrow();
+		assertThat(response.message()).isEqualTo("password reset completed");
 		assertThat(savedMember.getPassword()).isNotEqualTo("newpassword1");
 		assertThat(passwordEncoder.matches("newpassword1", savedMember.getPassword())).isTrue();
 		assertThat(passwordEncoder.matches("password1", savedMember.getPassword())).isFalse();
+		assertThat(savedMember.getPasswordChangedAt()).isNotNull();
+		assertThat(verification.getUsedAt()).isNotNull();
 	}
 
 	@Test
-	void resetPasswordRejectsUnknownMember() {
+	void resetPasswordRejectsInvalidVerificationCode() {
 		memberService.signup(new MemberSignupRequest(
 			"user@example.com",
 			"gongchae",
 			"password1"
 		));
+		savePasswordResetVerification("user@example.com", "123456", LocalDateTime.now().plusMinutes(5));
 
 		assertThatThrownBy(() -> memberService.resetPassword(new MemberResetPasswordRequest(
 			"user@example.com",
-			"wrongnickname",
+			"000000",
 			"newpassword1"
-		))).isInstanceOf(MemberNotFoundException.class)
-			.hasMessage("member not found");
+		))).isInstanceOf(IllegalArgumentException.class)
+			.hasMessage("verification code is invalid or expired");
+	}
+
+	@Test
+	void resetPasswordRejectsExpiredVerificationCode() {
+		memberService.signup(new MemberSignupRequest(
+			"user@example.com",
+			"gongchae",
+			"password1"
+		));
+		savePasswordResetVerification("user@example.com", "123456", LocalDateTime.now().minusSeconds(1));
+
+		assertThatThrownBy(() -> memberService.resetPassword(new MemberResetPasswordRequest(
+			"user@example.com",
+			"123456",
+			"newpassword1"
+		))).isInstanceOf(IllegalArgumentException.class)
+			.hasMessage("verification code is invalid or expired");
+	}
+
+	@Test
+	void resetPasswordRejectsUsedVerificationCode() {
+		memberService.signup(new MemberSignupRequest(
+			"user@example.com",
+			"gongchae",
+			"password1"
+		));
+		PasswordResetVerification verification = savePasswordResetVerification(
+			"user@example.com",
+			"123456",
+			LocalDateTime.now().plusMinutes(5)
+		);
+		verification.use(LocalDateTime.now());
+
+		assertThatThrownBy(() -> memberService.resetPassword(new MemberResetPasswordRequest(
+			"user@example.com",
+			"123456",
+			"newpassword1"
+		))).isInstanceOf(IllegalArgumentException.class)
+			.hasMessage("verification code is invalid or expired");
+	}
+
+	@Test
+	void resetPasswordRejectsSamePassword() {
+		memberService.signup(new MemberSignupRequest(
+			"user@example.com",
+			"gongchae",
+			"password1"
+		));
+		savePasswordResetVerification("user@example.com", "123456", LocalDateTime.now().plusMinutes(5));
+
+		assertThatThrownBy(() -> memberService.resetPassword(new MemberResetPasswordRequest(
+			"user@example.com",
+			"123456",
+			"password1"
+		))).isInstanceOf(IllegalArgumentException.class)
+			.hasMessage("new password must be different from current password");
 	}
 
 	@Test
@@ -261,6 +330,31 @@ class MemberServiceTest {
 	}
 
 	@Test
+	void requestPasswordResetCodeRejectsResendWithinOneMinute() {
+		savePasswordResetVerification("user@example.com", "123456", LocalDateTime.now().plusMinutes(5));
+
+		assertThatThrownBy(() -> memberService.requestPasswordResetCode(
+			new PasswordResetCodeRequest("user@example.com")
+		)).isInstanceOf(IllegalArgumentException.class)
+			.hasMessage("verification code can be requested once per minute");
+	}
+
+	@Test
+	void verifyPasswordResetCodeMarksVerificationAsVerified() {
+		savePasswordResetVerification("user@example.com", "123456", LocalDateTime.now().plusMinutes(5));
+
+		memberService.verifyPasswordResetCode(
+			new PasswordResetCodeVerifyRequest("user@example.com", "123456")
+		);
+
+		PasswordResetVerification verification = passwordResetVerificationRepository
+			.findTopByEmailOrderByCreatedAtDesc("user@example.com")
+			.orElseThrow();
+		assertThat(verification.getVerifiedAt()).isNotNull();
+		assertThat(verification.getAttemptCount()).isZero();
+	}
+
+	@Test
 	void updateJobPreferenceStoresAllowedFilters() {
 		memberService.signup(new MemberSignupRequest(
 			"user@example.com",
@@ -343,5 +437,13 @@ class MemberServiceTest {
 		item.put("instCd", instCd);
 		item.put("instNm", instNm);
 		publicInstitutionRepository.save(PublicInstitution.from(item, java.time.LocalDateTime.now()));
+	}
+
+	private PasswordResetVerification savePasswordResetVerification(String email, String code, LocalDateTime expiresAt) {
+		return passwordResetVerificationRepository.save(PasswordResetVerification.create(
+			email,
+			passwordEncoder.encode(code),
+			expiresAt
+		));
 	}
 }

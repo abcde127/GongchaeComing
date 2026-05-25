@@ -14,6 +14,9 @@ import com.gongchae.gongchae_coming.member.dto.MemberResetPasswordRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberResetPasswordResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberSignupRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberSignupResponse;
+import com.gongchae.gongchae_coming.member.dto.PasswordResetCodeRequest;
+import com.gongchae.gongchae_coming.member.dto.PasswordResetCodeVerifyRequest;
+import com.gongchae.gongchae_coming.member.dto.PasswordResetVerificationResponse;
 import com.gongchae.gongchae_coming.member.service.MemberService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -61,6 +64,20 @@ public class MemberController {
 	@PostMapping("/find-id")
 	public MemberFindIdResponse findId(@Valid @RequestBody MemberFindIdRequest request) {
 		return memberService.findId(request);
+	}
+
+	@PostMapping("/password-reset-verifications")
+	public PasswordResetVerificationResponse requestPasswordResetCode(
+		@Valid @RequestBody PasswordResetCodeRequest request
+	) {
+		return memberService.requestPasswordResetCode(request);
+	}
+
+	@PostMapping("/password-reset-verifications/verify")
+	public PasswordResetVerificationResponse verifyPasswordResetCode(
+		@Valid @RequestBody PasswordResetCodeVerifyRequest request
+	) {
+		return memberService.verifyPasswordResetCode(request);
 	}
 
 	@PostMapping("/reset-password")

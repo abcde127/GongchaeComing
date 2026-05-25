@@ -2,6 +2,7 @@ package com.gongchae.gongchae_coming.member.service;
 
 import com.gongchae.gongchae_coming.alio.repository.PublicInstitutionRepository;
 import com.gongchae.gongchae_coming.member.domain.Member;
+import com.gongchae.gongchae_coming.member.domain.PasswordResetVerification;
 import com.gongchae.gongchae_coming.member.dto.MemberFindIdRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberFindIdResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberFavoriteReminderRequest;
@@ -15,9 +16,16 @@ import com.gongchae.gongchae_coming.member.dto.MemberResetPasswordRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberResetPasswordResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberSignupRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberSignupResponse;
+import com.gongchae.gongchae_coming.member.dto.PasswordResetCodeRequest;
+import com.gongchae.gongchae_coming.member.dto.PasswordResetCodeVerifyRequest;
+import com.gongchae.gongchae_coming.member.dto.PasswordResetVerificationResponse;
 import com.gongchae.gongchae_coming.member.exception.DuplicateMemberException;
 import com.gongchae.gongchae_coming.member.exception.MemberNotFoundException;
+import com.gongchae.gongchae_coming.member.mail.PasswordResetMailSender;
 import com.gongchae.gongchae_coming.member.repository.MemberRepository;
+import com.gongchae.gongchae_coming.member.repository.PasswordResetVerificationRepository;
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.HashSet;
 import java.util.List;
@@ -39,6 +47,11 @@ public class MemberService {
 	);
 	private static final Set<String> CATEGORIES = Set.of("R2010", "R2020", "R2040");
 	private static final Set<String> HIRE_TYPES = Set.of("R1010", "R1020", "R1030", "R1040", "R1050", "R1060", "R1070");
+	private static final int PASSWORD_RESET_CODE_BOUND = 1_000_000;
+	private static final int PASSWORD_RESET_CODE_LENGTH = 6;
+	private static final int PASSWORD_RESET_EXPIRATION_MINUTES = 5;
+	private static final int PASSWORD_RESET_RESEND_INTERVAL_MINUTES = 1;
+	private static final String PASSWORD_RESET_FAILURE_MESSAGE = "verification code is invalid or expired";
 	private static final Set<String> NCS_CODES = Set.of(
 		"R600001", "R600002", "R600003", "R600004", "R600005", "R600006", "R600007", "R600008", "R600009",
 		"R600010", "R600011", "R600012", "R600013", "R600014", "R600015", "R600016", "R600017", "R600018",
@@ -46,8 +59,11 @@ public class MemberService {
 	);
 
 	private final MemberRepository memberRepository;
+	private final PasswordResetVerificationRepository passwordResetVerificationRepository;
 	private final PublicInstitutionRepository publicInstitutionRepository;
 	private final PasswordEncoder passwordEncoder;
+	private final PasswordResetMailSender passwordResetMailSender;
+	private final SecureRandom secureRandom = new SecureRandom();
 
 	@Transactional
 	public MemberSignupResponse signup(MemberSignupRequest request) {
@@ -76,13 +92,63 @@ public class MemberService {
 	}
 
 	@Transactional
+	public PasswordResetVerificationResponse requestPasswordResetCode(PasswordResetCodeRequest request) {
+		String email = normalizeEmail(request.email());
+		LocalDateTime now = LocalDateTime.now();
+
+		passwordResetVerificationRepository.findTopByEmailOrderByCreatedAtDesc(email)
+			.filter(verification -> verification.getCreatedAt()
+				.isAfter(now.minusMinutes(PASSWORD_RESET_RESEND_INTERVAL_MINUTES)))
+			.ifPresent(verification -> {
+				throw new IllegalArgumentException("verification code can be requested once per minute");
+			});
+
+		passwordResetVerificationRepository.findActiveByEmail(email)
+			.forEach(verification -> verification.invalidate(now));
+
+		String code = generateVerificationCode();
+		PasswordResetVerification verification = PasswordResetVerification.create(
+			email,
+			passwordEncoder.encode(code),
+			now.plusMinutes(PASSWORD_RESET_EXPIRATION_MINUTES)
+		);
+		passwordResetVerificationRepository.save(verification);
+
+		if (memberRepository.existsByEmail(email)) {
+			passwordResetMailSender.sendVerificationCode(email, code);
+		}
+
+		return PasswordResetVerificationResponse.codeRequested();
+	}
+
+	@Transactional
+	public PasswordResetVerificationResponse verifyPasswordResetCode(PasswordResetCodeVerifyRequest request) {
+		LocalDateTime now = LocalDateTime.now();
+		verifyPasswordResetCode(normalizeEmail(request.email()), request.code(), now).verify(now);
+		return PasswordResetVerificationResponse.codeVerified();
+	}
+
+	@Transactional
 	public MemberResetPasswordResponse resetPassword(MemberResetPasswordRequest request) {
-		Member member = memberRepository.findByEmailAndNickname(request.email(), request.nickname())
-			.orElseThrow(() -> new MemberNotFoundException("member not found"));
+		String email = normalizeEmail(request.email());
+		LocalDateTime now = LocalDateTime.now();
+		PasswordResetVerification verification = verifyPasswordResetCode(email, request.code(), now);
+
+		Member member = memberRepository.findByEmail(email)
+			.orElse(null);
+		if (member == null) {
+			verification.use(now);
+			return MemberResetPasswordResponse.completed();
+		}
+
+		if (passwordEncoder.matches(request.newPassword(), member.getPassword())) {
+			throw new IllegalArgumentException("new password must be different from current password");
+		}
 
 		member.resetPassword(passwordEncoder.encode(request.newPassword()));
+		verification.use(now);
 
-		return MemberResetPasswordResponse.from(member);
+		return MemberResetPasswordResponse.completed();
 	}
 
 	@Transactional(readOnly = true)
@@ -166,6 +232,34 @@ public class MemberService {
 	private Member findByEmail(String email) {
 		return memberRepository.findByEmail(email)
 			.orElseThrow(() -> new MemberNotFoundException("member not found"));
+	}
+
+	private PasswordResetVerification verifyPasswordResetCode(String email, String code, LocalDateTime now) {
+		PasswordResetVerification verification = passwordResetVerificationRepository.findTopByEmailOrderByCreatedAtDesc(email)
+			.orElseThrow(() -> new IllegalArgumentException(PASSWORD_RESET_FAILURE_MESSAGE));
+
+		if (verification.isVerifiedAndUsable(now) && passwordEncoder.matches(code, verification.getCodeHash())) {
+			return verification;
+		}
+
+		if (!verification.canVerify(now)) {
+			throw new IllegalArgumentException(PASSWORD_RESET_FAILURE_MESSAGE);
+		}
+
+		if (!passwordEncoder.matches(code, verification.getCodeHash())) {
+			verification.increaseAttemptCount();
+			throw new IllegalArgumentException(PASSWORD_RESET_FAILURE_MESSAGE);
+		}
+
+		return verification;
+	}
+
+	private String generateVerificationCode() {
+		return String.format("%0" + PASSWORD_RESET_CODE_LENGTH + "d", secureRandom.nextInt(PASSWORD_RESET_CODE_BOUND));
+	}
+
+	private String normalizeEmail(String email) {
+		return email.trim();
 	}
 
 	private String normalizeText(String value) {

@@ -11,9 +11,9 @@ public record MemberResetPasswordRequest(
 	@Size(max = 100, message = "email must be 100 characters or less")
 	String email,
 
-	@NotBlank(message = "nickname is required")
-	@Size(min = 2, max = 50, message = "nickname must be between 2 and 50 characters")
-	String nickname,
+	@NotBlank(message = "verification code is required")
+	@Pattern(regexp = "\\d{6}", message = "verification code must be 6 digits")
+	String code,
 
 	@NotBlank(message = "new password is required")
 	@Size(min = 8, max = 64, message = "password must be between 8 and 64 characters")
