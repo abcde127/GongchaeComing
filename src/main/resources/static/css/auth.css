@@ -108,6 +108,10 @@ a:hover {
 .login-page {
 	grid-template-columns: 1fr;
 	min-height: calc(100vh - 72px);
+	background:
+		linear-gradient(rgba(245, 247, 251, 0.76), rgba(245, 247, 251, 0.88)),
+		url("https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1800&q=80") center/cover fixed,
+		var(--bg);
 }
 
 .auth-visual {
@@ -179,6 +183,15 @@ a:hover {
 
 .auth-card {
 	width: min(100%, 420px);
+}
+
+.login-page .auth-card {
+	padding: 36px;
+	border: 1px solid rgba(215, 220, 229, 0.86);
+	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.94);
+	box-shadow: 0 22px 48px rgba(23, 32, 51, 0.14);
+	backdrop-filter: blur(10px);
 }
 
 .auth-heading {
@@ -526,6 +539,10 @@ input:focus {
 
 	.auth-heading h2 {
 		font-size: 1.7rem;
+	}
+
+	.login-page .auth-card {
+		padding: 28px 22px;
 	}
 
 	.label-row {
