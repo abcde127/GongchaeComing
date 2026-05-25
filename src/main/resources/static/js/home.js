@@ -14,6 +14,15 @@ const RECRUITMENT_CATEGORY_DISPLAY_OPTIONS = [
 	{ code: "R2020", label: "경력", sourceCodes: ["R2020", "R2030"] },
 	{ code: "R2040", label: "외국인", sourceCodes: ["R2040"] }
 ];
+const HIRE_TYPE_DISPLAY_OPTIONS = [
+	{ code: "R1010", label: "정규직" },
+	{ code: "R1020", label: "계약직" },
+	{ code: "R1030", label: "무기계약직" },
+	{ code: "R1040", label: "비정규직" },
+	{ code: "R1050", label: "청년인턴" },
+	{ code: "R1060", label: "청년인턴(체험형)" },
+	{ code: "R1070", label: "청년인턴(채용형)" }
+];
 const WORK_REGION_OPTIONS = [
 	{ code: "ALL", label: "전국" },
 	{ code: "R3010", label: "서울" },
@@ -476,6 +485,14 @@ function renderStatisticLoadingState(container, tab) {
 		container.appendChild(createColumnChartSkeleton(monthLabels(), "monthly"));
 		return;
 	}
+	if (tab === "recruitmentCategory") {
+		renderFixedBarLoadingState(container, RECRUITMENT_CATEGORY_DISPLAY_OPTIONS, true);
+		return;
+	}
+	if (tab === "hireType") {
+		renderFixedBarLoadingState(container, HIRE_TYPE_DISPLAY_OPTIONS, false);
+		return;
+	}
 
 	const list = document.createElement("div");
 	list.className = "bar-list skeleton-bar-list";
@@ -491,6 +508,24 @@ function renderStatisticLoadingState(container, tab) {
 		`;
 		list.appendChild(row);
 	}
+	container.appendChild(list);
+}
+
+function renderFixedBarLoadingState(container, items, compact) {
+	const list = document.createElement("div");
+	list.className = `bar-list skeleton-bar-list${compact ? " is-compact-statistic" : ""}`;
+	items.forEach((item) => {
+		const row = document.createElement("div");
+		row.className = "bar-row skeleton-bar-row skeleton-fixed-label-row";
+		row.innerHTML = `
+			<div class="bar-row-meta">
+				<span>${escapeHtml(item.label)}</span>
+				<strong class="skeleton-surface"></strong>
+			</div>
+			<div class="bar-track skeleton-surface" aria-hidden="true"></div>
+		`;
+		list.appendChild(row);
+	});
 	container.appendChild(list);
 }
 

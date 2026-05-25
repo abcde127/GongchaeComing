@@ -788,6 +788,15 @@ button {
 	border-radius: 999px;
 }
 
+.skeleton-fixed-label-row .bar-row-meta span {
+	display: inline;
+	width: auto;
+	height: auto;
+	border-radius: 0;
+	background: transparent;
+	color: var(--muted);
+}
+
 .bar-track {
 	height: 10px;
 	overflow: hidden;
