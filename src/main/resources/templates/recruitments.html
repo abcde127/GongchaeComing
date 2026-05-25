@@ -17,6 +17,7 @@
 			<span>공채왔어요</span>
 		</a>
 		<nav class="service-topnav" aria-label="채용 목록 상단 메뉴">
+			<a href="/statistics">통계 정보</a>
 			<a href="/mypage" th:if="${isLoggedIn}">마이페이지</a>
 			<a href="/login" th:if="${!isLoggedIn}">로그인</a>
 			<form th:if="${isLoggedIn}" method="post" action="/logout">
