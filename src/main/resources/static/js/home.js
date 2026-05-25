@@ -231,15 +231,18 @@ function renderColumnChart(container, items, labelKey) {
 	const maxCount = Math.max(...items.map((item) => item.count || 0), 1);
 	items.forEach((item) => {
 		const value = item.count || 0;
+		const label = item[labelKey] || "-";
 		const percent = Math.max(6, Math.round((value / maxCount) * 100));
 		const column = document.createElement("div");
 		column.className = "column-item";
+		column.tabIndex = 0;
+		column.setAttribute("aria-label", `${label} ${formatNumber(value)}개`);
 		column.innerHTML = `
 			<strong class="column-value">${formatNumber(value)}</strong>
 			<div class="column-bar-wrap" aria-hidden="true">
 				<span class="column-bar" style="height: ${percent}%"></span>
 			</div>
-			<span class="column-label">${escapeHtml(item[labelKey] || "-")}</span>
+			<span class="column-label">${escapeHtml(label)}</span>
 		`;
 		container.appendChild(column);
 	});
@@ -311,7 +314,8 @@ function renderBarList(container, items, labelKey) {
 function latestItems(items, limit) {
 	return [...items]
 		.sort((left, right) => String(right.yearMonth || "").localeCompare(String(left.yearMonth || "")))
-		.slice(0, limit);
+		.slice(0, limit)
+		.reverse();
 }
 
 function renderRegionLoadingState(container) {

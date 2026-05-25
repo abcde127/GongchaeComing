@@ -454,6 +454,7 @@ button {
 }
 
 .column-chart {
+	position: relative;
 	display: grid;
 	align-items: end;
 	grid-auto-columns: minmax(44px, 1fr);
@@ -462,6 +463,7 @@ button {
 	min-height: 220px;
 	overflow-x: auto;
 	padding: 8px 2px 2px;
+	border-bottom: 1px solid var(--line);
 }
 
 .column-chart-yearly {
@@ -469,12 +471,19 @@ button {
 }
 
 .column-item {
+	position: relative;
 	display: grid;
 	align-items: end;
 	grid-template-rows: auto 150px auto;
 	gap: 8px;
 	min-width: 0;
+	border-radius: 8px;
+	outline: none;
 	text-align: center;
+}
+
+.column-item:focus-visible {
+	box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.18);
 }
 
 .column-value {
@@ -482,6 +491,15 @@ button {
 	font-size: 0.82rem;
 	font-weight: 800;
 	line-height: 1.2;
+	opacity: 0;
+	transform: translateY(4px);
+	transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.column-item:hover .column-value,
+.column-item:focus-visible .column-value {
+	opacity: 1;
+	transform: translateY(0);
 }
 
 .column-bar-wrap {
@@ -489,8 +507,6 @@ button {
 	align-items: end;
 	justify-content: center;
 	height: 150px;
-	border-radius: 8px;
-	background: #f1f5f9;
 }
 
 .column-bar {
@@ -532,7 +548,7 @@ button {
 }
 
 .skeleton-bar-wrap {
-	background: #f4f7fb;
+	background: transparent;
 }
 
 .region-panel {
