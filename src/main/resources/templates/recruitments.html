@@ -7,34 +7,63 @@
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
-	<link rel="stylesheet" th:href="@{/css/recruitments.css(v=4)}">
+	<link rel="stylesheet" th:href="@{/css/recruitments.css(v=6)}">
 </head>
 <body>
 <div class="page-shell">
-	<header class="hero">
-		<nav class="topbar">
-			<a class="brand" href="/recruitments">
-				<span class="brand-mark">G</span>
-				<span class="brand-copy">
-					<strong>Gongchae Coming</strong>
-				</span>
-			</a>
-			<a class="login-link" href="/login" th:if="${!isLoggedIn}">로그인</a>
-			<a class="login-link" href="/mypage" th:if="${isLoggedIn}">마이페이지</a>
-			<form class="logout-form" th:if="${isLoggedIn}" method="post" action="/logout">
-				<button type="submit" class="login-link logout-button">로그아웃</button>
+	<header class="service-topbar">
+		<a class="service-brand" href="/recruitments">
+			<span class="brand-mark">G</span>
+			<span>Gongchae Coming</span>
+		</a>
+		<nav class="service-topnav" aria-label="채용 목록 상단 메뉴">
+			<a href="/mypage" th:if="${isLoggedIn}">마이페이지</a>
+			<a href="/login" th:if="${!isLoggedIn}">로그인</a>
+			<form th:if="${isLoggedIn}" method="post" action="/logout">
+				<button type="submit">로그아웃</button>
 			</form>
 		</nav>
-
-		<div class="hero-content">
-			<div class="hero-copy">
-				<p class="eyebrow">Recruitment List</p>
-				<h1>공공기관 채용공고 목록</h1>
-			</div>
-		</div>
 	</header>
 
 	<main class="content-grid">
+		<aside class="hero" aria-labelledby="recruitments-title">
+			<div class="hero-copy">
+				<p class="eyebrow">Recruitment List</p>
+				<h1 id="recruitments-title">채용공고 목록</h1>
+			</div>
+			<div class="sidebar-divider" aria-hidden="true"></div>
+			<p class="hero-summary" id="resultCountSummary">전체 0개 중 0개</p>
+			<div class="sidebar-divider" aria-hidden="true"></div>
+			<div class="sidebar-controls" aria-label="채용 목록 보기 옵션">
+				<div class="sidebar-control-group">
+					<div class="list-filter-status sidebar-filter-status">
+						<button class="list-filter-trigger" type="button" data-filter-trigger aria-controls="listStatusFilter" aria-expanded="false">상태</button>
+						<div class="list-filter-menu" id="listStatusFilter" data-filter-menu hidden>
+							<label><input type="checkbox" value="scheduled"> 예정</label>
+							<label><input type="checkbox" value="active"> 진행</label>
+							<label><input type="checkbox" value="closed"> 마감</label>
+						</div>
+					</div>
+				</div>
+				<div class="sidebar-toggle-group" th:if="${isLoggedIn}">
+					<label class="preference-toggle">
+						<input type="checkbox" id="jobPreferenceToggle">
+						<span class="preference-toggle-copy">
+							<strong>맞춤공고</strong>
+						</span>
+						<span class="preference-toggle-track" aria-hidden="true"></span>
+					</label>
+					<label class="preference-toggle">
+						<input type="checkbox" id="favoriteToggle">
+						<span class="preference-toggle-copy">
+							<strong>관심공고</strong>
+						</span>
+						<span class="preference-toggle-track" aria-hidden="true"></span>
+					</label>
+				</div>
+			</div>
+		</aside>
+
 		<form id="searchForm" class="search-form-shell" novalidate></form>
 
 		<section class="result-panel" aria-label="채용공고 목록">
@@ -46,21 +75,11 @@
 
 			<div class="result-stage" id="resultStage">
 				<div class="data-refresh-row" id="dataRefreshRow">
-					<span class="result-count-summary" id="resultCountSummary">전체 0개 중 0개</span>
-					<label class="preference-toggle" th:if="${isLoggedIn}">
-						<input type="checkbox" id="jobPreferenceToggle">
-						<span class="preference-toggle-copy">
-							<strong>맞춤공고</strong>
-						</span>
-						<span class="preference-toggle-track" aria-hidden="true"></span>
-					</label>
-					<label class="preference-toggle" th:if="${isLoggedIn}">
-						<input type="checkbox" id="favoriteToggle">
-						<span class="preference-toggle-copy">
-							<strong>관심공고</strong>
-						</span>
-						<span class="preference-toggle-track" aria-hidden="true"></span>
-					</label>
+					<div class="status-legend" aria-label="채용공고 상태 범례">
+						<span class="status-legend-item"><span class="status-legend-dot status-legend-dot-active" aria-hidden="true"></span>진행</span>
+						<span class="status-legend-item"><span class="status-legend-dot status-legend-dot-scheduled" aria-hidden="true"></span>예정</span>
+						<span class="status-legend-item"><span class="status-legend-dot status-legend-dot-closed" aria-hidden="true"></span>마감</span>
+					</div>
 					<span id="dataRefreshText">최종 갱신: 정보 없음</span>
 					<span class="sync-status-badge" id="syncStatusBadge" hidden></span>
 					<button type="button" class="sync-failure-button" id="syncFailureDetailButton" aria-label="실패 사유 보기" title="실패 사유 보기" hidden>
@@ -84,14 +103,6 @@
 				</div>
 				<div class="list-filter-row" id="listFilterRow">
 					<div class="list-filter-search">
-						<div class="list-filter-status">
-							<button class="list-filter-trigger" type="button" data-filter-trigger aria-controls="listStatusFilter" aria-expanded="false">상태</button>
-							<div class="list-filter-menu" id="listStatusFilter" data-filter-menu hidden>
-								<label><input type="checkbox" value="scheduled"> 예정</label>
-								<label><input type="checkbox" value="active"> 진행</label>
-								<label><input type="checkbox" value="closed"> 마감</label>
-							</div>
-						</div>
 						<label class="visually-hidden" for="searchKeyword">키워드 검색</label>
 						<div class="list-filter-search-control">
 							<span class="list-filter-title">공고명</span>
@@ -140,9 +151,6 @@
 							<button class="list-filter-trigger" type="button" data-filter-trigger aria-controls="listNcsFilter" aria-expanded="false">표준직무</button>
 							<div class="list-filter-menu" id="listNcsFilter" data-filter-menu hidden></div>
 						</div>
-					</div>
-					<div class="list-filter-action">
-						<span>원문보기</span>
 					</div>
 				</div>
 				<div class="result-content-area">
