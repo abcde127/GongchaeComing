@@ -17,7 +17,6 @@
 			<span>공채왔어요</span>
 		</a>
 		<nav class="service-topnav" aria-label="서비스 상단 메뉴">
-			<a href="/recruitments">공고 보기</a>
 			<a href="/mypage" th:if="${isLoggedIn}">마이페이지</a>
 			<a href="/login" th:if="${!isLoggedIn}">로그인</a>
 			<form th:if="${isLoggedIn}" method="post" action="/logout">
@@ -83,8 +82,7 @@
 				<div class="status-banner" id="statisticsStatus" hidden></div>
 
 				<div class="region-dashboard" aria-live="polite">
-					<section class="stat-panel region-panel" aria-labelledby="regionStatsTitle">
-						<h3 id="regionStatsTitle">지역별 공고 수</h3>
+					<section class="stat-panel region-panel" aria-label="지역별 공고 수">
 						<div class="region-button-list" id="regionStats"></div>
 					</section>
 
