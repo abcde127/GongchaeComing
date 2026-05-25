@@ -3,29 +3,28 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>로그인 | Gongchae Coming</title>
+	<title>로그인 | 공채왔어요</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
 	<link rel="stylesheet" th:href="@{/css/auth.css}">
 </head>
 <body>
-<main class="auth-page">
-	<section class="auth-visual" aria-label="서비스 소개">
-		<div class="brand-mark">G</div>
-		<div class="visual-copy">
-			<p class="eyebrow">Gongchae Coming</p>
-			<h1>오늘의 공채를 놓치지 않게.</h1>
-			<p>관심 공고를 더 빠르게 확인하고, 내 지원 준비 흐름을 한곳에서 이어가세요.</p>
-		</div>
-	</section>
-
+<header class="service-topbar">
+	<a class="service-brand" href="/recruitments">
+		<span class="brand-mark">G</span>
+		<span>공채왔어요</span>
+	</a>
+	<nav class="service-topnav" aria-label="로그인 상단 메뉴">
+		<a href="/recruitments">공고 목록</a>
+	</nav>
+</header>
+<main class="auth-page login-page">
 	<section class="auth-panel" aria-labelledby="login-title">
 		<div class="auth-card">
 			<div class="auth-heading">
 				<p class="eyebrow">Welcome back</p>
 				<h2 id="login-title">로그인</h2>
-				<p>가입한 아이디와 비밀번호를 입력해주세요.</p>
 			</div>
 
 			<div class="alert" id="loginMessage" role="alert" aria-live="polite" hidden></div>
@@ -75,11 +74,6 @@
 					</div>
 					<p class="field-error" id="passwordError"></p>
 				</div>
-
-				<label class="check-row">
-					<input type="checkbox" name="remember-me">
-					<span>로그인 상태 유지</span>
-				</label>
 
 				<button type="submit" class="primary-button" id="loginButton">로그인</button>
 			</form>

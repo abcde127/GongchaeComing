@@ -40,6 +40,7 @@ let syncEventSource = null;
 let lastSyncStatus = "IDLE";
 let syncCompletionHideTimer = null;
 let syncStatusPollTimer = null;
+let shouldShowSyncCompletion = false;
 let refreshButtonStateTimer = null;
 let refreshButtonContentTimer = null;
 let jobPreferenceCache = null;
@@ -62,10 +63,11 @@ const completedButtonContent = `
 `;
 
 function buildRefreshButtonContent(icon, label, detail = "") {
+	const detailContent = detail ? `<span class="data-refresh-detail">${detail}</span>` : "";
 	return `
 		<span class="data-refresh-icon">${icon || ""}</span>
 		<span class="data-refresh-label">${label}</span>
-		<span class="data-refresh-detail">${detail}</span>
+		${detailContent}
 	`;
 }
 
@@ -399,7 +401,9 @@ function updateSyncStatus(progress) {
 	syncFailureDetailButton.hidden = status !== "FAILED";
 
 	if (progress?.inProgress) {
+		shouldShowSyncCompletion = true;
 		window.clearTimeout(syncCompletionHideTimer);
+		setStatus("");
 		syncStatusBadge.hidden = true;
 		dataRefreshText.hidden = true;
 		renderRefreshButtonProgress(
@@ -415,7 +419,9 @@ function updateSyncStatus(progress) {
 	stopSyncStatusPolling();
 
 	if (status === "FAILED") {
+		shouldShowSyncCompletion = false;
 		window.clearTimeout(syncCompletionHideTimer);
+		setStatus("");
 		renderRefreshButtonFailed();
 		syncStatusBadge.hidden = true;
 		dataRefreshText.hidden = true;
@@ -424,7 +430,8 @@ function updateSyncStatus(progress) {
 	}
 
 	if (status === "COMPLETED") {
-		if (previousStatus !== "COMPLETED") {
+		if (shouldShowSyncCompletion && previousStatus !== "COMPLETED") {
+			shouldShowSyncCompletion = false;
 			renderRefreshButtonCompleted();
 			syncStatusBadge.hidden = true;
 			dataRefreshText.hidden = true;
@@ -439,6 +446,7 @@ function updateSyncStatus(progress) {
 	}
 
 	if (status === "CANCELED") {
+		shouldShowSyncCompletion = false;
 		window.clearTimeout(syncCompletionHideTimer);
 		renderRefreshButtonIdle();
 		syncStatusBadge.hidden = true;
@@ -448,6 +456,7 @@ function updateSyncStatus(progress) {
 	}
 
 	window.clearTimeout(syncCompletionHideTimer);
+	shouldShowSyncCompletion = false;
 	renderRefreshButtonIdle();
 	syncStatusBadge.hidden = true;
 	dataRefreshText.hidden = false;
@@ -510,6 +519,8 @@ async function startRecruitmentSynchronization() {
 	}
 
 	try {
+		shouldShowSyncCompletion = true;
+		setStatus("");
 		dataRefreshButton.disabled = true;
 		dataRefreshText.hidden = true;
 		syncFailurePanel.hidden = true;
@@ -533,6 +544,7 @@ async function startRecruitmentSynchronization() {
 		}
 	} catch (error) {
 		stopSyncStatusPolling();
+		shouldShowSyncCompletion = false;
 		setStatus(error.message || "공고 갱신 요청 중 오류가 발생했습니다.");
 		renderRefreshButtonIdle();
 		dataRefreshText.hidden = false;
@@ -809,12 +821,14 @@ function createMetaRow(value, className = "") {
 
 function createCompanyMeta(institution, companyDivision, companyType) {
 	const details = [companyDivision, companyType].filter(Boolean);
+	const detailText = details.join(" · ");
+	const institutionText = institution || "정보 없음";
 
 	return `
 		<div class="meta-row meta-row-company">
 			<span class="company-meta">
-				${details.length ? `<span class="company-meta-detail">${details.join(" · ")}</span>` : ""}
-				<span class="company-meta-name">${institution || "정보 없음"}</span>
+				${detailText ? `<span class="company-meta-detail" title="${escapeAttribute(detailText)}" aria-label="${escapeAttribute(detailText)}">${detailText}</span>` : ""}
+				<span class="company-meta-name" title="${escapeAttribute(institutionText)}" aria-label="${escapeAttribute(institutionText)}">${institutionText}</span>
 			</span>
 		</div>
 	`;
@@ -823,7 +837,7 @@ function createCompanyMeta(institution, companyDivision, companyType) {
 function createStatusBadge(status) {
 	const tone = status?.tone || "unknown";
 	const label = status?.label || "정보 없음";
-	return `<span class="status-badge status-badge-${tone}">${label}</span>`;
+	return `<span class="status-badge status-badge-${tone}" aria-label="${escapeAttribute(label)}" title="${escapeAttribute(label)}"><span class="visually-hidden">${label}</span></span>`;
 }
 
 function getPeriodDdayBadge(status, startDateValue, endDateValue) {
@@ -897,6 +911,7 @@ function isFavoriteListActive() {
 
 function createRecruitmentCard(item) {
 	const title = getValue(item, "recrutPbancTtl");
+	const titleText = title || "제목 정보 없음";
 	const institution = getValue(item, "instNm");
 	const companyDivision = getValue(item, "instSeNm", "instSe", "orgSeNm", "orgSe");
 	const companyType = getValue(item, "instKndNm", "instKnd", "pblntInstTypeNm", "pblntInstType");
@@ -925,30 +940,32 @@ function createRecruitmentCard(item) {
 		`
 		: "";
 
+	const cardContent = `
+		<div class="card-top">
+			${createStatusBadge(status)}
+			<div class="card-main">
+				<h3 class="card-title" title="${escapeAttribute(titleText)}">${titleText}</h3>
+			</div>
+		</div>
+
+		<div class="meta-list">
+			${createMetaRow(`${period}${periodDdayBadge}`, "meta-row-period")}
+			${createCompanyMeta(institution, companyDivision, companyType)}
+			${createMetaRow(region)}
+			${createMetaRow(recruitmentCategory)}
+			${createMetaRow(hireType)}
+			${createMetaRow(ncs)}
+		</div>
+	`;
+	const cardLabel = `${titleText || "채용공고"} 원문보기`;
+	const cardElement = detailUrl
+		? `<a class="recruitment-card" href="${escapeAttribute(detailUrl)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeAttribute(cardLabel)}">${cardContent}</a>`
+		: `<div class="recruitment-card recruitment-card-disabled" aria-label="상세 링크 정보 없음">${cardContent}</div>`;
+
 	return `
 		<article class="recruitment-card-shell ${isFavorite ? "is-favorite" : ""}" data-recruitment-id="${escapeAttribute(favoriteId)}">
 			${favoriteActionButton}
-			<div class="recruitment-card">
-				<div class="card-top">
-					${createStatusBadge(status)}
-					<div class="card-main">
-						<h3 class="card-title">${title || "제목 정보 없음"}</h3>
-					</div>
-				</div>
-
-				<div class="meta-list">
-					${createMetaRow(`${period}${periodDdayBadge}`, "meta-row-period")}
-					${createCompanyMeta(institution, companyDivision, companyType)}
-					${createMetaRow(region)}
-					${createMetaRow(recruitmentCategory)}
-					${createMetaRow(hireType)}
-					${createMetaRow(ncs)}
-				</div>
-
-				<div class="card-actions">
-					${detailUrl ? `<a class="card-link card-link-icon" href="${detailUrl}" target="_blank" rel="noopener noreferrer" aria-label="원문보기" title="원문보기">↗</a>` : `<span class="card-footnote">상세 링크 정보 없음</span>`}
-				</div>
-			</div>
+			${cardElement}
 		</article>
 	`;
 }
@@ -1550,6 +1567,12 @@ async function deleteFavoriteRecruitment(item, card) {
 resultList.addEventListener("click", (event) => {
 	const button = event.target.closest("[data-favorite-action]");
 	if (!button) {
+		const cardLink = event.target.closest("a.recruitment-card");
+		const card = cardLink?.closest(".recruitment-card-shell");
+		if (card) {
+			card.classList.add("is-favorite-action-suppressed");
+			cardLink.blur();
+		}
 		return;
 	}
 	button.blur();
@@ -1568,6 +1591,17 @@ resultList.addEventListener("click", (event) => {
 	}
 
 	createFavoriteRecruitment(item, card);
+});
+
+resultList.addEventListener("pointerover", (event) => {
+	const card = event.target.closest(".recruitment-card-shell");
+	if (card && (!event.relatedTarget || !card.contains(event.relatedTarget))) {
+		card.classList.remove("is-favorite-action-suppressed");
+	}
+});
+
+resultList.addEventListener("focusin", (event) => {
+	event.target.closest(".recruitment-card-shell")?.classList.remove("is-favorite-action-suppressed");
 });
 
 function clearListHeaderFilters() {

@@ -148,10 +148,14 @@ async function checkEmailAvailability() {
 
 function togglePasswordVisibility(input, button, visibleLabel, hiddenLabel) {
 	const isPassword = input.type === "password";
+	const hiddenIcon = button.querySelector('[data-visible="false"]');
+	const visibleIcon = button.querySelector('[data-visible="true"]');
 
 	input.type = isPassword ? "text" : "password";
-	button.textContent = isPassword ? "숨김" : "보기";
 	button.setAttribute("aria-label", isPassword ? hiddenLabel : visibleLabel);
+	button.setAttribute("aria-pressed", String(isPassword));
+	hiddenIcon.hidden = isPassword;
+	visibleIcon.hidden = !isPassword;
 	input.focus();
 }
 
