@@ -85,6 +85,30 @@ class AlioRecruitmentSeedImporterTest {
 		verifyNoInteractions(service);
 	}
 
+	@Test
+	void importSeedRecruitmentsImportsItemsInBatches() {
+		AlioRecruitmentService service = mock(AlioRecruitmentService.class);
+		AlioRecruitmentSeedImporter importer = new AlioRecruitmentSeedImporter(service);
+		StringBuilder content = new StringBuilder("{\"items\":{");
+		for (int index = 1; index <= 1001; index++) {
+			if (index > 1) {
+				content.append(",");
+			}
+			content.append("\"").append(index).append("\":{\"recrutPbancTtl\":\"공고").append(index).append("\"}");
+		}
+		content.append("}}");
+		setSeedResource(importer, content.toString());
+
+		int importedCount = importer.importSeedRecruitments();
+
+		@SuppressWarnings("unchecked")
+		ArgumentCaptor<List<JsonNode>> itemsCaptor = ArgumentCaptor.forClass(List.class);
+		verify(service, org.mockito.Mockito.times(2))
+			.importRecruitments(itemsCaptor.capture(), org.mockito.ArgumentMatchers.any());
+		assertThat(importedCount).isEqualTo(1001);
+		assertThat(itemsCaptor.getAllValues()).extracting(List::size).containsExactly(1000, 1);
+	}
+
 	private void setSeedResource(AlioRecruitmentSeedImporter importer, String content) {
 		Resource resource = new ByteArrayResource(content.getBytes(StandardCharsets.UTF_8));
 		ReflectionTestUtils.setField(importer, "seedResource", resource);

@@ -21,6 +21,7 @@ import org.springframework.stereotype.Component;
 public class AlioRecruitmentSeedImporter {
 
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+	private static final int IMPORT_BATCH_SIZE = 1000;
 
 	private final AlioRecruitmentService alioRecruitmentService;
 
@@ -40,11 +41,19 @@ public class AlioRecruitmentSeedImporter {
 				log.info("ALIO recruitment seed resource has no importable items. location={}", seedResource.getDescription());
 				return 0;
 			}
-			alioRecruitmentService.importRecruitments(items, LocalDateTime.now());
+			importRecruitmentsInBatches(items);
 			log.info("Imported {} ALIO recruitment seed items.", items.size());
 			return items.size();
 		} catch (IOException exception) {
 			throw new IllegalStateException("Failed to read ALIO recruitment seed file.", exception);
+		}
+	}
+
+	private void importRecruitmentsInBatches(List<JsonNode> items) {
+		LocalDateTime fetchedAt = LocalDateTime.now();
+		for (int start = 0; start < items.size(); start += IMPORT_BATCH_SIZE) {
+			int end = Math.min(start + IMPORT_BATCH_SIZE, items.size());
+			alioRecruitmentService.importRecruitments(items.subList(start, end), fetchedAt);
 		}
 	}
 
