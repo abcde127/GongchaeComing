@@ -15,6 +15,9 @@ const syncFailureContent = document.querySelector("#syncFailureContent");
 const listFilterRow = document.querySelector("#listFilterRow");
 const listStatusFilter = document.querySelector("#listStatusFilter");
 const listCompanyFilter = document.querySelector("#listCompanyFilter");
+const listCompanyFilterOptions = document.querySelector("#listCompanyFilterOptions");
+const companyFilterSearch = document.querySelector("#companyFilterSearch");
+const companyFilterSearchClear = document.querySelector("#companyFilterSearchClear");
 const listPeriodSortFilter = document.querySelector("#listPeriodSortFilter");
 const listCategoryFilter = document.querySelector("#listCategoryFilter");
 const listHireTypeFilter = document.querySelector("#listHireTypeFilter");
@@ -220,8 +223,28 @@ function createListFilterCheckbox(value, label) {
 	const checkbox = document.createElement("input");
 	checkbox.type = "checkbox";
 	checkbox.value = value;
+	wrapper.dataset.filterLabel = normalizeFilterSearchText(label);
 	wrapper.append(checkbox, ` ${label}`);
 	return wrapper;
+}
+
+function normalizeFilterSearchText(value) {
+	return String(value || "")
+		.toLowerCase()
+		.replace(/\s+/g, "")
+		.replace(/[()（）주㈜.,·-]/g, "");
+}
+
+function updateCompanyFilterVisibility() {
+	const keyword = normalizeFilterSearchText(companyFilterSearch?.value || "");
+	if (companyFilterSearchClear) {
+		companyFilterSearchClear.hidden = !keyword;
+	}
+	listCompanyFilterOptions.querySelectorAll("label").forEach((option) => {
+		const checkbox = option.querySelector("input");
+		const shouldShow = !keyword || option.dataset.filterLabel.includes(keyword) || checkbox?.checked;
+		option.classList.toggle("is-filtered-out", !shouldShow);
+	});
 }
 
 function syncCompanyFilterOptions(companyOptions = []) {
@@ -232,7 +255,7 @@ function syncCompanyFilterOptions(companyOptions = []) {
 		(jobPreferenceCompanyOptionsCache || []).map((company) => [company.detailCode, company.detailName])
 	);
 
-	listCompanyFilter.innerHTML = "";
+	listCompanyFilterOptions.innerHTML = "";
 	selectedValues.forEach((value) => {
 		if (!companyNames.includes(value)) {
 			companyNames.push(value);
@@ -243,8 +266,9 @@ function syncCompanyFilterOptions(companyOptions = []) {
 		const option = createListFilterCheckbox(companyName, companyLabelByValue.get(companyName) || companyName);
 		const checkbox = option.querySelector("input");
 		checkbox.checked = selectedValues.has(companyName);
-		listCompanyFilter.appendChild(option);
+		listCompanyFilterOptions.appendChild(option);
 	});
+	updateCompanyFilterVisibility();
 	updateListFilterIndicators();
 }
 
@@ -286,8 +310,9 @@ async function ensureCompanyFilterOptions(values = []) {
 	const labelByValue = new Map(companyOptions.map((company) => [company.detailCode, company.detailName]));
 
 	missingValues.forEach((value) => {
-		listCompanyFilter.appendChild(createListFilterCheckbox(value, labelByValue.get(value) || value));
+		listCompanyFilterOptions.appendChild(createListFilterCheckbox(value, labelByValue.get(value) || value));
 	});
+	updateCompanyFilterVisibility();
 }
 
 function setLoading(isLoading) {
@@ -985,7 +1010,7 @@ function getCheckedFilterValues(filter) {
 
 function setCheckedFilterValues(filter, values = []) {
 	const selectedValues = new Set(values);
-	filter.querySelectorAll("input").forEach((input) => {
+	filter.querySelectorAll("input[type='checkbox'], input[type='radio']").forEach((input) => {
 		input.checked = selectedValues.has(input.value);
 	});
 }
@@ -1231,7 +1256,6 @@ async function loadRecruitments(page = currentPage, showLoading = true) {
 
 function resetForm() {
 	searchKeyword.value = "";
-	keywordSearchControl.classList.remove("is-expanded");
 	if (jobPreferenceToggle) {
 		jobPreferenceToggle.checked = false;
 	}
@@ -1271,7 +1295,6 @@ async function getResponseErrorMessage(response, fallbackMessage) {
 
 async function applyJobPreference(preference) {
 	searchKeyword.value = preference.searchKeyword || "";
-	keywordSearchControl.classList.toggle("is-expanded", Boolean(searchKeyword.value.trim()));
 	updateKeywordSearchState();
 	clearListHeaderFilters();
 	await ensureCompanyFilterOptions(preference.companies || []);
@@ -1286,7 +1309,6 @@ async function applyJobPreference(preference) {
 
 function clearJobPreferenceApplication() {
 	searchKeyword.value = "";
-	keywordSearchControl.classList.remove("is-expanded");
 	updateKeywordSearchState();
 	clearListHeaderFilters();
 	updateListFilterIndicators();
@@ -1313,12 +1335,6 @@ searchKeyword.addEventListener("keydown", (event) => {
 });
 
 keywordSearchButton.addEventListener("click", () => {
-	if (!keywordSearchControl.classList.contains("is-expanded")) {
-		keywordSearchControl.classList.add("is-expanded");
-		searchKeyword.focus();
-		return;
-	}
-
 	loadRecruitments(1);
 });
 
@@ -1336,18 +1352,25 @@ clearKeywordButton.addEventListener("click", () => {
 	}, 0);
 });
 
-keywordSearchControl.addEventListener("focusout", () => {
-	window.setTimeout(() => {
-		if (isClearingKeyword || keywordSearchControl.contains(document.activeElement) || searchKeyword.value.trim()) {
-			return;
-		}
+companyFilterSearch.addEventListener("input", updateCompanyFilterVisibility);
 
-		keywordSearchControl.classList.remove("is-expanded");
-	}, 0);
+companyFilterSearch.addEventListener("keydown", (event) => {
+	if (event.key === "Enter") {
+		event.preventDefault();
+	}
+});
+
+companyFilterSearchClear.addEventListener("click", () => {
+	companyFilterSearch.value = "";
+	updateCompanyFilterVisibility();
+	companyFilterSearch.focus();
 });
 
 [listStatusFilter, listCompanyFilter, listCategoryFilter, listHireTypeFilter, listNcsFilter, listRegionFilter].forEach((filter) => {
-	filter.addEventListener("change", () => {
+	filter.addEventListener("change", (event) => {
+		if (!["checkbox", "radio"].includes(event.target.type)) {
+			return;
+		}
 		updateListFilterIndicators();
 		loadRecruitments(1);
 	});
