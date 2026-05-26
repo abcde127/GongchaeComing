@@ -284,70 +284,9 @@ select {
 	gap: 10px;
 }
 
-.filter-search-control {
-	position: sticky;
-	top: 0;
-	z-index: 1;
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) 26px;
-	align-items: center;
-	gap: 6px;
-	padding: 0 0 8px;
-	background: var(--page-bg);
-}
-
-.filter-search-control input {
-	width: 100%;
-	min-height: 38px;
-	min-width: 0;
-	border: 1px solid var(--line);
-	border-radius: 8px;
-	background: #ffffff;
-	padding: 0 10px;
-	color: var(--ink);
-	font: inherit;
-	font-size: 0.82rem;
-	font-weight: 700;
-	outline: none;
-}
-
-.filter-search-control input:focus {
-	border-color: var(--accent);
-	box-shadow: 0 0 0 3px rgba(12, 148, 136, 0.13);
-}
-
-.filter-search-clear {
-	display: grid;
-	place-items: center;
-	width: 26px;
-	height: 26px;
-	border: 0;
-	border-radius: 999px;
-	background: transparent;
-	color: var(--muted);
-	cursor: pointer;
-	font: inherit;
-	font-size: 0.92rem;
-	font-weight: 900;
-}
-
-.filter-search-clear:hover,
-.filter-search-clear:focus-visible {
-	background: var(--accent-soft);
-	color: var(--accent-strong);
-}
-
-.filter-search-clear[hidden] {
-	display: none;
-}
-
 .filter-option-list {
 	display: grid;
 	gap: 8px;
-}
-
-.filter-option-list label.is-filtered-out {
-	display: none;
 }
 
 .sidebar-toggle-group .preference-toggle {

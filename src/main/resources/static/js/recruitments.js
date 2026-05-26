@@ -16,8 +16,6 @@ const listFilterRow = document.querySelector("#listFilterRow");
 const listStatusFilter = document.querySelector("#listStatusFilter");
 const listCompanyFilter = document.querySelector("#listCompanyFilter");
 const listCompanyFilterOptions = document.querySelector("#listCompanyFilterOptions");
-const companyFilterSearch = document.querySelector("#companyFilterSearch");
-const companyFilterSearchClear = document.querySelector("#companyFilterSearchClear");
 const listPeriodSortFilter = document.querySelector("#listPeriodSortFilter");
 const listCategoryFilter = document.querySelector("#listCategoryFilter");
 const listHireTypeFilter = document.querySelector("#listHireTypeFilter");
@@ -223,28 +221,8 @@ function createListFilterCheckbox(value, label) {
 	const checkbox = document.createElement("input");
 	checkbox.type = "checkbox";
 	checkbox.value = value;
-	wrapper.dataset.filterLabel = normalizeFilterSearchText(label);
 	wrapper.append(checkbox, ` ${label}`);
 	return wrapper;
-}
-
-function normalizeFilterSearchText(value) {
-	return String(value || "")
-		.toLowerCase()
-		.replace(/\s+/g, "")
-		.replace(/[()（）주㈜.,·-]/g, "");
-}
-
-function updateCompanyFilterVisibility() {
-	const keyword = normalizeFilterSearchText(companyFilterSearch?.value || "");
-	if (companyFilterSearchClear) {
-		companyFilterSearchClear.hidden = !keyword;
-	}
-	listCompanyFilterOptions.querySelectorAll("label").forEach((option) => {
-		const checkbox = option.querySelector("input");
-		const shouldShow = !keyword || option.dataset.filterLabel.includes(keyword) || checkbox?.checked;
-		option.classList.toggle("is-filtered-out", !shouldShow);
-	});
 }
 
 function syncCompanyFilterOptions(companyOptions = []) {
@@ -268,7 +246,6 @@ function syncCompanyFilterOptions(companyOptions = []) {
 		checkbox.checked = selectedValues.has(companyName);
 		listCompanyFilterOptions.appendChild(option);
 	});
-	updateCompanyFilterVisibility();
 	updateListFilterIndicators();
 }
 
@@ -312,7 +289,7 @@ async function ensureCompanyFilterOptions(values = []) {
 	missingValues.forEach((value) => {
 		listCompanyFilterOptions.appendChild(createListFilterCheckbox(value, labelByValue.get(value) || value));
 	});
-	updateCompanyFilterVisibility();
+	updateListFilterIndicators();
 }
 
 function setLoading(isLoading) {
@@ -1375,20 +1352,6 @@ clearKeywordButton.addEventListener("click", () => {
 	window.setTimeout(() => {
 		isClearingKeyword = false;
 	}, 0);
-});
-
-companyFilterSearch.addEventListener("input", updateCompanyFilterVisibility);
-
-companyFilterSearch.addEventListener("keydown", (event) => {
-	if (event.key === "Enter") {
-		event.preventDefault();
-	}
-});
-
-companyFilterSearchClear.addEventListener("click", () => {
-	companyFilterSearch.value = "";
-	updateCompanyFilterVisibility();
-	companyFilterSearch.focus();
 });
 
 [listStatusFilter, listCompanyFilter, listCategoryFilter, listHireTypeFilter, listNcsFilter, listRegionFilter].forEach((filter) => {
