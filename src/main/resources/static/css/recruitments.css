@@ -592,6 +592,49 @@ select:focus {
 	color: var(--success-ink);
 }
 
+.toast {
+	position: fixed;
+	top: 92px;
+	left: 50%;
+	z-index: 30;
+	width: min(calc(100% - 40px), 380px);
+	padding: 14px 16px;
+	border: 1px solid #fed7c3;
+	border-radius: 8px;
+	background: var(--danger-bg);
+	box-shadow: 0 16px 36px rgba(23, 32, 51, 0.16);
+	color: var(--danger);
+	font-size: 0.92rem;
+	font-weight: 800;
+	text-align: center;
+	transform: translate(-50%, 0);
+	animation: toast-in 0.18s ease-out;
+}
+
+.toast[data-type="success"] {
+	border-color: rgba(22, 101, 52, 0.16);
+	background: var(--success-bg);
+	color: var(--success-ink);
+}
+
+.toast.is-hiding {
+	opacity: 0;
+	transform: translate(-50%, -8px);
+	transition: opacity 0.28s ease, transform 0.28s ease;
+}
+
+@keyframes toast-in {
+	from {
+		opacity: 0;
+		transform: translate(-50%, -8px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translate(-50%, 0);
+	}
+}
+
 .debug-panel {
 	margin-bottom: 14px;
 	padding: 16px;

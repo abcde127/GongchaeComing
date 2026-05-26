@@ -403,6 +403,12 @@ input:focus {
 	animation: toast-in 0.18s ease-out;
 }
 
+.toast[data-type="error"] {
+	border-color: #fed7c3;
+	background: var(--danger-bg);
+	color: var(--danger);
+}
+
 .toast.is-hiding {
 	opacity: 0;
 	transform: translate(-50%, -8px);

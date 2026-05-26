@@ -143,9 +143,7 @@ const jobPreferenceLeaveMessage = "수정사항이 저장되지 않습니다. �
 let currentJobPreference = null;
 
 function showMessage(text, type = "error") {
-	message.textContent = text;
-	message.dataset.type = type;
-	message.hidden = false;
+	showToast(text, type);
 }
 
 function clearMessage() {
@@ -155,9 +153,7 @@ function clearMessage() {
 }
 
 function showPasswordMessage(text, type = "error") {
-	passwordMessage.textContent = text;
-	passwordMessage.dataset.type = type;
-	passwordMessage.hidden = false;
+	showToast(text, type);
 }
 
 function clearPasswordMessage() {
@@ -167,15 +163,35 @@ function clearPasswordMessage() {
 }
 
 function showJobPreferenceMessage(text, type = "error") {
-	jobPreferenceMessage.textContent = text;
-	jobPreferenceMessage.dataset.type = type;
-	jobPreferenceMessage.hidden = false;
+	showToast(text, type);
 }
 
 function clearJobPreferenceMessage() {
 	jobPreferenceMessage.textContent = "";
 	jobPreferenceMessage.hidden = true;
 	delete jobPreferenceMessage.dataset.type;
+}
+
+function showToast(text, type = "error") {
+	if (!text) {
+		return;
+	}
+
+	const toast = document.createElement("div");
+	toast.className = "toast";
+	toast.dataset.type = type;
+	toast.setAttribute("role", type === "error" ? "alert" : "status");
+	toast.setAttribute("aria-live", type === "error" ? "assertive" : "polite");
+	toast.textContent = text;
+	document.body.append(toast);
+
+	window.setTimeout(() => {
+		toast.classList.add("is-hiding");
+	}, 2400);
+
+	window.setTimeout(() => {
+		toast.remove();
+	}, 2800);
 }
 
 function showFieldError(errorElement, inputElement, text) {
@@ -1192,7 +1208,7 @@ if (notificationHistoryList) {
 			return;
 		}
 
-		window.alert(button.dataset.failureReason || "실패 원인을 확인할 수 없습니다.");
+		showToast(button.dataset.failureReason || "실패 원인을 확인할 수 없습니다.");
 	});
 }
 
@@ -1422,9 +1438,9 @@ async function saveFavoriteReminderSetting(enabled, { showAlert = false } = {}) 
 	updateProfileView(await response.json());
 	favoriteReminderLastSavedTime = reminderTime;
 	if (showAlert) {
-		window.alert(enabled
+		showToast(enabled
 			? `매일 ${reminderTime}분 리마인드 알림이 설정되었습니다.`
-			: "리마인드 알림이 해제되었습니다.");
+			: "리마인드 알림이 해제되었습니다.", "success");
 	}
 }
 

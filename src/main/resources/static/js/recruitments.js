@@ -577,9 +577,34 @@ async function startRecruitmentSynchronization() {
 }
 
 function setStatus(message, type = "error") {
-	statusBanner.textContent = message || "";
-	statusBanner.hidden = !message;
-	statusBanner.classList.toggle("success", type === "success");
+	statusBanner.textContent = "";
+	statusBanner.hidden = true;
+	statusBanner.classList.remove("success");
+	if (message) {
+		showToast(message, type);
+	}
+}
+
+function showToast(message, type = "error") {
+	if (!message) {
+		return;
+	}
+
+	const toast = document.createElement("div");
+	toast.className = "toast";
+	toast.dataset.type = type;
+	toast.setAttribute("role", type === "error" ? "alert" : "status");
+	toast.setAttribute("aria-live", type === "error" ? "assertive" : "polite");
+	toast.textContent = message;
+	document.body.append(toast);
+
+	window.setTimeout(() => {
+		toast.classList.add("is-hiding");
+	}, 2400);
+
+	window.setTimeout(() => {
+		toast.remove();
+	}, 2800);
 }
 
 function setDebug(debugData) {
@@ -1489,18 +1514,18 @@ async function renderFavoriteRecruitments() {
 
 async function createFavoriteRecruitment(item, card) {
 	if (!favoriteToggle) {
-		window.alert("로그인 후 관심공고를 설정할 수 있습니다.");
+		showToast("로그인 후 관심공고를 설정할 수 있습니다.");
 		return;
 	}
 
 	const request = buildFavoriteRequest(item);
 	if (!request.sourceRecruitmentId) {
-		window.alert("공고 식별 정보가 없어 관심공고로 설정할 수 없습니다.");
+		showToast("공고 식별 정보가 없어 관심공고로 설정할 수 없습니다.");
 		return;
 	}
 
 	if (favoriteRecruitmentIds.has(request.sourceRecruitmentId)) {
-		window.alert("이미 관심공고로 설정된 공고입니다.");
+		showToast("이미 관심공고로 설정된 공고입니다.");
 		return;
 	}
 
@@ -1529,21 +1554,21 @@ async function createFavoriteRecruitment(item, card) {
 			button.setAttribute("aria-label", "관심공고 해제");
 			button.setAttribute("title", "관심공고 해제");
 		}
-		window.alert(payload?.created === false ? "이미 관심공고로 설정된 공고입니다." : "관심공고로 설정되었습니다.");
+		showToast(payload?.created === false ? "이미 관심공고로 설정된 공고입니다." : "관심공고로 설정되었습니다.", "success");
 	} catch (error) {
-		window.alert(error.message);
+		showToast(error.message);
 	}
 }
 
 async function deleteFavoriteRecruitment(item, card) {
 	if (!favoriteToggle) {
-		window.alert("로그인 후 관심공고를 해제할 수 있습니다.");
+		showToast("로그인 후 관심공고를 해제할 수 있습니다.");
 		return;
 	}
 
 	const sourceRecruitmentId = getRecruitmentFavoriteId(item);
 	if (!sourceRecruitmentId) {
-		window.alert("공고 식별 정보가 없어 관심공고를 해제할 수 없습니다.");
+		showToast("공고 식별 정보가 없어 관심공고를 해제할 수 없습니다.");
 		return;
 	}
 
@@ -1581,9 +1606,9 @@ async function deleteFavoriteRecruitment(item, card) {
 			});
 			updateResultCountSummary(latestOverallTotalCount, currentItems.length);
 		}
-		window.alert("관심공고에서 해제되었습니다.");
+		showToast("관심공고에서 해제되었습니다.", "success");
 	} catch (error) {
-		window.alert(error.message);
+		showToast(error.message);
 	}
 }
 
@@ -1604,7 +1629,7 @@ resultList.addEventListener("click", (event) => {
 	const recruitmentId = card?.dataset.recruitmentId;
 	const item = currentItems.find((candidate) => getRecruitmentFavoriteId(candidate) === recruitmentId);
 	if (!card || !item) {
-		window.alert("공고 정보를 찾을 수 없습니다.");
+		showToast("공고 정보를 찾을 수 없습니다.");
 		return;
 	}
 

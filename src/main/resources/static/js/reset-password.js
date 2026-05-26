@@ -28,16 +28,20 @@ let codeTimerId = null;
 let resendTimerId = null;
 
 function setMessage(message, type = "error") {
-	messageBox.textContent = message;
-	messageBox.dataset.type = type;
-	messageBox.hidden = !message;
+	messageBox.textContent = "";
+	messageBox.hidden = true;
+	delete messageBox.dataset.type;
+	if (message) {
+		showToast(message, type);
+	}
 }
 
-function showToast(message) {
+function showToast(message, type = "success") {
 	const toast = document.createElement("div");
 	toast.className = "toast";
-	toast.setAttribute("role", "status");
-	toast.setAttribute("aria-live", "polite");
+	toast.dataset.type = type;
+	toast.setAttribute("role", type === "error" ? "alert" : "status");
+	toast.setAttribute("aria-live", type === "error" ? "assertive" : "polite");
 	toast.textContent = message;
 	document.body.append(toast);
 
