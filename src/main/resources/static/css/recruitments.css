@@ -181,18 +181,20 @@ select {
 	gap: 8px;
 }
 
-.list-filter-status.sidebar-filter-status {
+.list-filter-status.sidebar-filter {
 	display: grid;
 	gap: 8px;
 	justify-content: stretch;
 }
 
-.sidebar-filter-status .list-filter-trigger {
+.sidebar-filter .list-filter-trigger {
 	display: flex;
+	flex-wrap: nowrap;
 	align-items: center;
 	justify-content: flex-start;
 	gap: 6px;
 	width: 100%;
+	height: 44px;
 	min-height: 44px;
 	padding: 0 12px;
 	border: 0;
@@ -202,24 +204,25 @@ select {
 	text-align: left;
 }
 
-.sidebar-filter-status .list-filter-trigger::before {
+.sidebar-filter .list-filter-trigger::before {
 	order: 1;
 	margin: 0;
 }
 
-.sidebar-filter-status .list-filter-trigger::after {
+.sidebar-filter .list-filter-trigger::after {
 	order: 2;
-	margin-left: 0;
+	flex-basis: auto;
+	margin-left: auto;
 }
 
-.sidebar-filter-status .list-filter-trigger:hover,
-.sidebar-filter-status .list-filter-trigger:focus-visible,
-.sidebar-filter-status .list-filter-trigger[aria-expanded="true"] {
+.sidebar-filter .list-filter-trigger:hover,
+.sidebar-filter .list-filter-trigger:focus-visible,
+.sidebar-filter .list-filter-trigger[aria-expanded="true"] {
 	background: var(--accent-soft);
 	color: var(--accent-strong);
 }
 
-.sidebar-filter-status .list-filter-menu {
+.sidebar-filter .list-filter-menu {
 	position: static;
 	width: 100%;
 	min-width: 0;
@@ -232,15 +235,15 @@ select {
 	transform: none;
 }
 
-.sidebar-filter-status .list-filter-menu label {
+.sidebar-filter .list-filter-menu label {
 	min-height: 34px;
 	padding: 0 10px;
 	border-radius: 8px;
 	color: var(--muted);
 }
 
-.sidebar-filter-status .list-filter-menu label:hover,
-.sidebar-filter-status .list-filter-menu label:focus-within {
+.sidebar-filter .list-filter-menu label:hover,
+.sidebar-filter .list-filter-menu label:focus-within {
 	background: var(--accent-soft);
 	color: var(--accent-strong);
 }
@@ -1211,8 +1214,8 @@ select:focus {
 .list-filter-trigger,
 .list-filter-cell-static {
 	width: 100%;
-	height: 28px;
-	min-height: 28px;
+	height: 50px;
+	min-height: 50px;
 	padding: 0;
 	border-radius: 0;
 	background-color: transparent;
@@ -1223,15 +1226,24 @@ select:focus {
 }
 
 .list-filter-trigger {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-content: center;
+	align-items: center;
+	justify-content: center;
 	border: 0;
 	cursor: pointer;
 	text-align: center;
+	white-space: nowrap;
 }
 
 .list-filter-trigger::after {
 	content: "▾";
-	margin-left: 5px;
+	display: block;
+	flex-basis: 100%;
+	margin: 1px 0 0;
 	font-size: 0.68rem;
+	line-height: 1;
 	color: var(--muted);
 }
 
@@ -1249,7 +1261,7 @@ select:focus {
 	place-items: center;
 	min-width: 16px;
 	height: 16px;
-	margin-right: 5px;
+	margin: 0 5px 0 0;
 	padding: 0 4px;
 	border-radius: 8px;
 	background: var(--accent);
@@ -1782,6 +1794,10 @@ a.recruitment-card:focus-visible {
 	.list-filter-row {
 		grid-template-columns: minmax(0, 1fr);
 		align-items: stretch;
+	}
+
+	.list-filter-meta {
+		grid-column: 1;
 	}
 
 }
