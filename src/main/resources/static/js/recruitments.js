@@ -30,6 +30,7 @@ const debugContent = document.querySelector("#debugContent");
 const jobPreferenceToggle = document.querySelector("#jobPreferenceToggle");
 const favoriteToggle = document.querySelector("#favoriteToggle");
 const FAVORITE_API_PATH = "/api/members/me/favorite-recruitments";
+const COMPANY_OPTIONS_API_PATH = "/api/recruitments/alio/companies";
 const PAGE_SIZE = 10;
 
 let currentPage = 1;
@@ -227,23 +228,21 @@ function createListFilterCheckbox(value, label) {
 
 function syncCompanyFilterOptions(companyOptions = []) {
 	const selectedValues = new Set(getCheckedFilterValues(listCompanyFilter));
-	const companyNames = Array.from(new Set(companyOptions.filter(Boolean)))
-		.sort((first, second) => first.localeCompare(second, "ko"));
-	const companyLabelByValue = new Map(
-		(jobPreferenceCompanyOptionsCache || []).map((company) => [company.detailCode, company.detailName])
-	);
+	const companyLabelByValue = new Map(companyOptions.map((company) => [company.detailCode, company.detailName]));
+	const companyCodes = companyOptions.map((company) => company.detailCode);
 
 	listCompanyFilterOptions.innerHTML = "";
 	selectedValues.forEach((value) => {
-		if (!companyNames.includes(value)) {
-			companyNames.push(value);
+		if (!companyLabelByValue.has(value)) {
+			companyCodes.push(value);
+			companyLabelByValue.set(value, value);
 		}
 	});
 
-	companyNames.forEach((companyName) => {
-		const option = createListFilterCheckbox(companyName, companyLabelByValue.get(companyName) || companyName);
+	companyCodes.forEach((companyCode) => {
+		const option = createListFilterCheckbox(companyCode, companyLabelByValue.get(companyCode) || companyCode);
 		const checkbox = option.querySelector("input");
-		checkbox.checked = selectedValues.has(companyName);
+		checkbox.checked = selectedValues.has(companyCode);
 		listCompanyFilterOptions.appendChild(option);
 	});
 	updateListFilterIndicators();
@@ -254,7 +253,7 @@ async function fetchJobPreferenceCompanyOptions() {
 		return jobPreferenceCompanyOptionsCache;
 	}
 
-	const response = await fetch("/api/members/me/job-preference/companies", {
+	const response = await fetch(COMPANY_OPTIONS_API_PATH, {
 		headers: {
 			Accept: "application/json"
 		}
@@ -1234,7 +1233,6 @@ async function loadRecruitments(page = currentPage, showLoading = true) {
 		latestOverallTotalCount = overallTotalCount;
 		updateDataRefreshText(payload?.lastFetchedAt ?? payload?.response?.body?.lastFetchedAt);
 		updateResultCountSummary(overallTotalCount, totalCount);
-		syncCompanyFilterOptions(payload?.filterOptions?.companies || []);
 		const filteredItems = getFilteredItems(items);
 
 		setStatus("");
@@ -1678,6 +1676,11 @@ pagination.addEventListener("click", (event) => {
 
 initializeSelectOptions();
 initializeListFilterOptions();
+fetchJobPreferenceCompanyOptions()
+	.then(syncCompanyFilterOptions)
+	.catch((error) => {
+		setStatus(error.message);
+	});
 updateListFilterIndicators();
 updateKeywordSearchState();
 renderRefreshButtonIdle();

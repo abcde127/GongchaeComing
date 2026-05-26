@@ -39,6 +39,32 @@ class PublicInstitutionServiceTest {
 		verify(client).fetchPublicInstitutions(2, 400);
 	}
 
+	@Test
+	void getPublicInstitutionOptionsReturnsInstitutionsFromRepository() throws Exception {
+		when(repository.findAllByOrderByInstNmAsc()).thenReturn(List.of(
+			PublicInstitution.from(publicInstitution("C0001", "88관광개발(주)"), java.time.LocalDateTime.now()),
+			PublicInstitution.from(publicInstitution("C0002", "한국가스공사"), java.time.LocalDateTime.now())
+		));
+
+		var options = service.getPublicInstitutionOptions();
+
+		assertThat(options)
+			.extracting("detailCode", "detailName")
+			.containsExactly(
+				org.assertj.core.groups.Tuple.tuple("C0001", "88관광개발(주)"),
+				org.assertj.core.groups.Tuple.tuple("C0002", "한국가스공사")
+			);
+	}
+
+	private JsonNode publicInstitution(String instCd, String instNm) throws Exception {
+		return OBJECT_MAPPER.readTree("""
+			{
+				"instCd": "%s",
+				"instNm": "%s"
+			}
+			""".formatted(instCd, instNm));
+	}
+
 	private JsonNode response(int totalCount, String instCd, String instNm) throws Exception {
 		return OBJECT_MAPPER.readTree("""
 			{

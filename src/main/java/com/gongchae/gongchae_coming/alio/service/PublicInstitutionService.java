@@ -3,6 +3,7 @@ package com.gongchae.gongchae_coming.alio.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.gongchae.gongchae_coming.alio.client.AlioPublicInstitutionClient;
 import com.gongchae.gongchae_coming.alio.domain.PublicInstitution;
+import com.gongchae.gongchae_coming.alio.dto.PublicInstitutionOptionResponse;
 import com.gongchae.gongchae_coming.alio.repository.PublicInstitutionRepository;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -34,6 +35,13 @@ public class PublicInstitutionService {
 
 		publicInstitutionRepository.saveAll(institutions);
 		return institutions.size();
+	}
+
+	@Transactional(readOnly = true)
+	public List<PublicInstitutionOptionResponse> getPublicInstitutionOptions() {
+		return publicInstitutionRepository.findAllByOrderByInstNmAsc().stream()
+			.map(PublicInstitutionOptionResponse::from)
+			.toList();
 	}
 
 	private List<PublicInstitution> extractInstitutions(JsonNode response) {

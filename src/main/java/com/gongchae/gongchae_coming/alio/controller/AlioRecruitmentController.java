@@ -4,9 +4,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentListRequest;
 import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentStatisticsResponse;
 import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentSyncProgressResponse;
+import com.gongchae.gongchae_coming.alio.dto.PublicInstitutionOptionResponse;
 import com.gongchae.gongchae_coming.alio.service.AlioRecruitmentService;
 import com.gongchae.gongchae_coming.alio.service.AlioRecruitmentSyncProgressStore;
+import com.gongchae.gongchae_coming.alio.service.PublicInstitutionService;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -22,6 +25,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class AlioRecruitmentController {
 
 	private final AlioRecruitmentService alioRecruitmentService;
+	private final PublicInstitutionService publicInstitutionService;
 	private final AlioRecruitmentSyncProgressStore syncProgressStore;
 
 	@GetMapping
@@ -32,6 +36,11 @@ public class AlioRecruitmentController {
 	@GetMapping("/statistics")
 	public AlioRecruitmentStatisticsResponse getRecruitmentStatistics() {
 		return alioRecruitmentService.getRecruitmentStatistics();
+	}
+
+	@GetMapping("/companies")
+	public List<PublicInstitutionOptionResponse> getCompanies() {
+		return publicInstitutionService.getPublicInstitutionOptions();
 	}
 
 	@GetMapping("/statistics/summary")

@@ -912,7 +912,7 @@ function confirmDiscardJobPreferenceEdits() {
 }
 
 async function loadJobPreferenceCompanyOptions() {
-	const response = await fetch("/api/members/me/job-preference/companies", {
+	const response = await fetch("/api/recruitments/alio/companies", {
 		headers: {
 			Accept: "application/json"
 		}
