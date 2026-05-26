@@ -29,6 +29,7 @@ public class AlioRecruitmentSeedImporter {
 
 	public int importSeedRecruitments() {
 		if (!seedResource.exists()) {
+			log.warn("ALIO recruitment seed resource does not exist. location={}", seedResource.getDescription());
 			return 0;
 		}
 
@@ -36,6 +37,7 @@ public class AlioRecruitmentSeedImporter {
 			JsonNode seed = OBJECT_MAPPER.readTree(seedResource.getInputStream());
 			List<JsonNode> items = extractItems(seed);
 			if (items.isEmpty()) {
+				log.info("ALIO recruitment seed resource has no importable items. location={}", seedResource.getDescription());
 				return 0;
 			}
 			alioRecruitmentService.importRecruitments(items, LocalDateTime.now());

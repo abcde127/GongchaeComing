@@ -18,11 +18,18 @@ public class AlioRecruitmentStartupSyncRunner {
 
 	@EventListener(ApplicationReadyEvent.class)
 	public void startInitialSync() {
+		int importedSeedCount = 0;
 		try {
-			alioRecruitmentSeedImporter.importSeedRecruitments();
+			importedSeedCount = alioRecruitmentSeedImporter.importSeedRecruitments();
 		} catch (Exception exception) {
 			log.warn("Failed to import ALIO recruitment seed data on startup.", exception);
 		}
+		log.info(
+			"ALIO recruitment startup seed import completed. importedSeedCount={}, storedRecruitmentCount={}, latestStoredRecruitmentSequence={}",
+			importedSeedCount,
+			alioRecruitmentService.countStoredRecruitments(),
+			alioRecruitmentService.findLatestStoredRecruitmentSequence()
+		);
 		try {
 			publicInstitutionService.synchronizePublicInstitutions();
 		} catch (Exception exception) {

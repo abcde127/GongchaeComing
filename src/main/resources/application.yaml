@@ -55,7 +55,7 @@ app:
     public-inst-list-url: https://apis.data.go.kr/1051000/public_inst/list
     service-key: ${API_KEY:}
     result-type: json
-    recruitment-seed-location: file:src/main/resources/seed/alio-recruitments.json
+    recruitment-seed-location: classpath:seed/alio-recruitments.json
     recruitment-seed-output-path: src/main/resources/seed/alio-recruitments.json
   recruitment:
     default-page-size: 10

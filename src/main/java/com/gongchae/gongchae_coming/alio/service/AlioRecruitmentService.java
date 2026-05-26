@@ -239,6 +239,16 @@ public class AlioRecruitmentService {
 		return upsertRecruitments(items, fetchedAt);
 	}
 
+	@Transactional(readOnly = true)
+	public long countStoredRecruitments() {
+		return alioRecruitmentRepository.count();
+	}
+
+	@Transactional(readOnly = true)
+	public Long findLatestStoredRecruitmentSequence() {
+		return alioRecruitmentRepository.findMaxRecrutPblntSn().orElse(null);
+	}
+
 	public boolean startBackgroundSynchronization(AlioRecruitmentListRequest request) {
 		if (!syncInProgress.compareAndSet(false, true)) {
 			return false;
