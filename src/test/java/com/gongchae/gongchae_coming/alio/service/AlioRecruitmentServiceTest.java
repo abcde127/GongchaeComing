@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.gongchae.gongchae_coming.alio.client.AlioRecruitmentClient;
 import com.gongchae.gongchae_coming.alio.domain.AlioRecruitment;
 import com.gongchae.gongchae_coming.alio.domain.AlioRecruitmentSyncState;
+import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentCategoryCountRow;
 import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentListRequest;
 import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentStatisticsRow;
 import com.gongchae.gongchae_coming.alio.repository.AlioRecruitmentRepository;
@@ -356,7 +357,10 @@ class AlioRecruitmentServiceTest {
 		busan.put("hireTypeLst", "R1030");
 		busan.put("hireTypeNmLst", "무기계약직");
 
-		when(recruitmentRepository.findStatisticsRows()).thenReturn(toStatisticsRows(createResponse(seoul, busan)));
+		when(recruitmentRepository.findStatisticsRowsByRegionCode("R3010"))
+			.thenReturn(toStatisticsRows(createResponse(seoul)));
+		when(recruitmentRepository.findCompanyCountRowsByRegionCode("R3010"))
+			.thenReturn(List.of(categoryCountRow("C001", "서울기관", 1L)));
 
 		assertThat(service.getRecruitmentYearlyStartCounts("R3010"))
 			.extracting("year", "count")
@@ -616,6 +620,25 @@ class AlioRecruitmentServiceTest {
 				return;
 			}
 		}
+	}
+
+	private AlioRecruitmentCategoryCountRow categoryCountRow(String code, String label, long count) {
+		return new AlioRecruitmentCategoryCountRow() {
+			@Override
+			public String getCode() {
+				return code;
+			}
+
+			@Override
+			public String getLabel() {
+				return label;
+			}
+
+			@Override
+			public long getCount() {
+				return count;
+			}
+		};
 	}
 
 	private AlioRecruitmentService serviceWithCachedItems(ObjectNode response) {
