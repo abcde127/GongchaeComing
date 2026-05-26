@@ -1,6 +1,8 @@
 package com.gongchae.gongchae_coming.alio.repository;
 
 import com.gongchae.gongchae_coming.alio.domain.AlioRecruitment;
+import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentCategoryCountRow;
+import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentMonthlyCountRow;
 import com.gongchae.gongchae_coming.alio.dto.AlioRecruitmentStatisticsRow;
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -55,5 +57,88 @@ public interface AlioRecruitmentRepository extends JpaRepository<AlioRecruitment
 		from AlioRecruitment recruitment
 		""")
 	List<AlioRecruitmentStatisticsRow> findStatisticsRows();
+
+	@Query("""
+		select
+			recruitment.pbancBgngYmd as pbancBgngYmd,
+			recruitment.pbancEndYmd as pbancEndYmd,
+			recruitment.workRgnLst as workRgnLst,
+			recruitment.workRgnNmLst as workRgnNmLst,
+			recruitment.pblntInstCd as pblntInstCd,
+			recruitment.instNm as instNm,
+			recruitment.ncsCdLst as ncsCdLst,
+			recruitment.ncsCdNmLst as ncsCdNmLst,
+			recruitment.recrutSe as recrutSe,
+			recruitment.recrutSeNm as recrutSeNm,
+			recruitment.hireTypeLst as hireTypeLst,
+			recruitment.hireTypeNmLst as hireTypeNmLst
+		from AlioRecruitment recruitment
+		where coalesce(recruitment.workRgnLst, '') like concat('%', :regionCode, '%')
+		""")
+	List<AlioRecruitmentStatisticsRow> findStatisticsRowsByRegionCode(@Param("regionCode") String regionCode);
+
+	@Query("""
+		select
+			concat(
+				substring(function('replace', coalesce(recruitment.pbancBgngYmd, ''), '-', ''), 1, 4),
+				'-',
+				substring(function('replace', coalesce(recruitment.pbancBgngYmd, ''), '-', ''), 5, 2)
+			) as yearMonth,
+			count(recruitment) as count
+		from AlioRecruitment recruitment
+		where length(function('replace', coalesce(recruitment.pbancBgngYmd, ''), '-', '')) >= 6
+		group by concat(
+			substring(function('replace', coalesce(recruitment.pbancBgngYmd, ''), '-', ''), 1, 4),
+			'-',
+			substring(function('replace', coalesce(recruitment.pbancBgngYmd, ''), '-', ''), 5, 2)
+		)
+		order by yearMonth
+		""")
+	List<AlioRecruitmentMonthlyCountRow> findMonthlyStartCountRows();
+
+	@Query("""
+		select
+			concat(
+				substring(function('replace', coalesce(recruitment.pbancBgngYmd, ''), '-', ''), 1, 4),
+				'-',
+				substring(function('replace', coalesce(recruitment.pbancBgngYmd, ''), '-', ''), 5, 2)
+			) as yearMonth,
+			count(recruitment) as count
+		from AlioRecruitment recruitment
+		where length(function('replace', coalesce(recruitment.pbancBgngYmd, ''), '-', '')) >= 6
+			and coalesce(recruitment.workRgnLst, '') like concat('%', :regionCode, '%')
+		group by concat(
+			substring(function('replace', coalesce(recruitment.pbancBgngYmd, ''), '-', ''), 1, 4),
+			'-',
+			substring(function('replace', coalesce(recruitment.pbancBgngYmd, ''), '-', ''), 5, 2)
+		)
+		order by yearMonth
+		""")
+	List<AlioRecruitmentMonthlyCountRow> findMonthlyStartCountRowsByRegionCode(@Param("regionCode") String regionCode);
+
+	@Query("""
+		select
+			recruitment.pblntInstCd as code,
+			recruitment.instNm as label,
+			count(recruitment) as count
+		from AlioRecruitment recruitment
+		where coalesce(recruitment.pblntInstCd, recruitment.instNm) is not null
+		group by recruitment.pblntInstCd, recruitment.instNm
+		order by count(recruitment) desc, recruitment.instNm asc
+		""")
+	List<AlioRecruitmentCategoryCountRow> findCompanyCountRows();
+
+	@Query("""
+		select
+			recruitment.pblntInstCd as code,
+			recruitment.instNm as label,
+			count(recruitment) as count
+		from AlioRecruitment recruitment
+		where coalesce(recruitment.pblntInstCd, recruitment.instNm) is not null
+			and coalesce(recruitment.workRgnLst, '') like concat('%', :regionCode, '%')
+		group by recruitment.pblntInstCd, recruitment.instNm
+		order by count(recruitment) desc, recruitment.instNm asc
+		""")
+	List<AlioRecruitmentCategoryCountRow> findCompanyCountRowsByRegionCode(@Param("regionCode") String regionCode);
 
 }

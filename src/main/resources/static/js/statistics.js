@@ -262,7 +262,7 @@ function renderRegionDetailStatistic(items) {
 		renderBarList(regionDetailStats, recruitmentCategoryDisplayCounts(items), "label");
 		return;
 	}
-	renderBarList(regionDetailStats, items.slice(0, 12), "label");
+	renderBarList(regionDetailStats, items, "label");
 }
 
 function recruitmentCategoryDisplayCounts(items) {
