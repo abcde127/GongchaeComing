@@ -7,7 +7,7 @@
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
-	<link rel="stylesheet" th:href="@{/css/recruitments.css(v=6)}">
+	<link rel="stylesheet" th:href="@{/css/recruitments.css(v=8)}">
 </head>
 <body>
 <div class="page-shell">
@@ -37,13 +37,40 @@
 			<div class="sidebar-divider" aria-hidden="true"></div>
 			<div class="sidebar-controls" aria-label="채용 목록 보기 옵션">
 				<div class="sidebar-control-group">
-					<div class="list-filter-status sidebar-filter-status">
+					<div class="list-filter-status sidebar-filter">
 						<button class="list-filter-trigger" type="button" data-filter-trigger aria-controls="listStatusFilter" aria-expanded="false">상태</button>
 						<div class="list-filter-menu" id="listStatusFilter" data-filter-menu hidden>
 							<label><input type="checkbox" value="scheduled"> 예정</label>
 							<label><input type="checkbox" value="active"> 진행</label>
 							<label><input type="checkbox" value="closed"> 마감</label>
 						</div>
+					</div>
+					<div class="list-filter-status sidebar-filter">
+						<button class="list-filter-trigger" type="button" data-filter-trigger data-sort-trigger aria-controls="listPeriodSortFilter" aria-expanded="false">공고 기간</button>
+						<div class="list-filter-menu" id="listPeriodSortFilter" data-filter-menu data-sort-menu hidden>
+							<label><input type="radio" name="periodSort" value="recent" checked> 최근등록순</label>
+							<label><input type="radio" name="periodSort" value="deadline"> 마감임박순</label>
+						</div>
+					</div>
+					<div class="list-filter-status sidebar-filter">
+						<button class="list-filter-trigger" type="button" data-filter-trigger aria-controls="listCompanyFilter" aria-expanded="false">기업명</button>
+						<div class="list-filter-menu" id="listCompanyFilter" data-filter-menu hidden></div>
+					</div>
+					<div class="list-filter-status sidebar-filter">
+						<button class="list-filter-trigger" type="button" data-filter-trigger aria-controls="listRegionFilter" aria-expanded="false">근무지</button>
+						<div class="list-filter-menu" id="listRegionFilter" data-filter-menu hidden></div>
+					</div>
+					<div class="list-filter-status sidebar-filter">
+						<button class="list-filter-trigger" type="button" data-filter-trigger aria-controls="listCategoryFilter" aria-expanded="false">채용 구분</button>
+						<div class="list-filter-menu" id="listCategoryFilter" data-filter-menu hidden></div>
+					</div>
+					<div class="list-filter-status sidebar-filter">
+						<button class="list-filter-trigger" type="button" data-filter-trigger aria-controls="listHireTypeFilter" aria-expanded="false">고용 형태</button>
+						<div class="list-filter-menu" id="listHireTypeFilter" data-filter-menu hidden></div>
+					</div>
+					<div class="list-filter-status sidebar-filter">
+						<button class="list-filter-trigger" type="button" data-filter-trigger aria-controls="listNcsFilter" aria-expanded="false">표준직무</button>
+						<div class="list-filter-menu" id="listNcsFilter" data-filter-menu hidden></div>
 					</div>
 				</div>
 				<div class="sidebar-toggle-group" th:if="${isLoggedIn}">
@@ -126,31 +153,22 @@
 					</div>
 					<div class="list-filter-meta">
 						<div class="list-filter-cell">
-							<button class="list-filter-trigger" type="button" data-filter-trigger data-sort-trigger aria-controls="listPeriodSortFilter" aria-expanded="false">공고 기간</button>
-							<div class="list-filter-menu" id="listPeriodSortFilter" data-filter-menu data-sort-menu hidden>
-								<label><input type="radio" name="periodSort" value="recent" checked> 최근등록순</label>
-								<label><input type="radio" name="periodSort" value="deadline"> 마감임박순</label>
-							</div>
+							<span class="list-filter-cell-static">공고 기간</span>
 						</div>
 						<div class="list-filter-cell">
-							<button class="list-filter-trigger" type="button" data-filter-trigger aria-controls="listCompanyFilter" aria-expanded="false">기업명</button>
-							<div class="list-filter-menu" id="listCompanyFilter" data-filter-menu hidden></div>
+							<span class="list-filter-cell-static">기업명</span>
 						</div>
 						<div class="list-filter-cell">
-							<button class="list-filter-trigger" type="button" data-filter-trigger aria-controls="listRegionFilter" aria-expanded="false">근무지</button>
-							<div class="list-filter-menu" id="listRegionFilter" data-filter-menu hidden></div>
+							<span class="list-filter-cell-static">근무지</span>
 						</div>
 						<div class="list-filter-cell">
-							<button class="list-filter-trigger" type="button" data-filter-trigger aria-controls="listCategoryFilter" aria-expanded="false">채용 구분</button>
-							<div class="list-filter-menu" id="listCategoryFilter" data-filter-menu hidden></div>
+							<span class="list-filter-cell-static">채용 구분</span>
 						</div>
 						<div class="list-filter-cell">
-							<button class="list-filter-trigger" type="button" data-filter-trigger aria-controls="listHireTypeFilter" aria-expanded="false">고용 형태</button>
-							<div class="list-filter-menu" id="listHireTypeFilter" data-filter-menu hidden></div>
+							<span class="list-filter-cell-static">고용 형태</span>
 						</div>
 						<div class="list-filter-cell">
-							<button class="list-filter-trigger" type="button" data-filter-trigger aria-controls="listNcsFilter" aria-expanded="false">표준직무</button>
-							<div class="list-filter-menu" id="listNcsFilter" data-filter-menu hidden></div>
+							<span class="list-filter-cell-static">표준직무</span>
 						</div>
 					</div>
 				</div>
