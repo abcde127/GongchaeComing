@@ -252,15 +252,8 @@ select {
 
 .sidebar-keyword-filter {
 	display: grid;
-	gap: 8px;
-	padding: 0 12px 8px;
-	border-bottom: 1px solid rgba(23, 32, 51, 0.08);
-}
-
-.sidebar-keyword-filter .list-filter-title {
-	color: var(--ink);
-	font-size: 0.82rem;
-	font-weight: 900;
+	gap: 0;
+	padding: 0 12px;
 }
 
 .sidebar-keyword-filter .list-filter-search-control {
@@ -1142,11 +1135,11 @@ select:focus {
 
 .list-filter-row {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr);
+	grid-template-columns: minmax(240px, 1.12fr) minmax(0, 2.2fr);
 	align-items: center;
 	gap: 8px;
 	margin-bottom: 10px;
-	padding: 8px 12px;
+	padding: 8px 12px 8px 16px;
 	border-radius: 8px;
 	border: 1px solid rgba(23, 32, 51, 0.08);
 	background: rgba(247, 250, 252, 0.92);
@@ -1155,14 +1148,19 @@ select:focus {
 	font-weight: 800;
 }
 
-.list-filter-meta {
+.list-filter-title-cell {
 	grid-column: 1;
+	min-width: 0;
+}
+
+.list-filter-meta {
+	grid-column: 2;
 	display: grid;
 	grid-template-columns: minmax(92px, 1.34fr) minmax(82px, 1.08fr) minmax(54px, 0.74fr) minmax(62px, 0.74fr) minmax(62px, 0.8fr) minmax(70px, 0.96fr);
 	gap: 6px;
 	min-width: 0;
-	padding-left: 0;
-	border-left: 0;
+	padding-left: 8px;
+	border-left: 1px solid rgba(23, 32, 51, 0.1);
 }
 
 .list-filter-search {
@@ -1948,8 +1946,14 @@ a.recruitment-card:focus-visible {
 		align-items: stretch;
 	}
 
+	.list-filter-title-cell {
+		grid-column: 1;
+	}
+
 	.list-filter-meta {
 		grid-column: 1;
+		padding-left: 0;
+		border-left: 0;
 	}
 
 }

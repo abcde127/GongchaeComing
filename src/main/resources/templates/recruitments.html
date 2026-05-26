@@ -38,7 +38,6 @@
 			<div class="sidebar-controls" aria-label="채용 목록 보기 옵션">
 				<div class="sidebar-control-group">
 					<div class="sidebar-keyword-filter sidebar-filter">
-						<label class="list-filter-title" for="searchKeyword">공고명</label>
 						<div class="list-filter-search-control is-expanded">
 							<div class="search-input-wrap">
 								<button type="button" class="search-icon-button" id="keywordSearchButton" aria-label="키워드 검색" title="검색">
@@ -52,7 +51,7 @@
 									id="searchKeyword"
 									name="searchKeyword"
 									form="searchForm"
-									placeholder="키워드 검색">
+									aria-label="공고명 검색">
 								<button type="button" class="clear-search-button" id="clearKeywordButton" aria-label="키워드 지우기" title="지우기">×</button>
 							</div>
 						</div>
@@ -161,6 +160,9 @@
 					<pre id="syncFailureContent"></pre>
 				</div>
 				<div class="list-filter-row" id="listFilterRow">
+					<div class="list-filter-title-cell">
+						<span class="list-filter-cell-static">공고명</span>
+					</div>
 					<div class="list-filter-meta">
 						<div class="list-filter-cell">
 							<span class="list-filter-cell-static">공고 기간</span>
