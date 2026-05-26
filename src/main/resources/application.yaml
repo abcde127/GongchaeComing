@@ -48,7 +48,7 @@ app:
   web-base-url: ${APP_WEB_BASE_URL:http://localhost:8080}
   mail:
     enabled: ${APP_MAIL_ENABLED:true}
-    from: ${APP_MAIL_FROM:${MAIL_USERNAME}}
+    from: ${APP_MAIL_FROM:no-reply@gongchae-coming.local}
   alio:
     base-url: https://apis.data.go.kr/1051000/recruitment
     recruit-list-path: /list

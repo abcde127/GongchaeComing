@@ -22,16 +22,14 @@ class JavaMailPasswordResetMailSenderTest {
 	void sendVerificationCodeCreatesHtmlMail() throws Exception {
 		CapturingJavaMailSender javaMailSender = new CapturingJavaMailSender();
 		JavaMailPasswordResetMailSender mailSender = new JavaMailPasswordResetMailSender(javaMailSender);
-		ReflectionTestUtils.setField(mailSender, "from", "sender");
-		ReflectionTestUtils.setField(mailSender, "mailHost", "smtp.naver.com");
-		ReflectionTestUtils.setField(mailSender, "mailUsername", "sender");
+		ReflectionTestUtils.setField(mailSender, "from", "sender@example.com");
 
 		mailSender.sendVerificationCode("user@example.com", "123456");
 
 		MimeMessage sentMessage = javaMailSender.sentMessage;
 		assertThat(sentMessage).isNotNull();
 		assertThat(sentMessage.getSubject()).isEqualTo("[공채왔어요] 비밀번호 재설정 인증번호");
-		assertThat(sentMessage.getFrom()[0].toString()).contains("sender@naver.com");
+		assertThat(sentMessage.getFrom()[0].toString()).contains("sender@example.com");
 		assertThat(sentMessage.getContentType()).contains("multipart");
 		assertThat(extractText(sentMessage.getContent())).contains("123456");
 	}
