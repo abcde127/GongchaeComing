@@ -18,6 +18,10 @@ public class AlioRecruitmentStartupSyncRunner {
 
 	@EventListener(ApplicationReadyEvent.class)
 	public void startInitialSync() {
+		alioRecruitmentService.startInitialSynchronization(emptyRequest(), this::prepareInitialSynchronization);
+	}
+
+	private void prepareInitialSynchronization() {
 		int importedSeedCount = 0;
 		try {
 			importedSeedCount = alioRecruitmentSeedImporter.importSeedRecruitments();
@@ -35,7 +39,6 @@ public class AlioRecruitmentStartupSyncRunner {
 		} catch (Exception exception) {
 			log.warn("Failed to synchronize public institutions on startup.", exception);
 		}
-		alioRecruitmentService.startBackgroundSynchronization(emptyRequest());
 	}
 
 	private AlioRecruitmentListRequest emptyRequest() {

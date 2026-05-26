@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.data.domain.PageImpl;
@@ -423,6 +424,44 @@ class AlioRecruitmentServiceTest {
 		));
 		assertThat(result.at("/response/body/items/item/0/recrutPbancTtl").asText())
 			.isEqualTo("식품안전정보원 개방형 직위 공개 모집");
+	}
+
+	@Test
+	void initialSynchronizationShowsPreparingProgressAndBlocksManualSynchronization() {
+		AlioRecruitmentClient client = mock(AlioRecruitmentClient.class);
+		AlioRecruitmentRepository recruitmentRepository = mock(AlioRecruitmentRepository.class);
+		AlioRecruitmentSyncStateRepository syncStateRepository = mock(AlioRecruitmentSyncStateRepository.class);
+		AlioRecruitmentSyncProgressStore progressStore = new AlioRecruitmentSyncProgressStore();
+		AlioRecruitmentService service = new AlioRecruitmentService(
+			client,
+			recruitmentRepository,
+			syncStateRepository,
+			mock(PublicInstitutionRepository.class),
+			progressStore,
+			mock(NewRecruitmentNotificationService.class),
+			mock(AlioRecruitmentSeedExporter.class)
+		);
+		ObjectNode apiResponse = OBJECT_MAPPER.createObjectNode();
+		apiResponse.put("resultCode", 200);
+		apiResponse.put("totalCount", 0);
+		apiResponse.putArray("result");
+		when(client.fetchRecruitments(any(AlioRecruitmentListRequest.class))).thenReturn(apiResponse);
+		when(recruitmentRepository.findMaxRecrutPblntSn()).thenReturn(Optional.empty());
+		when(recruitmentRepository.count()).thenReturn(0L);
+		AtomicBoolean preparationCalled = new AtomicBoolean(false);
+
+		boolean started = service.startInitialSynchronization(request("RECRUITMENT_SEQUENCE", "DESC"), () -> {
+			preparationCalled.set(true);
+			assertThat(progressStore.get().inProgress()).isTrue();
+			assertThat(progressStore.get().totalPages()).isZero();
+			assertThat(progressStore.get().message()).isEqualTo("데이터 갱신 준비 중입니다.");
+			assertThat(service.startBackgroundSynchronization(request("RECRUITMENT_SEQUENCE", "DESC"))).isFalse();
+		});
+
+		assertThat(started).isTrue();
+		assertThat(preparationCalled).isTrue();
+		verify(client, org.mockito.Mockito.timeout(1000)).fetchRecruitments(any(AlioRecruitmentListRequest.class));
+		waitUntilStatus(progressStore, "COMPLETED");
 	}
 
 	@Test

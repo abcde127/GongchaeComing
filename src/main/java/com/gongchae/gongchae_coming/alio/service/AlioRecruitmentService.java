@@ -254,7 +254,36 @@ public class AlioRecruitmentService {
 			return false;
 		}
 		syncProgressStore.start();
+		submitSynchronization(request);
+		return true;
+	}
 
+	public boolean startInitialSynchronization(AlioRecruitmentListRequest request, Runnable preparation) {
+		if (!syncInProgress.compareAndSet(false, true)) {
+			return false;
+		}
+		syncProgressStore.startPreparing();
+		try {
+			preparation.run();
+		} catch (Exception exception) {
+			syncInProgress.set(false);
+			syncProgressStore.fail(
+				0,
+				0,
+				0,
+				0,
+				"데이터 갱신 준비 중 오류가 발생했습니다.",
+				0,
+				failureResponseFromException(exception)
+			);
+			return false;
+		}
+		syncProgressStore.start();
+		submitSynchronization(request);
+		return true;
+	}
+
+	private void submitSynchronization(AlioRecruitmentListRequest request) {
 		syncExecutor.submit(() -> {
 			try {
 				synchronizeRecruitments(request);
@@ -274,7 +303,6 @@ public class AlioRecruitmentService {
 				syncInProgress.set(false);
 			}
 		});
-		return true;
 	}
 
 	private void synchronizeRecruitments(AlioRecruitmentListRequest request) {

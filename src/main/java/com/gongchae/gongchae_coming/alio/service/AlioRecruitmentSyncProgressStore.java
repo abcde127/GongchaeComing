@@ -32,6 +32,21 @@ public class AlioRecruitmentSyncProgressStore {
 		start(GLOBAL_PROGRESS_KEY);
 	}
 
+	public void startPreparing() {
+		put(GLOBAL_PROGRESS_KEY, new AlioRecruitmentSyncProgressResponse(
+			true,
+			0,
+			0,
+			0,
+			0,
+			0,
+			"RUNNING",
+			"데이터 갱신 준비 중입니다.",
+			0,
+			null
+		));
+	}
+
 	public void start(String sessionId) {
 		put(sessionId, new AlioRecruitmentSyncProgressResponse(
 			true,
