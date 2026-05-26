@@ -12,6 +12,8 @@ const kakaoLinkedBanner = document.querySelector("#kakaoLinkedBanner");
 const kakaoLinkedAtText = document.querySelector("#kakaoLinkedAtText");
 const notificationHeadingActions = document.querySelector("#notificationHeadingActions");
 const message = document.querySelector("#mypageMessage");
+const passwordChangeShell = document.querySelector("#passwordChangeShell");
+const passwordVerificationForm = document.querySelector("#passwordVerificationForm");
 const passwordChangeForm = document.querySelector("#passwordChangeForm");
 const currentPasswordInput = document.querySelector("#currentPassword");
 const newPasswordInput = document.querySelector("#newPassword");
@@ -19,6 +21,7 @@ const newPasswordConfirmInput = document.querySelector("#newPasswordConfirm");
 const currentPasswordError = document.querySelector("#currentPasswordError");
 const newPasswordError = document.querySelector("#newPasswordError");
 const newPasswordConfirmError = document.querySelector("#newPasswordConfirmError");
+const passwordVerifyButton = document.querySelector("#passwordVerifyButton");
 const passwordSaveButton = document.querySelector("#passwordSaveButton");
 const passwordMessage = document.querySelector("#passwordMessage");
 const jobPreferenceReadView = document.querySelector("#jobPreferenceReadView");
@@ -62,6 +65,7 @@ let favoriteReminderMinute = "00";
 let favoriteReminderLastSavedTime = null;
 let favoriteReminderCloseTimer = null;
 let notificationHistoriesLoaded = false;
+let isCurrentPasswordVerified = false;
 const favoriteReminderScrollTimers = {};
 
 const preferenceOptions = {
@@ -600,14 +604,26 @@ function validateNickname() {
 	return nickname;
 }
 
-function validatePasswordForm() {
+function validateCurrentPasswordForm() {
 	const currentPassword = currentPasswordInput.value;
-	const newPassword = newPasswordInput.value;
-	const newPasswordConfirm = newPasswordConfirmInput.value;
 	clearPasswordFieldErrors();
 
 	if (!currentPassword) {
 		showFieldError(currentPasswordError, currentPasswordInput, "현재 비밀번호를 입력해주세요.");
+		return null;
+	}
+
+	return currentPassword;
+}
+
+function validatePasswordForm() {
+	const newPassword = newPasswordInput.value;
+	const newPasswordConfirm = newPasswordConfirmInput.value;
+	clearPasswordFieldErrors();
+
+	if (!isCurrentPasswordVerified) {
+		showPasswordMessage("현재 비밀번호를 먼저 확인해주세요.");
+		currentPasswordInput.focus();
 		return null;
 	}
 
@@ -626,7 +642,10 @@ function validatePasswordForm() {
 		return null;
 	}
 
-	return { currentPassword, newPassword };
+	return {
+		currentPassword: currentPasswordInput.value,
+		newPassword
+	};
 }
 
 function setNicknameSaving(isSaving) {
@@ -636,8 +655,40 @@ function setNicknameSaving(isSaving) {
 }
 
 function setPasswordSaving(isSaving) {
-	passwordSaveButton.disabled = isSaving;
+	passwordSaveButton.disabled = isSaving || !isCurrentPasswordVerified;
+	if (passwordVerifyButton) {
+		passwordVerifyButton.disabled = isSaving;
+	}
 	passwordSaveButton.classList.toggle("is-loading", isSaving);
+}
+
+function setPasswordVerifying(isVerifying) {
+	passwordVerifyButton.disabled = isVerifying;
+	passwordVerifyButton.classList.toggle("is-loading", isVerifying);
+}
+
+function setPasswordVerificationState(isVerified) {
+	isCurrentPasswordVerified = isVerified;
+	passwordChangeShell.dataset.currentVerified = String(isVerified);
+	passwordSaveButton.disabled = !isVerified;
+	newPasswordInput.disabled = !isVerified;
+	newPasswordConfirmInput.disabled = !isVerified;
+	passwordChangeForm.querySelectorAll(".password-toggle").forEach((button) => {
+		button.disabled = !isVerified;
+	});
+	if (isVerified) {
+		newPasswordInput.focus();
+	}
+}
+
+function resetPasswordVerification() {
+	isCurrentPasswordVerified = false;
+	currentPasswordInput.value = "";
+	newPasswordInput.value = "";
+	newPasswordConfirmInput.value = "";
+	clearPasswordMessage();
+	clearPasswordFieldErrors();
+	setPasswordVerificationState(false);
 }
 
 function setJobPreferenceSaving(isSaving) {
@@ -654,6 +705,10 @@ function updatePreferenceInputClearButton(input) {
 }
 
 function activateSection(sectionName) {
+	if (sectionName === "password") {
+		resetPasswordVerification();
+	}
+
 	sections.forEach((section) => {
 		const isActive = section.dataset.section === sectionName;
 		section.hidden = !isActive;
@@ -1414,6 +1469,10 @@ document.querySelectorAll("[data-password-toggle]").forEach((button) => {
 
 currentPasswordInput.addEventListener("input", () => {
 	clearFieldError(currentPasswordError, currentPasswordInput);
+	if (isCurrentPasswordVerified) {
+		setPasswordVerificationState(false);
+		clearPasswordMessage();
+	}
 });
 
 newPasswordInput.addEventListener("input", () => {
@@ -1423,6 +1482,42 @@ newPasswordInput.addEventListener("input", () => {
 
 newPasswordConfirmInput.addEventListener("input", () => {
 	clearFieldError(newPasswordConfirmError, newPasswordConfirmInput);
+});
+
+passwordVerificationForm.addEventListener("submit", async (event) => {
+	event.preventDefault();
+	clearPasswordMessage();
+
+	const currentPassword = validateCurrentPasswordForm();
+	if (!currentPassword) {
+		return;
+	}
+
+	setPasswordVerifying(true);
+
+	try {
+		const response = await fetch("/api/members/me/password-verification", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify({ currentPassword })
+		});
+
+		if (!response.ok) {
+			const problem = await response.json().catch(() => null);
+			throw new Error(problem?.detail || "현재 비밀번호를 확인하지 못했습니다.");
+		}
+
+		clearPasswordFieldErrors();
+		setPasswordVerificationState(true);
+		showPasswordMessage("현재 비밀번호가 확인되었습니다.", "success");
+	} catch (error) {
+		setPasswordVerificationState(false);
+		showPasswordMessage(error.message);
+	} finally {
+		setPasswordVerifying(false);
+	}
 });
 
 nicknameEditForm.addEventListener("submit", async (event) => {
@@ -1491,6 +1586,7 @@ passwordChangeForm.addEventListener("submit", async (event) => {
 		newPasswordInput.value = "";
 		newPasswordConfirmInput.value = "";
 		clearPasswordFieldErrors();
+		setPasswordVerificationState(false);
 		showPasswordMessage("비밀번호가 변경되었습니다.", "success");
 	} catch (error) {
 		showPasswordMessage(error.message);

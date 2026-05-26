@@ -11,6 +11,7 @@ import com.gongchae.gongchae_coming.member.dto.MemberJobPreferenceRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberJobPreferenceResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberNicknameUpdateRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberPasswordUpdateRequest;
+import com.gongchae.gongchae_coming.member.dto.MemberPasswordVerificationRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberProfileResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberResetPasswordRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberResetPasswordResponse;
@@ -181,6 +182,15 @@ public class MemberService {
 		member.resetPassword(passwordEncoder.encode(request.newPassword()));
 
 		return MemberProfileResponse.from(member);
+	}
+
+	@Transactional(readOnly = true)
+	public void verifyPassword(String email, MemberPasswordVerificationRequest request) {
+		Member member = findByEmail(email);
+
+		if (!passwordEncoder.matches(request.currentPassword(), member.getPassword())) {
+			throw new IllegalArgumentException("current password does not match");
+		}
 	}
 
 	@Transactional(readOnly = true)

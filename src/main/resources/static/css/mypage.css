@@ -300,7 +300,13 @@
 	max-width: 760px;
 }
 
-.password-change-form {
+.password-change-shell {
+	position: relative;
+	max-width: 760px;
+}
+
+.password-change-form,
+.password-verification-form {
 	box-sizing: border-box;
 	width: 100%;
 	border: 1px solid var(--line);
@@ -309,17 +315,53 @@
 	padding: 28px;
 }
 
-.password-change-form .primary-button {
+.password-change-shell[data-current-verified="false"] .password-change-form {
+	filter: blur(3px);
+	opacity: 0.48;
+	pointer-events: none;
+	user-select: none;
+}
+
+.password-change-shell[data-current-verified="true"] .password-verification-form {
+	display: none;
+}
+
+.password-verification-form {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	display: grid;
+	align-content: center;
+	align-self: center;
+	justify-self: center;
+	width: min(420px, calc(100% - 40px));
+	height: fit-content;
+	box-shadow: 0 24px 54px rgba(23, 32, 51, 0.18);
+}
+
+.password-verification-copy {
+	margin: 0;
+	color: var(--ink);
+	font-size: 0.95rem;
+	font-weight: 900;
+	line-height: 1.45;
+	word-break: keep-all;
+}
+
+.password-change-form .primary-button,
+.password-verification-form .primary-button {
 	justify-self: end;
 	min-width: 160px;
 	padding: 0 18px;
 }
 
-.password-change-form input[aria-invalid="true"] {
+.password-change-form input[aria-invalid="true"],
+.password-verification-form input[aria-invalid="true"] {
 	border-color: var(--danger);
 }
 
-.password-change-form .password-toggle {
+.password-change-form .password-toggle,
+.password-verification-form .password-toggle {
 	display: inline-grid;
 	place-items: center;
 	width: 36px;
@@ -327,16 +369,19 @@
 	padding: 0;
 }
 
-.password-change-form .password-toggle-icon {
+.password-change-form .password-toggle-icon,
+.password-verification-form .password-toggle-icon {
 	display: inline-grid;
 	place-items: center;
 }
 
-.password-change-form .password-toggle-icon[hidden] {
+.password-change-form .password-toggle-icon[hidden],
+.password-verification-form .password-toggle-icon[hidden] {
 	display: none;
 }
 
-.password-change-form .password-toggle svg {
+.password-change-form .password-toggle svg,
+.password-verification-form .password-toggle svg {
 	width: 20px;
 	height: 20px;
 	fill: none;
@@ -1738,6 +1783,15 @@ body.is-notification-history-open {
 	.profile-field {
 		grid-template-columns: 1fr;
 		gap: 6px;
+	}
+
+	.password-change-form,
+	.password-verification-form {
+		padding: 20px;
+	}
+
+	.password-verification-form {
+		width: min(100% - 24px, 420px);
 	}
 
 	.profile-overview {

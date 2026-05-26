@@ -8,7 +8,7 @@
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
 	<link rel="stylesheet" th:href="@{/css/auth.css}">
-	<link rel="stylesheet" th:href="@{/css/mypage.css(v=8)}">
+	<link rel="stylesheet" th:href="@{/css/mypage.css(v=9)}">
 </head>
 <body>
 <div class="mypage-shell">
@@ -141,118 +141,124 @@
 
 				<div class="alert" id="passwordMessage" role="alert" aria-live="polite" hidden></div>
 
-				<form class="auth-form password-change-form" id="passwordChangeForm" novalidate>
-					<div class="field-group">
-						<label for="currentPassword">현재 비밀번호</label>
-						<div class="password-field">
-							<input
-								type="password"
-								id="currentPassword"
-								name="currentPassword"
-								autocomplete="current-password"
-								aria-describedby="currentPasswordError"
-								required>
-							<button
-								type="button"
-								class="text-button password-toggle"
-								data-password-toggle="currentPassword"
-								aria-label="현재 비밀번호 표시"
-								aria-pressed="false">
-								<span class="password-toggle-icon" data-visible="false" aria-hidden="true">
-									<svg viewBox="0 0 24 24" focusable="false">
-										<path d="m3 3 18 18"></path>
-										<path d="M10.7 5.2A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-3.2 4.1"></path>
-										<path d="M14.1 14.1A3 3 0 0 1 9.9 9.9"></path>
-										<path d="M6.6 6.6A18.2 18.2 0 0 0 2 12s3.5 7 10 7a10.8 10.8 0 0 0 4.4-.9"></path>
-									</svg>
-								</span>
-								<span class="password-toggle-icon" data-visible="true" aria-hidden="true" hidden>
-									<svg viewBox="0 0 24 24" focusable="false">
-										<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
-										<circle cx="12" cy="12" r="3"></circle>
-									</svg>
-								</span>
-							</button>
+				<div class="password-change-shell" id="passwordChangeShell" data-current-verified="false">
+					<form class="auth-form password-change-form" id="passwordChangeForm" novalidate>
+						<div class="field-group">
+							<label for="newPassword">새 비밀번호</label>
+							<div class="password-field">
+								<input
+									type="password"
+									id="newPassword"
+									name="newPassword"
+									autocomplete="new-password"
+									placeholder="영문과 숫자 포함 8자 이상"
+									minlength="8"
+									maxlength="64"
+									aria-describedby="newPasswordError"
+									required>
+								<button
+									type="button"
+									class="text-button password-toggle"
+									data-password-toggle="newPassword"
+									aria-label="새 비밀번호 표시"
+									aria-pressed="false">
+									<span class="password-toggle-icon" data-visible="false" aria-hidden="true">
+										<svg viewBox="0 0 24 24" focusable="false">
+											<path d="m3 3 18 18"></path>
+											<path d="M10.7 5.2A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-3.2 4.1"></path>
+											<path d="M14.1 14.1A3 3 0 0 1 9.9 9.9"></path>
+											<path d="M6.6 6.6A18.2 18.2 0 0 0 2 12s3.5 7 10 7a10.8 10.8 0 0 0 4.4-.9"></path>
+										</svg>
+									</span>
+									<span class="password-toggle-icon" data-visible="true" aria-hidden="true" hidden>
+										<svg viewBox="0 0 24 24" focusable="false">
+											<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+											<circle cx="12" cy="12" r="3"></circle>
+										</svg>
+									</span>
+								</button>
+							</div>
+							<p class="field-error" id="newPasswordError" hidden></p>
 						</div>
-						<p class="field-error" id="currentPasswordError" hidden></p>
-					</div>
 
-					<div class="field-group">
-						<label for="newPassword">새 비밀번호</label>
-						<div class="password-field">
-							<input
-								type="password"
-								id="newPassword"
-								name="newPassword"
-								autocomplete="new-password"
-								placeholder="영문과 숫자 포함 8자 이상"
-								minlength="8"
-								maxlength="64"
-								aria-describedby="newPasswordError"
-								required>
-							<button
-								type="button"
-								class="text-button password-toggle"
-								data-password-toggle="newPassword"
-								aria-label="새 비밀번호 표시"
-								aria-pressed="false">
-								<span class="password-toggle-icon" data-visible="false" aria-hidden="true">
-									<svg viewBox="0 0 24 24" focusable="false">
-										<path d="m3 3 18 18"></path>
-										<path d="M10.7 5.2A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-3.2 4.1"></path>
-										<path d="M14.1 14.1A3 3 0 0 1 9.9 9.9"></path>
-										<path d="M6.6 6.6A18.2 18.2 0 0 0 2 12s3.5 7 10 7a10.8 10.8 0 0 0 4.4-.9"></path>
-									</svg>
-								</span>
-								<span class="password-toggle-icon" data-visible="true" aria-hidden="true" hidden>
-									<svg viewBox="0 0 24 24" focusable="false">
-										<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
-										<circle cx="12" cy="12" r="3"></circle>
-									</svg>
-								</span>
-							</button>
+						<div class="field-group">
+							<label for="newPasswordConfirm">새 비밀번호 확인</label>
+							<div class="password-field">
+								<input
+									type="password"
+									id="newPasswordConfirm"
+									name="newPasswordConfirm"
+									autocomplete="new-password"
+									placeholder="영문과 숫자 포함 8자 이상"
+									aria-describedby="newPasswordConfirmError"
+									required>
+								<button
+									type="button"
+									class="text-button password-toggle"
+									data-password-toggle="newPasswordConfirm"
+									aria-label="새 비밀번호 확인 표시"
+									aria-pressed="false">
+									<span class="password-toggle-icon" data-visible="false" aria-hidden="true">
+										<svg viewBox="0 0 24 24" focusable="false">
+											<path d="m3 3 18 18"></path>
+											<path d="M10.7 5.2A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-3.2 4.1"></path>
+											<path d="M14.1 14.1A3 3 0 0 1 9.9 9.9"></path>
+											<path d="M6.6 6.6A18.2 18.2 0 0 0 2 12s3.5 7 10 7a10.8 10.8 0 0 0 4.4-.9"></path>
+										</svg>
+									</span>
+									<span class="password-toggle-icon" data-visible="true" aria-hidden="true" hidden>
+										<svg viewBox="0 0 24 24" focusable="false">
+											<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+											<circle cx="12" cy="12" r="3"></circle>
+										</svg>
+									</span>
+								</button>
+							</div>
+							<p class="field-error" id="newPasswordConfirmError" hidden></p>
 						</div>
-						<p class="field-error" id="newPasswordError" hidden></p>
-					</div>
 
-					<div class="field-group">
-						<label for="newPasswordConfirm">새 비밀번호 확인</label>
-						<div class="password-field">
-							<input
-								type="password"
-								id="newPasswordConfirm"
-								name="newPasswordConfirm"
-								autocomplete="new-password"
-								placeholder="영문과 숫자 포함 8자 이상"
-								aria-describedby="newPasswordConfirmError"
-								required>
-							<button
-								type="button"
-								class="text-button password-toggle"
-								data-password-toggle="newPasswordConfirm"
-								aria-label="새 비밀번호 확인 표시"
-								aria-pressed="false">
-								<span class="password-toggle-icon" data-visible="false" aria-hidden="true">
-									<svg viewBox="0 0 24 24" focusable="false">
-										<path d="m3 3 18 18"></path>
-										<path d="M10.7 5.2A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-3.2 4.1"></path>
-										<path d="M14.1 14.1A3 3 0 0 1 9.9 9.9"></path>
-										<path d="M6.6 6.6A18.2 18.2 0 0 0 2 12s3.5 7 10 7a10.8 10.8 0 0 0 4.4-.9"></path>
-									</svg>
-								</span>
-								<span class="password-toggle-icon" data-visible="true" aria-hidden="true" hidden>
-									<svg viewBox="0 0 24 24" focusable="false">
-										<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
-										<circle cx="12" cy="12" r="3"></circle>
-									</svg>
-								</span>
-							</button>
+						<button type="submit" class="primary-button" id="passwordSaveButton">비밀번호 변경</button>
+					</form>
+
+					<form class="auth-form password-verification-form" id="passwordVerificationForm" novalidate>
+						<p class="password-verification-copy">현재 비밀번호 확인 후 새 비밀번호를 입력할 수 있습니다.</p>
+						<div class="field-group">
+							<label for="currentPassword">현재 비밀번호</label>
+							<div class="password-field">
+								<input
+									type="password"
+									id="currentPassword"
+									name="currentPassword"
+									autocomplete="current-password"
+									aria-describedby="currentPasswordError"
+									required>
+								<button
+									type="button"
+									class="text-button password-toggle"
+									data-password-toggle="currentPassword"
+									aria-label="현재 비밀번호 표시"
+									aria-pressed="false">
+									<span class="password-toggle-icon" data-visible="false" aria-hidden="true">
+										<svg viewBox="0 0 24 24" focusable="false">
+											<path d="m3 3 18 18"></path>
+											<path d="M10.7 5.2A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-3.2 4.1"></path>
+											<path d="M14.1 14.1A3 3 0 0 1 9.9 9.9"></path>
+											<path d="M6.6 6.6A18.2 18.2 0 0 0 2 12s3.5 7 10 7a10.8 10.8 0 0 0 4.4-.9"></path>
+										</svg>
+									</span>
+									<span class="password-toggle-icon" data-visible="true" aria-hidden="true" hidden>
+										<svg viewBox="0 0 24 24" focusable="false">
+											<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+											<circle cx="12" cy="12" r="3"></circle>
+										</svg>
+									</span>
+								</button>
+							</div>
+							<p class="field-error" id="currentPasswordError" hidden></p>
 						</div>
-						<p class="field-error" id="newPasswordConfirmError" hidden></p>
-					</div>
-
-					<button type="submit" class="primary-button" id="passwordSaveButton">비밀번호 변경</button>
-				</form>
+						<button type="submit" class="primary-button" id="passwordVerifyButton">확인</button>
+					</form>
+				</div>
 			</section>
 
 			<section class="mypage-section" id="section-job-preference" data-section="job-preference" aria-labelledby="job-preference-title" hidden>

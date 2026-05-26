@@ -15,6 +15,7 @@ import com.gongchae.gongchae_coming.member.dto.MemberJobPreferenceRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberJobPreferenceResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberNicknameUpdateRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberPasswordUpdateRequest;
+import com.gongchae.gongchae_coming.member.dto.MemberPasswordVerificationRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberProfileResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberResetPasswordRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberResetPasswordResponse;
@@ -325,6 +326,35 @@ class MemberServiceTest {
 		assertThatThrownBy(() -> memberService.updatePassword(
 			"user@example.com",
 			new MemberPasswordUpdateRequest("wrongpassword", "newpassword1")
+		)).isInstanceOf(IllegalArgumentException.class)
+			.hasMessage("current password does not match");
+	}
+
+	@Test
+	void verifyPasswordAcceptsCurrentPassword() {
+		memberService.signup(new MemberSignupRequest(
+			"user@example.com",
+			"gongchae",
+			"password1"
+		));
+
+		memberService.verifyPassword(
+			"user@example.com",
+			new MemberPasswordVerificationRequest("password1")
+		);
+	}
+
+	@Test
+	void verifyPasswordRejectsWrongCurrentPassword() {
+		memberService.signup(new MemberSignupRequest(
+			"user@example.com",
+			"gongchae",
+			"password1"
+		));
+
+		assertThatThrownBy(() -> memberService.verifyPassword(
+			"user@example.com",
+			new MemberPasswordVerificationRequest("wrongpassword")
 		)).isInstanceOf(IllegalArgumentException.class)
 			.hasMessage("current password does not match");
 	}
