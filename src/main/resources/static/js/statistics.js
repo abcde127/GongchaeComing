@@ -580,9 +580,12 @@ function showStatus(message, isError = false) {
 	if (!statisticsStatus) {
 		return;
 	}
-	statisticsStatus.hidden = false;
-	statisticsStatus.textContent = message;
-	statisticsStatus.classList.toggle("is-error", isError);
+	statisticsStatus.hidden = true;
+	statisticsStatus.textContent = "";
+	statisticsStatus.classList.remove("is-error");
+	if (message) {
+		showToast(message, isError ? "error" : "success");
+	}
 }
 
 function hideStatus() {
@@ -592,6 +595,28 @@ function hideStatus() {
 	statisticsStatus.hidden = true;
 	statisticsStatus.textContent = "";
 	statisticsStatus.classList.remove("is-error");
+}
+
+function showToast(message, type = "error") {
+	if (!message) {
+		return;
+	}
+
+	const toast = document.createElement("div");
+	toast.className = "toast";
+	toast.dataset.type = type;
+	toast.setAttribute("role", type === "error" ? "alert" : "status");
+	toast.setAttribute("aria-live", type === "error" ? "assertive" : "polite");
+	toast.textContent = message;
+	document.body.append(toast);
+
+	window.setTimeout(() => {
+		toast.classList.add("is-hiding");
+	}, 2400);
+
+	window.setTimeout(() => {
+		toast.remove();
+	}, 2800);
 }
 
 function formatNumber(value) {

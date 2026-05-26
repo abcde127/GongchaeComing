@@ -8,6 +8,7 @@ import java.io.InputStream;
 import jakarta.mail.BodyPart;
 import jakarta.mail.MessagingException;
 import jakarta.mail.Multipart;
+import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.Test;
 import org.springframework.mail.SimpleMailMessage;
@@ -22,8 +23,7 @@ class JavaMailPasswordResetMailSenderTest {
 	void sendVerificationCodeCreatesHtmlMail() throws Exception {
 		CapturingJavaMailSender javaMailSender = new CapturingJavaMailSender();
 		JavaMailPasswordResetMailSender mailSender = new JavaMailPasswordResetMailSender(javaMailSender);
-		ReflectionTestUtils.setField(mailSender, "from", "sender");
-		ReflectionTestUtils.setField(mailSender, "mailHost", "smtp.naver.com");
+		ReflectionTestUtils.setField(mailSender, "from", "no-reply@gongchae-coming.local");
 		ReflectionTestUtils.setField(mailSender, "mailUsername", "sender");
 
 		mailSender.sendVerificationCode("user@example.com", "123456");
@@ -31,7 +31,9 @@ class JavaMailPasswordResetMailSenderTest {
 		MimeMessage sentMessage = javaMailSender.sentMessage;
 		assertThat(sentMessage).isNotNull();
 		assertThat(sentMessage.getSubject()).isEqualTo("[공채왔어요] 비밀번호 재설정 인증번호");
-		assertThat(sentMessage.getFrom()[0].toString()).contains("sender@naver.com");
+		InternetAddress fromAddress = (InternetAddress) sentMessage.getFrom()[0];
+		assertThat(fromAddress.getAddress()).isEqualTo("sender@naver.com");
+		assertThat(fromAddress.getPersonal()).isEqualTo("공채왔어요");
 		assertThat(sentMessage.getContentType()).contains("multipart");
 		assertThat(extractText(sentMessage.getContent())).contains("123456");
 	}

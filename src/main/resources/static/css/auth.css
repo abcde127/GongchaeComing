@@ -107,6 +107,7 @@ a:hover {
 
 .login-page,
 .signup-page,
+.signup-complete-page,
 .reset-password-page {
 	grid-template-columns: 1fr;
 	min-height: calc(100vh - 72px);
@@ -180,6 +181,7 @@ a:hover {
 
 .login-page .auth-panel,
 .signup-page .auth-panel,
+.signup-complete-page .auth-panel,
 .reset-password-page .auth-panel {
 	min-height: calc(100vh - 72px);
 	padding: 48px 20px;
@@ -191,6 +193,7 @@ a:hover {
 
 .login-page .auth-card,
 .signup-page .auth-card,
+.signup-complete-page .auth-card,
 .reset-password-page .auth-card {
 	padding: 36px;
 	border: 1px solid rgba(215, 220, 229, 0.86);
@@ -403,6 +406,12 @@ input:focus {
 	animation: toast-in 0.18s ease-out;
 }
 
+.toast[data-type="error"] {
+	border-color: #fed7c3;
+	background: var(--danger-bg);
+	color: var(--danger);
+}
+
 .toast.is-hiding {
 	opacity: 0;
 	transform: translate(-50%, -8px);
@@ -563,7 +572,8 @@ input:focus {
 	}
 
 	.login-page .auth-panel,
-	.signup-page .auth-panel {
+	.signup-page .auth-panel,
+	.signup-complete-page .auth-panel {
 		align-items: center;
 		padding: 32px 20px;
 	}
@@ -583,7 +593,8 @@ input:focus {
 	}
 
 	.login-page .auth-card,
-	.signup-page .auth-card {
+	.signup-page .auth-card,
+	.signup-complete-page .auth-card {
 		padding: 28px 22px;
 	}
 

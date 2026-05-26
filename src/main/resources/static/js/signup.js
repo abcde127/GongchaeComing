@@ -15,9 +15,30 @@ const togglePasswordConfirm = document.querySelector("#togglePasswordConfirm");
 let checkedEmail = "";
 
 function setMessage(message, type = "error") {
-	signupMessage.textContent = message;
-	signupMessage.dataset.type = type;
-	signupMessage.hidden = !message;
+	signupMessage.textContent = "";
+	signupMessage.hidden = true;
+	delete signupMessage.dataset.type;
+	if (message) {
+		showToast(message, type);
+	}
+}
+
+function showToast(message, type = "error") {
+	const toast = document.createElement("div");
+	toast.className = "toast";
+	toast.dataset.type = type;
+	toast.setAttribute("role", type === "error" ? "alert" : "status");
+	toast.setAttribute("aria-live", type === "error" ? "assertive" : "polite");
+	toast.textContent = message;
+	document.body.append(toast);
+
+	window.setTimeout(() => {
+		toast.classList.add("is-hiding");
+	}, 2400);
+
+	window.setTimeout(() => {
+		toast.remove();
+	}, 2800);
 }
 
 function setEmailFeedback(message, type = "error") {

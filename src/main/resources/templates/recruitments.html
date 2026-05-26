@@ -7,7 +7,7 @@
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
-	<link rel="stylesheet" th:href="@{/css/recruitments.css(v=8)}">
+	<link rel="stylesheet" th:href="@{/css/recruitments.css(v=9)}">
 </head>
 <body>
 <div class="page-shell">
@@ -37,6 +37,25 @@
 			<div class="sidebar-divider" aria-hidden="true"></div>
 			<div class="sidebar-controls" aria-label="채용 목록 보기 옵션">
 				<div class="sidebar-control-group">
+					<div class="sidebar-keyword-filter sidebar-filter">
+						<div class="list-filter-search-control is-expanded">
+							<div class="search-input-wrap">
+								<button type="button" class="search-icon-button" id="keywordSearchButton" aria-label="키워드 검색" title="검색">
+									<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+										<circle cx="11" cy="11" r="7"></circle>
+										<path d="m16.5 16.5 4 4"></path>
+									</svg>
+								</button>
+								<input
+									type="text"
+									id="searchKeyword"
+									name="searchKeyword"
+									form="searchForm"
+									aria-label="공고명 검색">
+								<button type="button" class="clear-search-button" id="clearKeywordButton" aria-label="키워드 지우기" title="지우기">×</button>
+							</div>
+						</div>
+					</div>
 					<div class="list-filter-status sidebar-filter">
 						<button class="list-filter-trigger" type="button" data-filter-trigger aria-controls="listStatusFilter" aria-expanded="false">상태</button>
 						<div class="list-filter-menu" id="listStatusFilter" data-filter-menu hidden>
@@ -54,7 +73,9 @@
 					</div>
 					<div class="list-filter-status sidebar-filter">
 						<button class="list-filter-trigger" type="button" data-filter-trigger aria-controls="listCompanyFilter" aria-expanded="false">기업명</button>
-						<div class="list-filter-menu" id="listCompanyFilter" data-filter-menu hidden></div>
+						<div class="list-filter-menu list-company-filter-menu" id="listCompanyFilter" data-filter-menu hidden>
+							<div class="filter-option-list" id="listCompanyFilterOptions"></div>
+						</div>
 					</div>
 					<div class="list-filter-status sidebar-filter">
 						<button class="list-filter-trigger" type="button" data-filter-trigger aria-controls="listRegionFilter" aria-expanded="false">근무지</button>
@@ -130,26 +151,8 @@
 					<pre id="syncFailureContent"></pre>
 				</div>
 				<div class="list-filter-row" id="listFilterRow">
-					<div class="list-filter-search">
-						<label class="visually-hidden" for="searchKeyword">키워드 검색</label>
-						<div class="list-filter-search-control">
-							<span class="list-filter-title">공고명</span>
-							<div class="search-input-wrap">
-								<button type="button" class="search-icon-button" id="keywordSearchButton" aria-label="키워드 검색" title="검색">
-									<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-										<circle cx="11" cy="11" r="7"></circle>
-										<path d="m16.5 16.5 4 4"></path>
-									</svg>
-								</button>
-								<input
-									type="text"
-									id="searchKeyword"
-									name="searchKeyword"
-									form="searchForm"
-									placeholder="키워드 검색">
-								<button type="button" class="clear-search-button" id="clearKeywordButton" aria-label="키워드 지우기" title="지우기">×</button>
-							</div>
-						</div>
+					<div class="list-filter-title-cell">
+						<span class="list-filter-cell-static">공고명</span>
 					</div>
 					<div class="list-filter-meta">
 						<div class="list-filter-cell">

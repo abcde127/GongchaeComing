@@ -10,15 +10,19 @@ const togglePassword = document.querySelector("#togglePassword");
 const params = new URLSearchParams(window.location.search);
 
 function setMessage(message) {
-	loginMessage.textContent = message;
-	loginMessage.hidden = !message;
+	loginMessage.textContent = "";
+	loginMessage.hidden = true;
+	if (message) {
+		showToast(message, "error");
+	}
 }
 
-function showToast(message) {
+function showToast(message, type = "success") {
 	const toast = document.createElement("div");
 	toast.className = "toast";
-	toast.setAttribute("role", "status");
-	toast.setAttribute("aria-live", "polite");
+	toast.dataset.type = type;
+	toast.setAttribute("role", type === "error" ? "alert" : "status");
+	toast.setAttribute("aria-live", type === "error" ? "assertive" : "polite");
 	toast.textContent = message;
 	document.body.append(toast);
 

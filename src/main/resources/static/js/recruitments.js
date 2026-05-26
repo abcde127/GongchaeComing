@@ -15,6 +15,7 @@ const syncFailureContent = document.querySelector("#syncFailureContent");
 const listFilterRow = document.querySelector("#listFilterRow");
 const listStatusFilter = document.querySelector("#listStatusFilter");
 const listCompanyFilter = document.querySelector("#listCompanyFilter");
+const listCompanyFilterOptions = document.querySelector("#listCompanyFilterOptions");
 const listPeriodSortFilter = document.querySelector("#listPeriodSortFilter");
 const listCategoryFilter = document.querySelector("#listCategoryFilter");
 const listHireTypeFilter = document.querySelector("#listHireTypeFilter");
@@ -232,7 +233,7 @@ function syncCompanyFilterOptions(companyOptions = []) {
 		(jobPreferenceCompanyOptionsCache || []).map((company) => [company.detailCode, company.detailName])
 	);
 
-	listCompanyFilter.innerHTML = "";
+	listCompanyFilterOptions.innerHTML = "";
 	selectedValues.forEach((value) => {
 		if (!companyNames.includes(value)) {
 			companyNames.push(value);
@@ -243,7 +244,7 @@ function syncCompanyFilterOptions(companyOptions = []) {
 		const option = createListFilterCheckbox(companyName, companyLabelByValue.get(companyName) || companyName);
 		const checkbox = option.querySelector("input");
 		checkbox.checked = selectedValues.has(companyName);
-		listCompanyFilter.appendChild(option);
+		listCompanyFilterOptions.appendChild(option);
 	});
 	updateListFilterIndicators();
 }
@@ -286,8 +287,9 @@ async function ensureCompanyFilterOptions(values = []) {
 	const labelByValue = new Map(companyOptions.map((company) => [company.detailCode, company.detailName]));
 
 	missingValues.forEach((value) => {
-		listCompanyFilter.appendChild(createListFilterCheckbox(value, labelByValue.get(value) || value));
+		listCompanyFilterOptions.appendChild(createListFilterCheckbox(value, labelByValue.get(value) || value));
 	});
+	updateListFilterIndicators();
 }
 
 function setLoading(isLoading) {
@@ -552,9 +554,34 @@ async function startRecruitmentSynchronization() {
 }
 
 function setStatus(message, type = "error") {
-	statusBanner.textContent = message || "";
-	statusBanner.hidden = !message;
-	statusBanner.classList.toggle("success", type === "success");
+	statusBanner.textContent = "";
+	statusBanner.hidden = true;
+	statusBanner.classList.remove("success");
+	if (message) {
+		showToast(message, type);
+	}
+}
+
+function showToast(message, type = "error") {
+	if (!message) {
+		return;
+	}
+
+	const toast = document.createElement("div");
+	toast.className = "toast";
+	toast.dataset.type = type;
+	toast.setAttribute("role", type === "error" ? "alert" : "status");
+	toast.setAttribute("aria-live", type === "error" ? "assertive" : "polite");
+	toast.textContent = message;
+	document.body.append(toast);
+
+	window.setTimeout(() => {
+		toast.classList.add("is-hiding");
+	}, 2400);
+
+	window.setTimeout(() => {
+		toast.remove();
+	}, 2800);
 }
 
 function setDebug(debugData) {
@@ -985,7 +1012,7 @@ function getCheckedFilterValues(filter) {
 
 function setCheckedFilterValues(filter, values = []) {
 	const selectedValues = new Set(values);
-	filter.querySelectorAll("input").forEach((input) => {
+	filter.querySelectorAll("input[type='checkbox'], input[type='radio']").forEach((input) => {
 		input.checked = selectedValues.has(input.value);
 	});
 }
@@ -1231,7 +1258,6 @@ async function loadRecruitments(page = currentPage, showLoading = true) {
 
 function resetForm() {
 	searchKeyword.value = "";
-	keywordSearchControl.classList.remove("is-expanded");
 	if (jobPreferenceToggle) {
 		jobPreferenceToggle.checked = false;
 	}
@@ -1271,7 +1297,6 @@ async function getResponseErrorMessage(response, fallbackMessage) {
 
 async function applyJobPreference(preference) {
 	searchKeyword.value = preference.searchKeyword || "";
-	keywordSearchControl.classList.toggle("is-expanded", Boolean(searchKeyword.value.trim()));
 	updateKeywordSearchState();
 	clearListHeaderFilters();
 	await ensureCompanyFilterOptions(preference.companies || []);
@@ -1286,7 +1311,6 @@ async function applyJobPreference(preference) {
 
 function clearJobPreferenceApplication() {
 	searchKeyword.value = "";
-	keywordSearchControl.classList.remove("is-expanded");
 	updateKeywordSearchState();
 	clearListHeaderFilters();
 	updateListFilterIndicators();
@@ -1313,12 +1337,6 @@ searchKeyword.addEventListener("keydown", (event) => {
 });
 
 keywordSearchButton.addEventListener("click", () => {
-	if (!keywordSearchControl.classList.contains("is-expanded")) {
-		keywordSearchControl.classList.add("is-expanded");
-		searchKeyword.focus();
-		return;
-	}
-
 	loadRecruitments(1);
 });
 
@@ -1336,18 +1354,11 @@ clearKeywordButton.addEventListener("click", () => {
 	}, 0);
 });
 
-keywordSearchControl.addEventListener("focusout", () => {
-	window.setTimeout(() => {
-		if (isClearingKeyword || keywordSearchControl.contains(document.activeElement) || searchKeyword.value.trim()) {
+[listStatusFilter, listCompanyFilter, listCategoryFilter, listHireTypeFilter, listNcsFilter, listRegionFilter].forEach((filter) => {
+	filter.addEventListener("change", (event) => {
+		if (!["checkbox", "radio"].includes(event.target.type)) {
 			return;
 		}
-
-		keywordSearchControl.classList.remove("is-expanded");
-	}, 0);
-});
-
-[listStatusFilter, listCompanyFilter, listCategoryFilter, listHireTypeFilter, listNcsFilter, listRegionFilter].forEach((filter) => {
-	filter.addEventListener("change", () => {
 		updateListFilterIndicators();
 		loadRecruitments(1);
 	});
@@ -1466,18 +1477,18 @@ async function renderFavoriteRecruitments() {
 
 async function createFavoriteRecruitment(item, card) {
 	if (!favoriteToggle) {
-		window.alert("로그인 후 관심공고를 설정할 수 있습니다.");
+		showToast("로그인 후 관심공고를 설정할 수 있습니다.");
 		return;
 	}
 
 	const request = buildFavoriteRequest(item);
 	if (!request.sourceRecruitmentId) {
-		window.alert("공고 식별 정보가 없어 관심공고로 설정할 수 없습니다.");
+		showToast("공고 식별 정보가 없어 관심공고로 설정할 수 없습니다.");
 		return;
 	}
 
 	if (favoriteRecruitmentIds.has(request.sourceRecruitmentId)) {
-		window.alert("이미 관심공고로 설정된 공고입니다.");
+		showToast("이미 관심공고로 설정된 공고입니다.");
 		return;
 	}
 
@@ -1506,21 +1517,21 @@ async function createFavoriteRecruitment(item, card) {
 			button.setAttribute("aria-label", "관심공고 해제");
 			button.setAttribute("title", "관심공고 해제");
 		}
-		window.alert(payload?.created === false ? "이미 관심공고로 설정된 공고입니다." : "관심공고로 설정되었습니다.");
+		showToast(payload?.created === false ? "이미 관심공고로 설정된 공고입니다." : "관심공고로 설정되었습니다.", "success");
 	} catch (error) {
-		window.alert(error.message);
+		showToast(error.message);
 	}
 }
 
 async function deleteFavoriteRecruitment(item, card) {
 	if (!favoriteToggle) {
-		window.alert("로그인 후 관심공고를 해제할 수 있습니다.");
+		showToast("로그인 후 관심공고를 해제할 수 있습니다.");
 		return;
 	}
 
 	const sourceRecruitmentId = getRecruitmentFavoriteId(item);
 	if (!sourceRecruitmentId) {
-		window.alert("공고 식별 정보가 없어 관심공고를 해제할 수 없습니다.");
+		showToast("공고 식별 정보가 없어 관심공고를 해제할 수 없습니다.");
 		return;
 	}
 
@@ -1558,9 +1569,9 @@ async function deleteFavoriteRecruitment(item, card) {
 			});
 			updateResultCountSummary(latestOverallTotalCount, currentItems.length);
 		}
-		window.alert("관심공고에서 해제되었습니다.");
+		showToast("관심공고에서 해제되었습니다.", "success");
 	} catch (error) {
-		window.alert(error.message);
+		showToast(error.message);
 	}
 }
 
@@ -1581,7 +1592,7 @@ resultList.addEventListener("click", (event) => {
 	const recruitmentId = card?.dataset.recruitmentId;
 	const item = currentItems.find((candidate) => getRecruitmentFavoriteId(candidate) === recruitmentId);
 	if (!card || !item) {
-		window.alert("공고 정보를 찾을 수 없습니다.");
+		showToast("공고 정보를 찾을 수 없습니다.");
 		return;
 	}
 

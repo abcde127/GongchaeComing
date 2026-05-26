@@ -9,6 +9,7 @@ import com.gongchae.gongchae_coming.member.dto.MemberJobPreferenceRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberJobPreferenceResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberNicknameUpdateRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberPasswordUpdateRequest;
+import com.gongchae.gongchae_coming.member.dto.MemberPasswordVerificationRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberProfileResponse;
 import com.gongchae.gongchae_coming.member.dto.MemberResetPasswordRequest;
 import com.gongchae.gongchae_coming.member.dto.MemberResetPasswordResponse;
@@ -104,6 +105,15 @@ public class MemberController {
 		@Valid @RequestBody MemberPasswordUpdateRequest request
 	) {
 		return memberService.updatePassword(authentication.getName(), request);
+	}
+
+	@PostMapping("/me/password-verification")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void verifyPassword(
+		Authentication authentication,
+		@Valid @RequestBody MemberPasswordVerificationRequest request
+	) {
+		memberService.verifyPassword(authentication.getName(), request);
 	}
 
 	@GetMapping("/me/job-preference")

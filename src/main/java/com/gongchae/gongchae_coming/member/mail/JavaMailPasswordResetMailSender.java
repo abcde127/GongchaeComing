@@ -24,9 +24,6 @@ public class JavaMailPasswordResetMailSender implements PasswordResetMailSender 
 	@Value("${app.mail.from:no-reply@gongchae-coming.local}")
 	private String from;
 
-	@Value("${spring.mail.host:}")
-	private String mailHost;
-
 	@Value("${spring.mail.username:}")
 	private String mailUsername;
 
@@ -110,8 +107,8 @@ public class JavaMailPasswordResetMailSender implements PasswordResetMailSender 
 	}
 
 	private String resolveFromAddress() {
-		String usernameAddress = normalizeMailAddress(mailUsername);
-		if (isNaverSmtp() && StringUtils.hasText(usernameAddress)) {
+		String usernameAddress = normalizeNaverMailAddress(mailUsername);
+		if (StringUtils.hasText(usernameAddress)) {
 			return usernameAddress;
 		}
 
@@ -120,7 +117,7 @@ public class JavaMailPasswordResetMailSender implements PasswordResetMailSender 
 			return configuredAddress;
 		}
 
-		return usernameAddress;
+		return "no-reply@gongchae-coming.local";
 	}
 
 	private String normalizeMailAddress(String address) {
@@ -128,15 +125,19 @@ public class JavaMailPasswordResetMailSender implements PasswordResetMailSender 
 			return address;
 		}
 
-		String trimmedAddress = address.trim();
-		if (isNaverSmtp() && !trimmedAddress.contains("@")) {
-			return trimmedAddress + "@naver.com";
-		}
-
-		return trimmedAddress;
+		return address.trim();
 	}
 
-	private boolean isNaverSmtp() {
-		return "smtp.naver.com".equalsIgnoreCase(mailHost);
+	private String normalizeNaverMailAddress(String username) {
+		if (!StringUtils.hasText(username)) {
+			return username;
+		}
+
+		String trimmedUsername = username.trim();
+		if (trimmedUsername.contains("@")) {
+			return trimmedUsername;
+		}
+
+		return trimmedUsername + "@naver.com";
 	}
 }
