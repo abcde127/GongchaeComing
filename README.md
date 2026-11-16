@@ -1,4 +1,4 @@
-# 공채커밍 (GongchaeComing)
+# 공채왔어요 (GongchaeComing)
 
 > 공공기관 취업 준비생을 위한 맞춤형 채용 정보 제공 서비스
 
